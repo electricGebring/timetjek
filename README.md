@@ -1,7 +1,7 @@
 # Timetjek
 
 A time tracking application built with Vue 3, TypeScript, and Tailwind CSS.
-Project for Timetjek in collaboration with DevelopersShore https://drive.google.com/drive/folders/1YEQX4CcguYidlzG-cMkzyOTKSd6LgvB6?usp=sharing
+Project for Timetjek in collaboration with DevelopersShore https://drive.google.com/drive/folders/1YEQX4CcguYidlzG-cMkzyOTKSd6LgvB6?usp=sharinggit
 
 Project for Timetjek in collaboration with DevelopersShore https://drive.google.com/drive/folders/1YEQX4CcguYidlzG-cMkzyOTKSd6LgvB6?usp=sharing
 

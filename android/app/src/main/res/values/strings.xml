@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">timetjek</string>
+    <string name="title_activity_main">timetjek</string>
+    <string name="package_name">se.northbridge.timetjek</string>
+    <string name="custom_url_scheme">se.northbridge.timetjek</string>
+</resources>
