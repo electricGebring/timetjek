@@ -5,6 +5,7 @@ import App from './App.vue'
 import { initDB } from '@/db/index.ts'
 import router from './router'
 import { syncService } from '@/sync/syncService'
+import i18n from './i18n'
 
 async function bootstrap() {
   await initDB()
@@ -12,6 +13,7 @@ async function bootstrap() {
   const app = createApp(App)
   app.use(createPinia())
   app.use(router)
+  app.use(i18n)
   app.mount('#app')
 
   // Initialize sync after DB is ready
