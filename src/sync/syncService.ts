@@ -71,7 +71,7 @@ export class SyncService {
     // For each local todo, create in API if it doesn't exist
     for (const todo of unsyncedTodos) {
       try {
-        await todosApi.createTodo(todo.title)
+        await todosApi.createTodo(todo.title, todo.id)
         await todosRepo.markAsSynced(todo.id)
       } catch (error) {
         console.error('Failed to push todo:', todo.title, error)

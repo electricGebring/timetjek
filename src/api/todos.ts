@@ -17,16 +17,15 @@ export async function fetchTodos(): Promise<Todo[]> {
 /**
  * Creates a new todo via json-server API
  */
-export async function createTodo(title: string): Promise<Todo> {
+export async function createTodo(title: string, id?: number): Promise<Todo> {
+  const body: any = { title, done: 0 }
+  if (id) body.id = id // Låt API använda lokalt ID
   const response = await fetch(API_URL, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
     },
-    body: JSON.stringify({
-      title,
-      done: 0
-    })
+    body: JSON.stringify(body)
   })
   return response.json()
 }
