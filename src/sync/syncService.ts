@@ -22,7 +22,7 @@ export class SyncService {
   async init() {
     // Register callback for mutations
     domain.onMutation(() => {
-      this.isOnline().then(online => {
+      this.isOnline().then((online) => {
         if (online) {
           this.syncAll()
         }
@@ -37,7 +37,7 @@ export class SyncService {
 
     Network.addListener('networkStatusChange', async (status) => {
       console.log('Network changed:', status.connected)
-      
+
       if (status.connected) {
         await this.syncAll()
       }
@@ -51,10 +51,10 @@ export class SyncService {
     try {
       // 1. Push: Send local todos to API
       await this.pushToApi()
-      
+
       // 2. Delete: Remove deleted todos from API
       await this.deleteFromApi()
-      
+
       // 3. Pull: Fetch from API and update store
       await this.pullFromApi()
     } catch (error) {
@@ -67,7 +67,7 @@ export class SyncService {
    */
   async pushToApi() {
     const unsyncedTodos = await todosRepo.getUnsyncedTodos()
-    
+
     // For each local todo, create in API if it doesn't exist
     for (const todo of unsyncedTodos) {
       try {
@@ -84,7 +84,7 @@ export class SyncService {
    */
   async deleteFromApi() {
     const deletedTodos = await todosRepo.getDeletedTodos()
-    
+
     for (const todo of deletedTodos) {
       try {
         await todosApi.deleteTodo(todo.id)
@@ -106,12 +106,12 @@ export class SyncService {
    */
   async pullFromApi() {
     const apiTodos = await todosApi.fetchTodos()
-    
+
     // Merge API todos into local database
     for (const todo of apiTodos) {
       await todosRepo.upsertTodo(todo)
     }
-    
+
     // Update store with merged data from DB
     await domain.updateStoreFromDb()
   }

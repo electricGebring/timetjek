@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
-import { useTodoStore } from "@/stores/todo/store";
+import { ref, onMounted } from 'vue'
+import { useTodoStore } from '@/stores/todo/store'
 
 const store = useTodoStore()
-const newTodo = ref("")
+const newTodo = ref('')
 
 onMounted(() => {
   store.loadTodos()
@@ -12,7 +12,7 @@ onMounted(() => {
 const addTodo = async () => {
   if (newTodo.value.trim()) {
     await store.addTodo(newTodo.value)
-    newTodo.value = ""
+    newTodo.value = ''
   }
 }
 
@@ -22,14 +22,19 @@ const deleteTodo = async (id: number) => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 py-12 px-4">
-    <div class="w-full max-w-2xl mx-auto bg-white rounded-2xl shadow-lg p-8">
+  <div class="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 px-4 py-12">
+    <div class="mx-auto w-full max-w-2xl rounded-2xl bg-white p-8 shadow-lg">
       <!-- Header -->
-      <h1 class="text-4xl font-light text-gray-800 mb-12 text-center">Your To Do</h1>
+      <h1 class="mb-12 text-center text-4xl font-light text-gray-800">Your To Do</h1>
 
       <!-- Add Todo Form -->
-      <form @submit.prevent="addTodo" class="mb-20">
-        <div class="flex items-center border-b-2 border-indigo-200 pb-3 focus-within:border-indigo-400 transition-colors">
+      <form
+        @submit.prevent="addTodo"
+        class="mb-20"
+      >
+        <div
+          class="flex items-center border-b-2 border-indigo-200 pb-3 transition-colors focus-within:border-indigo-400"
+        >
           <input
             v-model="newTodo"
             type="text"
@@ -38,10 +43,10 @@ const deleteTodo = async (id: number) => {
           />
           <button
             type="submit"
-            class="w-11 h-11 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center hover:from-indigo-600 hover:to-purple-700 transition-all shadow-md hover:shadow-lg"
+            class="flex h-11 w-11 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 shadow-md transition-all hover:from-indigo-600 hover:to-purple-700 hover:shadow-lg"
           >
             <svg
-              class="w-5 h-5 text-white"
+              class="h-5 w-5 text-white"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -58,30 +63,30 @@ const deleteTodo = async (id: number) => {
       </form>
 
       <!-- Loading State -->
-      <div v-if="store.loading" class="text-center py-12">
-        <div
-          class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gray-700"
-        ></div>
+      <div
+        v-if="store.loading"
+        class="py-12 text-center"
+      >
+        <div class="inline-block h-8 w-8 animate-spin rounded-full border-b-2 border-gray-700"></div>
       </div>
 
       <!-- Todos List -->
-      <div v-else class="space-y-6">
+      <div
+        v-else
+        class="space-y-6"
+      >
         <div
           v-for="t in store.todos"
           :key="t.id"
-          class="flex items-center gap-4 p-4 bg-gradient-to-r from-white to-indigo-50/30 border-2 border-indigo-100 rounded-xl hover:border-indigo-200 hover:shadow-md transition-all"
+          class="flex items-center gap-4 rounded-xl border-2 border-indigo-100 bg-gradient-to-r from-white to-indigo-50/30 p-4 transition-all hover:border-indigo-200 hover:shadow-md"
         >
           <div
-            class="w-5 h-5 rounded border-2 flex items-center justify-center cursor-pointer transition-all"
-            :class="
-              t.done
-                ? 'bg-indigo-500 border-indigo-500'
-                : 'border-gray-300 hover:border-indigo-400'
-            "
+            class="flex h-5 w-5 cursor-pointer items-center justify-center rounded border-2 transition-all"
+            :class="t.done ? 'border-indigo-500 bg-indigo-500' : 'border-gray-300 hover:border-indigo-400'"
           >
             <svg
               v-if="t.done"
-              class="w-3 h-3 text-white"
+              class="h-3 w-3 text-white"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -95,17 +100,17 @@ const deleteTodo = async (id: number) => {
             </svg>
           </div>
           <span
-            class="flex-1 text-gray-700 font-medium"
-            :class="{ 'line-through text-gray-400': t.done }"
+            class="flex-1 font-medium text-gray-700"
+            :class="{ 'text-gray-400 line-through': t.done }"
           >
             {{ t.title }}
           </span>
           <button
             @click="deleteTodo(t.id)"
-            class="text-gray-400 hover:text-rose-500 transition-colors"
+            class="text-gray-400 transition-colors hover:text-rose-500"
           >
             <svg
-              class="w-5 h-5"
+              class="h-5 w-5"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -122,11 +127,14 @@ const deleteTodo = async (id: number) => {
       </div>
 
       <!-- Footer -->
-      <div v-if="store.todos.length > 0" class="mt-10 text-center">
-        <p class="text-sm text-indigo-600 font-medium">
-          Your remaining todos: {{ store.todos.filter(t => !t.done).length }}
+      <div
+        v-if="store.todos.length > 0"
+        class="mt-10 text-center"
+      >
+        <p class="text-sm font-medium text-indigo-600">
+          Your remaining todos: {{ store.todos.filter((t) => !t.done).length }}
         </p>
-        <p class="text-xs text-gray-500 mt-3 italic">
+        <p class="mt-3 text-xs text-gray-500 italic">
           "Begin what you feel in the correctness of having awesome in your life" - Wayne Dyer
         </p>
       </div>

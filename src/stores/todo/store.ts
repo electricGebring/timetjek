@@ -18,7 +18,7 @@ export const useTodoStore = defineStore('todos', {
     },
 
     async updateTodos(todos: any[]) {
-      this.todos = todos    
+      this.todos = todos
     },
 
     /**

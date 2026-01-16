@@ -1,8 +1,5 @@
 import { Capacitor } from '@capacitor/core'
-import {
-  CapacitorSQLite,
-  SQLiteConnection
-} from '@capacitor-community/sqlite'
+import { CapacitorSQLite, SQLiteConnection } from '@capacitor-community/sqlite'
 import initSqlJs, { type Database } from 'sql.js'
 
 let sqlite: SQLiteConnection | null = null
@@ -17,18 +14,12 @@ let sqlJsDb: Database | null = null
 export async function initDB() {
   if (Capacitor.isNativePlatform()) {
     // Use Capacitor SQLite for native platforms
-    
+
     if (!sqlite) {
       sqlite = new SQLiteConnection(CapacitorSQLite)
     }
 
-    capacitorDb = await sqlite.createConnection(
-      'appdb',
-      false,
-      'no-encryption',
-      1,
-      false
-    )
+    capacitorDb = await sqlite.createConnection('appdb', false, 'no-encryption', 1, false)
 
     await capacitorDb.open()
 
@@ -41,7 +32,7 @@ export async function initDB() {
         deleted INTEGER DEFAULT 0
       );
     `)
-    
+
     // Migration: Add deleted column if it doesn't exist
     try {
       await capacitorDb.execute(`
@@ -52,20 +43,20 @@ export async function initDB() {
     }
   } else {
     // Use sql.js for web
-    
+
     const SQL = await initSqlJs({
-      locateFile: file => `https://sql.js.org/dist/${file}`
+      locateFile: (file) => `https://sql.js.org/dist/${file}`
     })
-    
+
     // Try to load existing database from localStorage
     const savedDb = localStorage.getItem('sqljs_db')
     if (savedDb) {
-      const buf = Uint8Array.from(atob(savedDb), c => c.charCodeAt(0))
+      const buf = Uint8Array.from(atob(savedDb), (c) => c.charCodeAt(0))
       sqlJsDb = new SQL.Database(buf)
     } else {
       sqlJsDb = new SQL.Database()
     }
-    
+
     // Create table
     sqlJsDb.run(`
       CREATE TABLE IF NOT EXISTS todos (
@@ -76,7 +67,7 @@ export async function initDB() {
         deleted INTEGER DEFAULT 0
       );
     `)
-    
+
     // Migration: Add deleted column if it doesn't exist
     try {
       sqlJsDb.run(`
@@ -85,7 +76,7 @@ export async function initDB() {
     } catch (e) {
       // Column already exists, ignore error
     }
-    
+
     // Save to localStorage
     saveDatabase()
   }
@@ -100,7 +91,9 @@ function saveDatabase() {
   if (sqlJsDb) {
     const data = sqlJsDb.export()
     // Convert Uint8Array to base64 for browser
-    const binary = Array.from(data).map(byte => String.fromCharCode(byte)).join('')
+    const binary = Array.from(data)
+      .map((byte) => String.fromCharCode(byte))
+      .join('')
     localStorage.setItem('sqljs_db', btoa(binary))
   }
 }

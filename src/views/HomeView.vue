@@ -1,6 +1,6 @@
 <template>
-  <div class="min-h-screen bg-gray-50 py-8 px-4">
-    <div class="max-w-2xl mx-auto">
+  <div class="min-h-screen bg-gray-50 px-4 py-8">
+    <div class="mx-auto max-w-2xl">
       <Todos />
     </div>
   </div>
