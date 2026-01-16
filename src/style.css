@@ -4,11 +4,6 @@
   /* Tailwind 4 theme configuration */
 }
 
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
 
 body {
   font-family:
