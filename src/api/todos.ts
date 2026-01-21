@@ -2,6 +2,7 @@ interface Todo {
   id: number
   title: string
   done: number
+  updatedAt?: number
 }
 
 const API_URL = 'http://localhost:3001/todos'
@@ -11,15 +12,21 @@ const API_URL = 'http://localhost:3001/todos'
  */
 export async function fetchTodos(): Promise<Todo[]> {
   const response = await fetch(API_URL)
-  return response.json()
+  const todos = await response.json()
+  // Ensure updatedAt is present (convert to Unix timestamp in seconds if needed)
+  return todos.map((todo: any) => ({
+    ...todo,
+    updatedAt: todo.updatedAt ? Math.floor(todo.updatedAt / 1000) : Math.floor(Date.now() / 1000)
+  }))
 }
 
 /**
  * Creates a new todo via json-server API
  */
-export async function createTodo(title: string, id?: number): Promise<Todo> {
+export async function createTodo(title: string, id?: number, updatedAt?: number): Promise<Todo> {
   const body: any = { title, done: 0 }
   if (id) body.id = id // Låt API använda lokalt ID
+  if (updatedAt) body.updatedAt = updatedAt
   const response = await fetch(API_URL, {
     method: 'POST',
     headers: {
@@ -27,7 +34,11 @@ export async function createTodo(title: string, id?: number): Promise<Todo> {
     },
     body: JSON.stringify(body)
   })
-  return response.json()
+  const todo = await response.json()
+  return {
+    ...todo,
+    updatedAt: todo.updatedAt ? Math.floor(todo.updatedAt / 1000) : Math.floor(Date.now() / 1000)
+  }
 }
 
 /**
@@ -37,6 +48,8 @@ export async function deleteTodo(id: string | number): Promise<void> {
   const response = await fetch(`${API_URL}/${id}`, {
     method: 'DELETE'
   })
+
+  console.log('deleteTodo response', response)
   // json-server v1 sometimes returns 404 on delete, but it still works
   if (!response.ok && response.status !== 404) {
     throw new Error(`Delete failed: ${response.status}`)

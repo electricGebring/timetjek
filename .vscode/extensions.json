@@ -1,3 +1,6 @@
 {
-  "recommendations": ["Vue.volar", "Webnative.webnative"]
+  "recommendations": [
+    "Vue.volar",
+    "Webnative.webnative"
+  ]
 }

@@ -10,7 +10,16 @@ export async function getTodos() {
   if (Capacitor.isNativePlatform()) {
     const db = getDB()
     const res = await db.query('SELECT * FROM todos WHERE deleted = 0')
-    return res.values ?? []
+    if (!res.values) return []
+    return res.values.map((row: [number, string, number, number, number, number | undefined, number | undefined]) => ({
+      id: row[0],
+      title: row[1],
+      done: row[2],
+      synced: row[3],
+      deleted: row[4],
+      updatedAt: row[5] ?? Date.now(),
+      createdAt: row[6] ?? row[5] ?? Date.now() // Fallback to updatedAt if createdAt missing
+    }))
   } else {
     const { sqlJsDb } = getDB() as any
     const results = sqlJsDb.exec('SELECT * FROM todos WHERE deleted = 0')
@@ -22,7 +31,9 @@ export async function getTodos() {
       title: row[1],
       done: row[2],
       synced: row[3],
-      deleted: row[4]
+      deleted: row[4],
+      updatedAt: row[5] ?? Date.now(),
+      createdAt: row[6] ?? row[5] ?? Date.now() // Fallback to updatedAt if createdAt missing
     }))
   }
 }
@@ -34,12 +45,13 @@ export async function getTodos() {
  * @param title - The title of the new todo
  */
 export async function addTodo(title: string) {
+  const now = Math.floor(Date.now() / 1000) // Unix timestamp in seconds
   if (Capacitor.isNativePlatform()) {
     const db = getDB()
-    await db.run('INSERT INTO todos (title, done, synced, deleted) VALUES (?, ?, ?, ?)', [title, 0, 0, 0])
+    await db.run('INSERT INTO todos (title, done, synced, deleted, updatedAt, createdAt) VALUES (?, ?, ?, ?, ?, ?)', [title, 0, 0, 0, now, now])
   } else {
     const { sqlJsDb, saveDatabase } = getDB() as any
-    sqlJsDb.run('INSERT INTO todos (title, done, synced, deleted) VALUES (?, ?, ?, ?)', [title, 0, 0, 0])
+    sqlJsDb.run('INSERT INTO todos (title, done, synced, deleted, updatedAt, createdAt) VALUES (?, ?, ?, ?, ?, ?)', [title, 0, 0, 0, now, now])
     saveDatabase()
   }
 }
@@ -63,8 +75,45 @@ export async function getUnsyncedTodos() {
       title: row[1],
       done: row[2],
       synced: row[3],
-      deleted: row[4]
+      deleted: row[4],
+      updatedAt: row[5] ?? Date.now(),
+      createdAt: row[6] ?? row[5] ?? Date.now() // Fallback to updatedAt if createdAt missing
     }))
+  }
+}
+
+/**
+ * Gets a single todo by ID
+ */
+export async function getTodoById(id: number) {
+  if (Capacitor.isNativePlatform()) {
+    const db = getDB()
+    const res = await db.query('SELECT * FROM todos WHERE id = ?', [id])
+    if (!res.values || res.values.length === 0) return null
+    const row = res.values[0]
+    return {
+      id: row[0],
+      title: row[1],
+      done: row[2],
+      synced: row[3],
+      deleted: row[4],
+      updatedAt: row[5] ?? Date.now(),
+      createdAt: row[6] ?? row[5] ?? Date.now() // Fallback to updatedAt if createdAt missing
+    }
+  } else {
+    const { sqlJsDb } = getDB() as any
+    const results = sqlJsDb.exec('SELECT * FROM todos WHERE id = ?', [id])
+    if (results.length === 0 || results[0].values.length === 0) return null
+    const row = results[0].values[0]
+    return {
+      id: row[0],
+      title: row[1],
+      done: row[2],
+      synced: row[3],
+      deleted: row[4],
+      updatedAt: row[5] ?? Date.now(),
+      createdAt: row[6] ?? row[5] ?? Date.now() // Fallback to updatedAt if createdAt missing
+    }
   }
 }
 
@@ -72,12 +121,13 @@ export async function getUnsyncedTodos() {
  * Marks a todo as synced
  */
 export async function markAsSynced(id: number) {
+  const now = Math.floor(Date.now() / 1000) // Unix timestamp in seconds
   if (Capacitor.isNativePlatform()) {
     const db = getDB()
-    await db.run('UPDATE todos SET synced = 1 WHERE id = ?', [id])
+    await db.run('UPDATE todos SET synced = 1, updatedAt = ? WHERE id = ?', [now, id])
   } else {
     const { sqlJsDb, saveDatabase } = getDB() as any
-    sqlJsDb.run('UPDATE todos SET synced = 1 WHERE id = ?', [id])
+    sqlJsDb.run('UPDATE todos SET synced = 1, updatedAt = ? WHERE id = ?', [now, id])
     saveDatabase()
   }
 }
@@ -115,7 +165,9 @@ export async function getDeletedTodos() {
       title: row[1],
       done: row[2],
       synced: row[3],
-      deleted: row[4]
+      deleted: row[4],
+      updatedAt: row[5] ?? Date.now(),
+      createdAt: row[6] ?? row[5] ?? Date.now() // Fallback to updatedAt if createdAt missing
     }))
   }
 }
@@ -138,21 +190,44 @@ export async function permanentDelete(id: number) {
  * Upserts a todo from API (insert or update if exists)
  */
 export async function upsertTodo(todo: any) {
+  const updatedAt = todo.updatedAt ? Math.floor(todo.updatedAt / 1000) : Math.floor(Date.now() / 1000)
+  const createdAt = todo.createdAt ? Math.floor(todo.createdAt / 1000) : updatedAt // Use updatedAt as fallback
+  const synced = todo.synced !== undefined ? todo.synced : 1
+
   if (Capacitor.isNativePlatform()) {
     const db = getDB()
     // Check if exists
     const existing = await db.query('SELECT * FROM todos WHERE id = ?', [todo.id])
     if (existing.values && existing.values.length > 0) {
-      // Update existing (but keep synced status if unsynced)
-      await db.run('UPDATE todos SET title = ?, done = ? WHERE id = ? AND synced = 1', [todo.title, todo.done, todo.id])
+      // Update existing - respect synced flag if provided, otherwise update if already synced
+      // Don't update createdAt on existing records
+      if (todo.synced !== undefined) {
+        await db.run('UPDATE todos SET title = ?, done = ?, synced = ?, updatedAt = ? WHERE id = ?', [
+          todo.title,
+          todo.done,
+          synced,
+          updatedAt,
+          todo.id
+        ])
+      } else {
+        // Only update if already synced (preserve local unsynced changes)
+        await db.run('UPDATE todos SET title = ?, done = ?, updatedAt = ? WHERE id = ? AND synced = 1', [
+          todo.title,
+          todo.done,
+          updatedAt,
+          todo.id
+        ])
+      }
     } else {
       // Insert new with explicit ID
-      await db.run('INSERT INTO todos (id, title, done, synced, deleted) VALUES (?, ?, ?, ?, ?)', [
+      await db.run('INSERT INTO todos (id, title, done, synced, deleted, updatedAt, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?)', [
         todo.id,
         todo.title,
         todo.done,
-        1,
-        0
+        synced,
+        0,
+        updatedAt,
+        createdAt
       ])
     }
   } else {
@@ -160,16 +235,35 @@ export async function upsertTodo(todo: any) {
     // Check if exists
     const existing = sqlJsDb.exec('SELECT * FROM todos WHERE id = ?', [todo.id])
     if (existing.length > 0 && existing[0].values.length > 0) {
-      // Update existing (but only if synced)
-      sqlJsDb.run('UPDATE todos SET title = ?, done = ? WHERE id = ? AND synced = 1', [todo.title, todo.done, todo.id])
+      // Update existing - respect synced flag if provided
+      // Don't update createdAt on existing records
+      if (todo.synced !== undefined) {
+        sqlJsDb.run('UPDATE todos SET title = ?, done = ?, synced = ?, updatedAt = ? WHERE id = ?', [
+          todo.title,
+          todo.done,
+          synced,
+          updatedAt,
+          todo.id
+        ])
+      } else {
+        // Only update if already synced (preserve local unsynced changes)
+        sqlJsDb.run('UPDATE todos SET title = ?, done = ?, updatedAt = ? WHERE id = ? AND synced = 1', [
+          todo.title,
+          todo.done,
+          updatedAt,
+          todo.id
+        ])
+      }
     } else {
       // Insert new with explicit ID
-      sqlJsDb.run('INSERT INTO todos (id, title, done, synced, deleted) VALUES (?, ?, ?, ?, ?)', [
+      sqlJsDb.run('INSERT INTO todos (id, title, done, synced, deleted, updatedAt, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?)', [
         todo.id,
         todo.title,
         todo.done,
-        1,
-        0
+        synced,
+        0,
+        updatedAt,
+        createdAt
       ])
     }
     saveDatabase()

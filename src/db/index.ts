@@ -29,7 +29,8 @@ export async function initDB() {
         title TEXT NOT NULL,
         done INTEGER DEFAULT 0,
         synced INTEGER DEFAULT 0,
-        deleted INTEGER DEFAULT 0
+        deleted INTEGER DEFAULT 0,
+        updatedAt INTEGER DEFAULT (strftime('%s', 'now'))
       );
     `)
 
@@ -41,12 +42,71 @@ export async function initDB() {
     } catch (e) {
       // Column already exists, ignore error
     }
+
+    // Migration: Add updatedAt column if it doesn't exist
+    try {
+      await capacitorDb.execute(`
+        ALTER TABLE todos ADD COLUMN updatedAt INTEGER DEFAULT (strftime('%s', 'now'));
+      `)
+    } catch (e) {
+      // Column already exists, ignore error
+    }
+
+    // Migration: Add createdAt column if it doesn't exist
+    try {
+      await capacitorDb.execute(`
+        ALTER TABLE todos ADD COLUMN createdAt INTEGER DEFAULT (strftime('%s', 'now'));
+      `)
+    } catch (e) {
+      // Column already exists, ignore error
+    }
+
+    // Initialize sync metadata table
+    const { initSyncMetadataTable } = await import('./sync-metadata/repo')
+    await initSyncMetadataTable()
+
+    // Create indexes for performance
+    await capacitorDb.execute(`
+      CREATE INDEX IF NOT EXISTS idx_todos_synced ON todos(synced);
+      CREATE INDEX IF NOT EXISTS idx_todos_deleted ON todos(deleted);
+      CREATE INDEX IF NOT EXISTS idx_todos_updatedAt ON todos(updatedAt);
+      CREATE INDEX IF NOT EXISTS idx_todos_createdAt ON todos(createdAt);
+      CREATE INDEX IF NOT EXISTS idx_todos_synced_deleted ON todos(synced, deleted);
+    `)
   } else {
     // Use sql.js for web
-
-    const SQL = await initSqlJs({
-      locateFile: (file) => `https://sql.js.org/dist/${file}`
-    })
+    // Try to load WASM from public folder first (works offline)
+    // Falls back to CDN if public file doesn't exist
+    let SQL: any
+    try {
+      SQL = await initSqlJs({
+        locateFile: (file) => {
+          // First try public folder (works offline)
+          if (file.endsWith('.wasm')) {
+            return '/sqljs/sql-wasm.wasm'
+          }
+          return `https://sql.js.org/dist/${file}`
+        }
+      })
+    } catch (error: any) {
+      // If public file doesn't exist, try CDN
+      if (error.message?.includes('fetch') || error.message?.includes('WASM') || error.message?.includes('404')) {
+        console.warn('[DB] Public WASM not found, trying CDN...')
+        try {
+          SQL = await initSqlJs({
+            locateFile: (file) => `https://sql.js.org/dist/${file}`
+          })
+        } catch (cdnError) {
+          // If both fail, throw with helpful message
+          throw new Error(
+            'Failed to load sql.js WASM file. ' +
+            'For offline support, copy node_modules/sql.js/dist/sql-wasm.wasm to public/sqljs/sql-wasm.wasm'
+          )
+        }
+      } else {
+        throw error
+      }
+    }
 
     // Try to load existing database from localStorage
     const savedDb = localStorage.getItem('sqljs_db')
@@ -57,25 +117,64 @@ export async function initDB() {
       sqlJsDb = new SQL.Database()
     }
 
+    if (!sqlJsDb) {
+      throw new Error('Failed to initialize sql.js database')
+    }
+
+    // TypeScript: sqlJsDb is now guaranteed to be non-null
+    const db = sqlJsDb
+
     // Create table
-    sqlJsDb.run(`
+    db.run(`
       CREATE TABLE IF NOT EXISTS todos (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         title TEXT NOT NULL,
         done INTEGER DEFAULT 0,
         synced INTEGER DEFAULT 0,
-        deleted INTEGER DEFAULT 0
+        deleted INTEGER DEFAULT 0,
+        updatedAt INTEGER DEFAULT (CAST(strftime('%s', 'now') AS INTEGER))
       );
     `)
 
     // Migration: Add deleted column if it doesn't exist
     try {
-      sqlJsDb.run(`
+      db.run(`
         ALTER TABLE todos ADD COLUMN deleted INTEGER DEFAULT 0;
       `)
     } catch (e) {
       // Column already exists, ignore error
     }
+
+    // Migration: Add updatedAt column if it doesn't exist
+    try {
+      db.run(`
+        ALTER TABLE todos ADD COLUMN updatedAt INTEGER DEFAULT (CAST(strftime('%s', 'now') AS INTEGER));
+      `)
+    } catch (e) {
+      // Column already exists, ignore error
+    }
+
+    // Migration: Add createdAt column if it doesn't exist
+    try {
+      db.run(`
+        ALTER TABLE todos ADD COLUMN createdAt INTEGER DEFAULT (CAST(strftime('%s', 'now') AS INTEGER));
+      `)
+    } catch (e) {
+      // Column already exists, ignore error
+    }
+
+    // Initialize sync metadata table
+    const { initSyncMetadataTable } = await import('./sync-metadata/repo')
+    await initSyncMetadataTable()
+
+    // Create indexes for performance
+    db.run(`
+      CREATE INDEX IF NOT EXISTS idx_todos_synced ON todos(synced);
+      CREATE INDEX IF NOT EXISTS idx_todos_deleted ON todos(deleted);
+      CREATE INDEX IF NOT EXISTS idx_todos_updatedAt ON todos(updatedAt);
+      CREATE INDEX IF NOT EXISTS idx_todos_createdAt ON todos(createdAt);
+      CREATE INDEX IF NOT EXISTS idx_todos_synced_deleted ON todos(synced, deleted);
+    `)
 
     // Save to localStorage
     saveDatabase()
@@ -115,4 +214,50 @@ export function getDB() {
     }
     return { sqlJsDb, saveDatabase }
   }
+}
+
+/**
+ * Exposes database query helper to window for Chrome DevTools debugging.
+ * Only available in development/web platform.
+ * 
+ * Usage in Chrome Console:
+ *   window.dbQuery('SELECT * FROM todos')
+ *   window.dbQuery('SELECT * FROM sync_metadata')
+ *   window.dbQuery('SELECT COUNT(*) as count FROM todos WHERE synced = 0')
+ */
+if (typeof window !== 'undefined' && !Capacitor.isNativePlatform()) {
+  (window as any).dbQuery = (sql: string) => {
+    if (!sqlJsDb) {
+      console.error('Database not initialized. Make sure the app has loaded.')
+      return null
+    }
+    try {
+      const result = sqlJsDb.exec(sql)
+      if (result.length === 0) {
+        console.log('Query executed successfully (no results)')
+        return []
+      }
+      const [queryResult] = result
+      if (!queryResult) {
+        console.log('Query executed successfully (no results)')
+        return []
+      }
+      const columns = queryResult.columns
+      const rows = queryResult.values.map((row: any[]) => {
+        const obj: any = {}
+        columns.forEach((col: string, i: number) => {
+          obj[col] = row[i]
+        })
+        return obj
+      })
+      console.table(rows)
+      return rows
+    } catch (error) {
+      console.error('Database query error:', error)
+      throw error
+    }
+  }
+  
+  console.log('%c💾 Database Query Helper Available!', 'color: #4CAF50; font-weight: bold; font-size: 14px')
+  console.log('Use window.dbQuery("SELECT * FROM todos") in the console to query the database')
 }
