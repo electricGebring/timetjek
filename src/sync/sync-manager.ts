@@ -55,8 +55,12 @@ export class SyncManager {
    * Sync all tables that should be synced
    */
   async syncAll(reason: SyncReason): Promise<void> {
+    // Extra skydd: kör aldrig sync om offline (web)
+    if (typeof window !== 'undefined' && typeof navigator !== 'undefined' && navigator.onLine === false) {
+      this.logger.warn('[SyncManager] Avbryter sync: navigator.onLine är false (offline-läge)')
+      return
+    }
     const policies = getPoliciesForSync()
-    this.logger.log(`[SyncManager] Syncing ${policies.length} tables`)
 
     const results = await Promise.allSettled(
       policies.map(async (policy) => {
@@ -68,7 +72,7 @@ export class SyncManager {
 
         try {
           await engine.start(reason)
-          this.logger.log(`[SyncManager] Synced ${policy.tableName}`)
+          // this.logger.log(`[SyncManager] Synced ${policy.tableName}`)
         } catch (error) {
           this.logger.error(`[SyncManager] Failed to sync ${policy.tableName}:`, error)
           throw error

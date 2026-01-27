@@ -32,6 +32,14 @@ export const DATA_POLICIES: Record<string, DataRetentionPolicy> = {
     softDeleteOnly: true,
     autoSync: true,
   },
+  work_entries: {
+    tableName: 'work_entries',
+    syncMode: 'offline-first',
+    retentionDays: 30,
+    softDeleteOnly: true,
+    autoSync: true,
+  },
+  // staffRegister kan vara kvar om du vill använda den som alias, men det är work_entries som styr sync
   // Example: Online-only data (no local storage)
   // notifications: {
   //   tableName: 'notifications',

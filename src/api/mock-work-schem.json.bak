@@ -1,0 +1,139 @@
+{
+  "workScheme": [
+    {
+      "headerDate": "Mån 11 feb",
+      "headerTime": "12:09:23",
+      "dateRange": "01 Februari 2025 - Idag",
+      "company": "Köket Luu AB",
+      "workplace": "Brogatan 10",
+      "totalWorkTime": "102 tim 40 min",
+      "days": [
+        {
+          "date": "2025-02-11",
+          "dateLabel": "MÅNDAG, 11 FEBRUARI",
+          "entries": [
+            {
+              "id": 1,
+              "name": "Anna Svensson",
+              "type": "A",
+              "personalNumber": "19870312-1234",
+              "timeIn": "12:00:00",
+              "timeOut": null,
+              "break": null,
+              "workTime": "24 min",
+              "status": "På arbete",
+              "statusType": "working"
+            },
+            {
+              "id": 2,
+              "name": "Anna Svensson",
+              "type": "A",
+              "personalNumber": "19870312-1234",
+              "timeIn": "11:31:24",
+              "timeOut": "12:00:00",
+              "break": null,
+              "workTime": "29 min",
+              "status": null,
+              "statusType": "working"
+            },
+            {
+              "id": 3,
+              "name": "Anna Svensson",
+              "type": "A",
+              "personalNumber": "19870312-1234",
+              "timeIn": "09:58:03",
+              "timeOut": null,
+              "break": "11:00:00-11:30:00",
+              "workTime": "30 min",
+              "status": "Rast",
+              "statusType": "break"
+            },
+            {
+              "id": 4,
+              "name": "Anna Svensson",
+              "type": "P",
+              "personalNumber": "19870312-1234",
+              "timeIn": "10:00:00",
+              "timeOut": "11:07:00",
+              "break": null,
+              "workTime": "1 tim",
+              "status": null,
+              "statusType": "normal",
+              "updatedBy": "Jakob A...",
+              "updatedAt": "2025-09-25 15:22:11"
+            },
+            {
+              "id": 5,
+              "name": "Anna Svensson",
+              "type": "P",
+              "personalNumber": "19870312-1234",
+              "timeIn": "09:03:03",
+              "timeOut": "10:00:00",
+              "break": null,
+              "workTime": "1 tim",
+              "status": null,
+              "statusType": "normal",
+              "updatedBy": "Jakob A...",
+              "updatedAt": "2025-09-25 15:22:11"
+            }
+          ]
+        },
+        {
+          "date": "2025-02-10",
+          "dateLabel": "SÖNDAG, 10 FEBRUARI",
+          "entries": [
+            {
+              "id": 6,
+              "name": "Anna Svensson",
+              "type": "K",
+              "personalNumber": "19870312-1234",
+              "timeIn": "09:58:03",
+              "timeOut": null,
+              "break": null,
+              "workTime": null,
+              "status": "Glömt att stämpla ut",
+              "statusType": "error",
+              "hasError": true
+            },
+            {
+              "id": 7,
+              "name": "Anna Svensson",
+              "type": "V",
+              "personalNumber": "19870312-1234",
+              "timeIn": "09:58:03",
+              "timeOut": "09:58:03",
+              "break": "09:58:03-12:00:00",
+              "workTime": "6 tim 2 min 18 sek",
+              "status": null,
+              "statusType": "normal"
+            },
+            {
+              "id": 8,
+              "name": "Anna Svensson",
+              "type": "A",
+              "personalNumber": "19870312-1234",
+              "timeIn": "09:58:03",
+              "timeOut": "09:58:03",
+              "break": "09:58:03-12:00:00",
+              "workTime": "6 tim 2 min 18 sek",
+              "status": null,
+              "statusType": "normal"
+            },
+            {
+              "id": 9,
+              "name": "Anna Svensson",
+              "type": "A",
+              "personalNumber": "19870312-1234",
+              "timeIn": "09:58:03",
+              "timeOut": "09:58:03",
+              "break": "09:58:03-12:00:00",
+              "workTime": "6 tim 2 min 18 sek",
+              "status": null,
+              "statusType": "normal"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

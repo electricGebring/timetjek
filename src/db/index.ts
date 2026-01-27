@@ -1,7 +1,7 @@
 import { Capacitor } from '@capacitor/core'
 import { CapacitorSQLite, SQLiteConnection } from '@capacitor-community/sqlite'
 import initSqlJs, { type Database } from 'sql.js'
-
+//
 let sqlite: SQLiteConnection | null = null
 let capacitorDb: any = null
 let sqlJsDb: Database | null = null
@@ -12,76 +12,23 @@ let sqlJsDb: Database | null = null
  * and sql.js for web. Creates the todos table if it doesn't exist.
  */
 export async function initDB() {
+  const { initTodosDb } = await import('./todos/init')
+  const { initStaffRegisterDb } = await import('./staff-register/init')
   if (Capacitor.isNativePlatform()) {
-    // Use Capacitor SQLite for native platforms
-
     if (!sqlite) {
       sqlite = new SQLiteConnection(CapacitorSQLite)
     }
-
     capacitorDb = await sqlite.createConnection('appdb', false, 'no-encryption', 1, false)
-
     await capacitorDb.open()
-
-    await capacitorDb.execute(`
-      CREATE TABLE IF NOT EXISTS todos (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        title TEXT NOT NULL,
-        done INTEGER DEFAULT 0,
-        synced INTEGER DEFAULT 0,
-        deleted INTEGER DEFAULT 0,
-        updatedAt INTEGER DEFAULT (strftime('%s', 'now'))
-      );
-    `)
-
-    // Migration: Add deleted column if it doesn't exist
-    try {
-      await capacitorDb.execute(`
-        ALTER TABLE todos ADD COLUMN deleted INTEGER DEFAULT 0;
-      `)
-    } catch (e) {
-      // Column already exists, ignore error
-    }
-
-    // Migration: Add updatedAt column if it doesn't exist
-    try {
-      await capacitorDb.execute(`
-        ALTER TABLE todos ADD COLUMN updatedAt INTEGER DEFAULT (strftime('%s', 'now'));
-      `)
-    } catch (e) {
-      // Column already exists, ignore error
-    }
-
-    // Migration: Add createdAt column if it doesn't exist
-    try {
-      await capacitorDb.execute(`
-        ALTER TABLE todos ADD COLUMN createdAt INTEGER DEFAULT (strftime('%s', 'now'));
-      `)
-    } catch (e) {
-      // Column already exists, ignore error
-    }
-
-    // Initialize sync metadata table
+    await initTodosDb(capacitorDb, true)
+    await initStaffRegisterDb(capacitorDb, true)
     const { initSyncMetadataTable } = await import('./sync-metadata/repo')
     await initSyncMetadataTable()
-
-    // Create indexes for performance
-    await capacitorDb.execute(`
-      CREATE INDEX IF NOT EXISTS idx_todos_synced ON todos(synced);
-      CREATE INDEX IF NOT EXISTS idx_todos_deleted ON todos(deleted);
-      CREATE INDEX IF NOT EXISTS idx_todos_updatedAt ON todos(updatedAt);
-      CREATE INDEX IF NOT EXISTS idx_todos_createdAt ON todos(createdAt);
-      CREATE INDEX IF NOT EXISTS idx_todos_synced_deleted ON todos(synced, deleted);
-    `)
   } else {
-    // Use sql.js for web
-    // Try to load WASM from public folder first (works offline)
-    // Falls back to CDN if public file doesn't exist
     let SQL: any
     try {
       SQL = await initSqlJs({
         locateFile: (file) => {
-          // First try public folder (works offline)
           if (file.endsWith('.wasm')) {
             return '/sqljs/sql-wasm.wasm'
           }
@@ -89,7 +36,6 @@ export async function initDB() {
         }
       })
     } catch (error: any) {
-      // If public file doesn't exist, try CDN
       if (error.message?.includes('fetch') || error.message?.includes('WASM') || error.message?.includes('404')) {
         console.warn('[DB] Public WASM not found, trying CDN...')
         try {
@@ -97,7 +43,6 @@ export async function initDB() {
             locateFile: (file) => `https://sql.js.org/dist/${file}`
           })
         } catch (cdnError) {
-          // If both fail, throw with helpful message
           throw new Error(
             'Failed to load sql.js WASM file. ' +
             'For offline support, copy node_modules/sql.js/dist/sql-wasm.wasm to public/sqljs/sql-wasm.wasm'
@@ -107,8 +52,6 @@ export async function initDB() {
         throw error
       }
     }
-
-    // Try to load existing database from localStorage
     const savedDb = localStorage.getItem('sqljs_db')
     if (savedDb) {
       const buf = Uint8Array.from(atob(savedDb), (c) => c.charCodeAt(0))
@@ -116,67 +59,14 @@ export async function initDB() {
     } else {
       sqlJsDb = new SQL.Database()
     }
-
     if (!sqlJsDb) {
       throw new Error('Failed to initialize sql.js database')
     }
-
-    // TypeScript: sqlJsDb is now guaranteed to be non-null
     const db = sqlJsDb
-
-    // Create table
-    db.run(`
-      CREATE TABLE IF NOT EXISTS todos (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        title TEXT NOT NULL,
-        done INTEGER DEFAULT 0,
-        synced INTEGER DEFAULT 0,
-        deleted INTEGER DEFAULT 0,
-        updatedAt INTEGER DEFAULT (CAST(strftime('%s', 'now') AS INTEGER))
-      );
-    `)
-
-    // Migration: Add deleted column if it doesn't exist
-    try {
-      db.run(`
-        ALTER TABLE todos ADD COLUMN deleted INTEGER DEFAULT 0;
-      `)
-    } catch (e) {
-      // Column already exists, ignore error
-    }
-
-    // Migration: Add updatedAt column if it doesn't exist
-    try {
-      db.run(`
-        ALTER TABLE todos ADD COLUMN updatedAt INTEGER DEFAULT (CAST(strftime('%s', 'now') AS INTEGER));
-      `)
-    } catch (e) {
-      // Column already exists, ignore error
-    }
-
-    // Migration: Add createdAt column if it doesn't exist
-    try {
-      db.run(`
-        ALTER TABLE todos ADD COLUMN createdAt INTEGER DEFAULT (CAST(strftime('%s', 'now') AS INTEGER));
-      `)
-    } catch (e) {
-      // Column already exists, ignore error
-    }
-
-    // Initialize sync metadata table
+    await initTodosDb(db, false)
+    await initStaffRegisterDb(db, false)
     const { initSyncMetadataTable } = await import('./sync-metadata/repo')
     await initSyncMetadataTable()
-
-    // Create indexes for performance
-    db.run(`
-      CREATE INDEX IF NOT EXISTS idx_todos_synced ON todos(synced);
-      CREATE INDEX IF NOT EXISTS idx_todos_deleted ON todos(deleted);
-      CREATE INDEX IF NOT EXISTS idx_todos_updatedAt ON todos(updatedAt);
-      CREATE INDEX IF NOT EXISTS idx_todos_createdAt ON todos(createdAt);
-      CREATE INDEX IF NOT EXISTS idx_todos_synced_deleted ON todos(synced, deleted);
-    `)
-
-    // Save to localStorage
     saveDatabase()
   }
 }
@@ -234,12 +124,10 @@ if (typeof window !== 'undefined' && !Capacitor.isNativePlatform()) {
     try {
       const result = sqlJsDb.exec(sql)
       if (result.length === 0) {
-        console.log('Query executed successfully (no results)')
         return []
       }
       const [queryResult] = result
       if (!queryResult) {
-        console.log('Query executed successfully (no results)')
         return []
       }
       const columns = queryResult.columns
@@ -257,7 +145,4 @@ if (typeof window !== 'undefined' && !Capacitor.isNativePlatform()) {
       throw error
     }
   }
-  
-  console.log('%c💾 Database Query Helper Available!', 'color: #4CAF50; font-weight: bold; font-size: 14px')
-  console.log('Use window.dbQuery("SELECT * FROM todos") in the console to query the database')
 }

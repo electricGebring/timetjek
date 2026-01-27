@@ -38,12 +38,12 @@ export class SyncEngine implements SyncPort {
 
   async start(reason: SyncReason): Promise<void> {
     if (this.running) {
-      this.logger.log(`[SyncEngine] Already running, skipping start (${reason})`)
+      // this.logger.log(`[SyncEngine] Already running, skipping start (${reason})`)
       return
     }
     this.running = true
 
-    this.logger.log(`[SyncEngine] start (${reason}) for table: ${this.tableName}`)
+    // this.logger.log(`[SyncEngine] start (${reason}) for table: ${this.tableName}`)
 
     try {
       // Set sync state to syncing
@@ -60,7 +60,7 @@ export class SyncEngine implements SyncPort {
 
       // Mark sync as successful
       await syncMetadata.markSyncSuccess(this.tableName)
-      this.logger.log(`[SyncEngine] Sync completed successfully for ${this.tableName}`)
+      // this.logger.log(`[SyncEngine] Sync completed successfully for ${this.tableName}`)
     } catch (err: any) {
       this.logger.error(`[SyncEngine] Sync failed for ${this.tableName}`, err)
       // Mark sync as failed
@@ -73,7 +73,7 @@ export class SyncEngine implements SyncPort {
 
   async stop(): Promise<void> {
     if (!this.running) return
-    this.logger.log('[SyncEngine] stop')
+    // this.logger.log('[SyncEngine] stop')
     this.running = false
   }
 
@@ -85,11 +85,11 @@ export class SyncEngine implements SyncPort {
     const unsyncedItems = await this.adapter.getUnsynced()
 
     if (unsyncedItems.length === 0) {
-      this.logger.log(`[SyncEngine] No unsynced items to push for ${this.tableName}`)
+      // this.logger.log(`[SyncEngine] No unsynced items to push for ${this.tableName}`)
       return
     }
 
-    this.logger.log(`[SyncEngine] Draining ${unsyncedItems.length} unsynced items from ${this.tableName}`)
+    // this.logger.log(`[SyncEngine] Draining ${unsyncedItems.length} unsynced items from ${this.tableName}`)
 
     // Try batch operation first (if API supports it)
     if (unsyncedItems.length > 1) {
@@ -99,9 +99,9 @@ export class SyncEngine implements SyncPort {
           ...item,
           updatedAt: item.updatedAt ?? now,
         }))
-
+        
         const batchResult = await this.adapter.batchUpsert(itemsToBatch)
-        this.logger.log(`[SyncEngine] Batch pushed ${batchResult.length} items from ${this.tableName}`)
+        // this.logger.log(`[SyncEngine] Batch pushed ${batchResult.length} items from ${this.tableName}`)
 
         // Mark all as synced
         for (const item of unsyncedItems) {
@@ -131,7 +131,7 @@ export class SyncEngine implements SyncPort {
           }
         )
         await this.adapter.markAsSynced(item.id)
-        this.logger.log(`[SyncEngine] Pushed item from ${this.tableName}: id ${item.id}`)
+        // this.logger.log(`[SyncEngine] Pushed item from ${this.tableName}: id ${item.id}`)
       } catch (error) {
         // Only log error if it's not retryable (retryable errors are already logged by retryWithBackoff)
         if (!isRetryableError(error)) {
@@ -150,18 +150,18 @@ export class SyncEngine implements SyncPort {
     const deletedItems = await this.adapter.getDeleted()
 
     if (deletedItems.length === 0) {
-      this.logger.log(`[SyncEngine] No deleted items to sync for ${this.tableName}`)
+      // this.logger.log(`[SyncEngine] No deleted items to sync for ${this.tableName}`)
       return
     }
 
-    this.logger.log(`[SyncEngine] Draining ${deletedItems.length} deleted items from ${this.tableName}`)
+    // this.logger.log(`[SyncEngine] Draining ${deletedItems.length} deleted items from ${this.tableName}`)
 
     // Try batch operation first (if API supports it)
     if (deletedItems.length > 1) {
       try {
         const idsToDelete = deletedItems.map((item: { id: number }) => item.id)
         await this.adapter.batchDelete(idsToDelete)
-        this.logger.log(`[SyncEngine] Batch deleted ${idsToDelete.length} items from ${this.tableName}`)
+        // this.logger.log(`[SyncEngine] Batch deleted ${idsToDelete.length} items from ${this.tableName}`)
 
         // Permanently delete all after successful batch delete
         for (const item of deletedItems) {
@@ -182,12 +182,12 @@ export class SyncEngine implements SyncPort {
         await this.adapter.deleteItem(item.id)
         // Permanently delete after successful API delete
         //await this.adapter.permanentDelete(item.id)
-        this.logger.log(`[SyncEngine] Deleted item from API (${this.tableName}): ${item.id}`)
+        // this.logger.log(`[SyncEngine] Deleted item from API (${this.tableName}): ${item.id}`)
       } catch (error: any) {
         // If 404, the item doesn't exist in API - safe to delete locally
         if (error?.message?.includes('404') || error?.status === 404) {
           await this.adapter.permanentDelete(item.id)
-          this.logger.log(`[SyncEngine] Item ${item.id} from ${this.tableName} not found in API, deleted locally`)
+          // this.logger.log(`[SyncEngine] Item ${item.id} from ${this.tableName} not found in API, deleted locally`)
         } else {
           this.logger.error(`[SyncEngine] Failed to delete item from API (${this.tableName}): ${item.id}`, error)
           // Continue with other deletions even if one fails
@@ -202,7 +202,7 @@ export class SyncEngine implements SyncPort {
    * Uses conflict resolution to handle concurrent edits
    */
   private async pullRemoteChanges(): Promise<void> {
-    this.logger.log(`[SyncEngine] Pulling remote changes for ${this.tableName}`)
+    // this.logger.log(`[SyncEngine] Pulling remote changes for ${this.tableName}`)
 
     try {
       // Get last sync timestamp for incremental sync
@@ -215,7 +215,7 @@ export class SyncEngine implements SyncPort {
       if (since > 0) {
         // Try incremental sync with retry
         try {
-          this.logger.log(`[SyncEngine] Attempting incremental sync for ${this.tableName} since ${new Date(since * 1000).toISOString()}`)
+          // this.logger.log(`[SyncEngine] Attempting incremental sync for ${this.tableName} since ${new Date(since * 1000).toISOString()}`)
           apiItems = await retryWithBackoff(
             async () => this.adapter.fetchSince(since),
             {
@@ -224,7 +224,7 @@ export class SyncEngine implements SyncPort {
             }
           )
           isIncremental = true
-          this.logger.log(`[SyncEngine] Incremental sync successful for ${this.tableName}, fetched ${apiItems.length} changes`)
+          // this.logger.log(`[SyncEngine] Incremental sync successful for ${this.tableName}, fetched ${apiItems.length} changes`)
         } catch (error: any) {
           // If incremental sync fails (API might not support it), fall back to full sync
           this.logger.warn(`[SyncEngine] Incremental sync failed for ${this.tableName}, falling back to full sync`, error)
@@ -239,7 +239,7 @@ export class SyncEngine implements SyncPort {
         }
       } else {
         // First sync - do full sync
-        this.logger.log(`[SyncEngine] First sync for ${this.tableName} - performing full sync`)
+        // this.logger.log(`[SyncEngine] First sync for ${this.tableName} - performing full sync`)
         apiItems = await this.adapter.fetchAll()
         isIncremental = false
       }
@@ -251,16 +251,16 @@ export class SyncEngine implements SyncPort {
         const result = await this.adapter.mergeRemote(item, 'last-write-wins')
         if (result.conflictDetected) {
           conflictCount++
-          this.logger.log(`[SyncEngine] Resolved conflict for ${this.tableName} item ${item.id}`)
+          // this.logger.log(`[SyncEngine] Resolved conflict for ${this.tableName} item ${item.id}`)
         }
       }
 
       // Update store with merged data from DB
       await this.adapter.updateStore()
 
-      this.logger.log(
-        `[SyncEngine] Pulled ${apiItems.length} items from API for ${this.tableName}${isIncremental ? ' (incremental)' : ' (full)'}${conflictCount > 0 ? `, resolved ${conflictCount} conflicts` : ''}`
-      )
+      // this.logger.log(
+      //   `[SyncEngine] Pulled ${apiItems.length} items from API for ${this.tableName}${isIncremental ? ' (incremental)' : ' (full)'}${conflictCount > 0 ? ", resolved "+conflictCount+" conflicts" : ''}`
+      // )
     } catch (error) {
       this.logger.error(`[SyncEngine] Failed to pull remote changes for ${this.tableName}`, error)
       throw error // Re-throw to let start() handle it

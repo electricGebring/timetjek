@@ -49,7 +49,6 @@ export async function deleteTodo(id: string | number): Promise<void> {
     method: 'DELETE'
   })
 
-  console.log('deleteTodo response', response)
   // json-server v1 sometimes returns 404 on delete, but it still works
   if (!response.ok && response.status !== 404) {
     throw new Error(`Delete failed: ${response.status}`)

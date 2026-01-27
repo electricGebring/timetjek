@@ -1,0 +1,15 @@
+export const TODO_SCHEMA = `
+  CREATE TABLE IF NOT EXISTS todos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT NOT NULL,
+    done INTEGER DEFAULT 0,
+    synced INTEGER DEFAULT 0,
+    deleted INTEGER DEFAULT 0
+  );
+`
+
+export const TODO_MIGRATIONS = [
+  `ALTER TABLE todos ADD COLUMN deleted INTEGER DEFAULT 0;`,
+  `ALTER TABLE todos ADD COLUMN updatedAt INTEGER;`,
+  `ALTER TABLE todos ADD COLUMN createdAt INTEGER;`
+]

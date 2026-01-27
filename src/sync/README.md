@@ -170,6 +170,35 @@ await manager.syncAll('connectivity-online')
 await manager.syncTable('todos', 'manual')
 ```
 
+## Sync Layer Overview
+
+### Structure
+
+- `table-sync-adapter.ts`: Generic registry and interface for all sync adapters.
+- `todos/adapter.ts`: Table-specific adapter for todos.
+- `staff-register/adapter.ts`: Table-specific adapter for staff-register.
+- `sync-engine.ts`, `sync-manager.ts`: Generic sync logic for all tables.
+
+### How to add a new table/entity
+
+1. Create a new folder in `src/sync/` (e.g. `my-entity/`).
+2. Implement a `adapter.ts` file that exports `createMyEntityAdapter(): TableSyncAdapter`.
+3. In your bootstrap (main.ts), register the adapter:
+   ```typescript
+   import { registerTableAdapter } from '@/sync/table-sync-adapter'
+   import { createMyEntityAdapter } from '@/sync/my-entity/adapter'
+   registerTableAdapter('my-entity', createMyEntityAdapter)
+   ```
+4. Done! SyncManager will now handle your new table automatically.
+
+### Adapter interface
+
+Each adapter must implement all methods in `TableSyncAdapter`, even if some are placeholders.
+
+### Example
+
+See `todos/adapter.ts` for a complete example.
+
 ## Data Flow
 
 ### Write Path (User Action)

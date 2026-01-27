@@ -1,3 +1,4 @@
+// Import core Vue and app dependencies
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import './style.css'
@@ -6,29 +7,45 @@ import { initDB } from '@/db/index'
 import router from './router'
 import i18n from './i18n'
 
+// Import sync and connectivity dependencies
 import { CapacitorConnectivityAdapter } from './sync/capacitor-connectivity.adapter'
 import { OnlineOfflineCoordinator } from './domain/services/online-offline-coordinator'
 import { cleanupAllTables } from './domain/services/data-cleanup'
 import { SyncManager } from './sync/sync-manager'
 import type { SyncPort } from './domain/ports/sync.port'
 import { initSyncTrigger } from './domain/services/sync-trigger'
+import { FontAwesomeIcon } from './fontawesome/icons'
 
+// Import generic sync adapter registration and table adapters
+import { registerTableAdapter } from '@/sync/table-sync-adapter'
+import { createTodosAdapter } from '@/sync/todos/adapter'
+import { createStaffRegisterAdapter } from '@/sync/staff-register/adapter'
+
+// Main bootstrap function for app startup
 async function bootstrap() {
+  // Initialize database (tables, migrations, etc)
   await initDB()
 
+  // Register sync adapters for each entity/table
+  // This makes the sync layer generic and scalable
+  registerTableAdapter('todos', createTodosAdapter)
+  registerTableAdapter('work_entries', createStaffRegisterAdapter)
+
+  // Create and mount Vue app
   const app = createApp(App)
+  app.component('FontAwesomeIcon', FontAwesomeIcon)
   app.use(createPinia())
   app.use(router)
   app.use(i18n)
   app.mount('#app')
 
-  // --- Compose dependencies
+  // Setup connectivity and sync dependencies
   const connectivity = new CapacitorConnectivityAdapter()
 
-  // Create sync manager that will handle all tables based on data policies
+  // Create SyncManager to handle all registered tables
   const syncManager = new SyncManager({ logger: console })
 
-  // Create SyncPort adapter that uses SyncManager
+  // Create a SyncPort adapter that wraps SyncManager
   const syncAdapter: SyncPort = {
     async start(reason) {
       await syncManager.syncAll(reason)
@@ -41,18 +58,19 @@ async function bootstrap() {
     },
   }
 
+  // Setup online/offline coordinator for automatic sync
   const coordinator = new OnlineOfflineCoordinator({
     connectivity,
     sync: syncAdapter,
     logger: console,
     // Optional: Enable periodic sync for always-online apps
-    // Syncs every 30 seconds when online (for pulling remote changes)
     // syncIntervalMs: 30 * 1000, // Uncomment to enable
   })
 
   // Initialize sync trigger for immediate sync on mutations (optional)
-  // This enables immediate sync when online, but still works offline
+  // This enables instant sync when online, but still works offline
   initSyncTrigger(syncAdapter, connectivity)
+
 
   // Start coordinator after app is mounted
   await coordinator.start()
@@ -105,6 +123,7 @@ function scheduleDailyCleanup() {
   console.log(`[Bootstrap] Scheduled daily cleanup starting at ${tomorrow.toISOString()}`)
 }
 
+// Start the app bootstrap process
 bootstrap().catch((err) => {
   console.error('Bootstrap error:', err)
 })
