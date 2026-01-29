@@ -51,7 +51,7 @@ export async function createWorkEntry(entry: any) {
 }
 
 // Soft delete a work_entry (optional implementation)
-export async function deleteWorkEntry(id: number) {
+export async function deleteWorkEntry(_id: number) {
   // You can implement soft delete in the repo if needed
   // await staffRepo.deleteWorkEntry(id)
   // await triggerSyncIfOnline('mutation')

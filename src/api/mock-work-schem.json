@@ -27,7 +27,8 @@
               "updatedBy": "Jakob A...",
               "updatedAt": "2025-09-25 15:22:11",
               "synced": 0,
-              "deleted": 0
+              "deleted": 0,
+              "work_day_id": 1739232000000
             },
             {
               "id": 2,
@@ -44,7 +45,8 @@
               "updatedBy": "Jakob A...",
               "updatedAt": "2025-09-25 15:22:11",
               "synced": 0,
-              "deleted": 0
+              "deleted": 0,
+              "work_day_id": 1739232000000
             },
             {
               "id": 3,
@@ -61,7 +63,8 @@
               "updatedBy": "Jakob A...",
               "updatedAt": "2025-09-25 15:22:11",
               "synced": 0,
-              "deleted": 0
+              "deleted": 0,
+              "work_day_id": 1739232000000
             },
             {
               "id": 4,
@@ -78,7 +81,8 @@
               "updatedBy": "Jakob A...",
               "updatedAt": "2025-09-25 15:22:11",
               "synced": 0,
-              "deleted": 0
+              "deleted": 0,
+              "work_day_id": 1739232000000
             },
             {
               "id": 5,
@@ -95,7 +99,8 @@
               "updatedBy": "Jakob A...",
               "updatedAt": "2025-09-25 15:22:11",
               "synced": 0,
-              "deleted": 0
+              "deleted": 0,
+              "work_day_id": 1739232000000
             }
           ]
         }

@@ -1,0 +1,111 @@
+{
+  "workScheme": [
+    {
+      "headerDate": "Mån 11 feb",
+      "headerTime": "12:09:23",
+      "dateRange": "01 Februari 2025 - Idag",
+      "company": "Köket Luu AB",
+      "workplace": "Brogatan 10",
+      "totalWorkTime": "102 tim 40 min",
+      "days": [
+        {
+          "date": "2025-02-11",
+          "dateLabel": "MÅNDAG, 11 FEBRUARI",
+          "entries": [
+            {
+              "id": 1,
+              "createdAt": "2025-02-11T09:03:03Z",
+              "name": "Anna Svensson",
+              "type": "A",
+              "personalNumber": "19870312-1234",
+              "timeIn": "12:00:00",
+              "timeOut": null,
+              "break": null,
+              "workTime": "24 min",
+              "status": "På arbete",
+              "statusType": "working",
+              "updatedBy": "Jakob A...",
+              "updatedAt": "2025-09-25 15:22:11",
+              "synced": 0,
+              "deleted": 0,
+              "work_day_id": 1739232000000
+            },
+            {
+              "id": 2,
+              "createdAt": "2025-02-11T10:00:00Z",
+              "name": "Anna Svensson",
+              "type": "A",
+              "personalNumber": "19870312-1234",
+              "timeIn": "11:31:24",
+              "timeOut": "12:00:00",
+              "break": null,
+              "workTime": "29 min",
+              "status": null,
+              "statusType": "working",
+              "updatedBy": "Jakob A...",
+              "updatedAt": "2025-09-25 15:22:11",
+              "synced": 0,
+              "deleted": 0,
+              "work_day_id": 1739232000000
+            },
+            {
+              "id": 3,
+              "createdAt": "2025-02-11T11:31:24Z",
+              "name": "Anna Svensson",
+              "type": "A",
+              "personalNumber": "19870312-1234",
+              "timeIn": "09:58:03",
+              "timeOut": null,
+              "break": "11:00:00-11:30:00",
+              "workTime": "30 min",
+              "status": "Rast",
+              "statusType": "break",
+              "updatedBy": "Jakob A...",
+              "updatedAt": "2025-09-25 15:22:11",
+              "synced": 0,
+              "deleted": 0,
+              "work_day_id": 1739232000000
+            },
+            {
+              "id": 4,
+              "createdAt": "2025-02-11T12:00:00Z",
+              "name": "Anna Svensson",
+              "type": "P",
+              "personalNumber": "19870312-1234",
+              "timeIn": "10:00:00",
+              "timeOut": "11:07:00",
+              "break": null,
+              "workTime": "1 tim",
+              "status": null,
+              "statusType": "normal",
+              "updatedBy": "Jakob A...",
+              "updatedAt": "2025-09-25 15:22:11",
+              "synced": 0,
+              "deleted": 0,
+              "work_day_id": 1739232000000
+            },
+            {
+              "id": 5,
+              "createdAt": "2025-02-11T12:09:23Z",
+              "name": "Anna Svensson",
+              "type": "P",
+              "personalNumber": "19870312-1234",
+              "timeIn": "09:03:03",
+              "timeOut": "10:00:00",
+              "break": null,
+              "workTime": "1 tim",
+              "status": null,
+              "statusType": "normal",
+              "updatedBy": "Jakob A...",
+              "updatedAt": "2025-09-25 15:22:11",
+              "synced": 0,
+              "deleted": 0,
+              "work_day_id": 1739232000000
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
+

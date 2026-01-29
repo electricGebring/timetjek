@@ -6,6 +6,7 @@ import App from './App.vue'
 import { initDB } from '@/db/index'
 import router from './router'
 import i18n from './i18n'
+import { runMigrations } from '@/db/migrate'
 
 // Import sync and connectivity dependencies
 import { CapacitorConnectivityAdapter } from './sync/capacitor-connectivity.adapter'
@@ -25,6 +26,8 @@ import { createStaffRegisterAdapter } from '@/sync/staff-register/adapter'
 async function bootstrap() {
   // Initialize database (tables, migrations, etc)
   await initDB()
+  // Kör DB-migreringar efter att databasen är initierad
+  await runMigrations()
 
   // Register sync adapters for each entity/table
   // This makes the sync layer generic and scalable

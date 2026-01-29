@@ -8,9 +8,15 @@ import { runMigrations } from '../migrate'
 export async function initTodosDb(db: any, isNative: boolean) {
   if (isNative) {
     await db.execute(TODO_SCHEMA)
-    await runMigrations((sql) => db.execute(sql), TODO_MIGRATIONS)
+    for (const sql of TODO_MIGRATIONS) {
+      try { await db.execute(sql) } catch (e) { /* ignore if already exists */ }
+    }
+    await runMigrations()
   } else {
     db.run(TODO_SCHEMA)
-    await runMigrations((sql) => db.run(sql), TODO_MIGRATIONS)
+    for (const sql of TODO_MIGRATIONS) {
+      try { db.run(sql) } catch (e) { /* ignore if already exists */ }
+    }
+    await runMigrations()
   }
 }

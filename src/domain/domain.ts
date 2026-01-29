@@ -9,4 +9,3 @@
 
 // Re-export domain logic for todos and staff-register
 export * from './todos/domain'
-export * from './staff-register/domain'

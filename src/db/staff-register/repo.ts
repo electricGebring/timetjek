@@ -11,173 +11,82 @@ export async function permanentDeleteWorkEntry(id: number) {
 }
 import { getDB } from '../index'
 import { Capacitor } from '@capacitor/core'
+import type { WorkEntry } from './types'
+import type { Entry } from '@/views/staffRegister/types'
 
-// Get all work_entries (not deleted)
-export async function getWorkEntries() {
+// Kolumnnamn i rätt ordning för work_entries
+const workEntryColumns = [
+  'id',
+  'work_day_id',
+  'name',
+  'type',
+  'personalNumber',
+  'timeIn',
+  'timeOut',
+  'break',
+  'workTime',
+  'status',
+  'statusType',
+  'hasError',
+  'updatedBy',
+  'updatedAt',
+  'createdAt',
+  'synced',
+  'deleted'
+]
+
+// Mappar en rad-array till ett WorkEntry-objekt
+function mapRowToWorkEntry(row: any[]): WorkEntry {
+  return {
+    id: row[0],
+    work_day_id: row[1],
+    name: row[2],
+    type: row[3],
+    personalNumber: row[4],
+    timeIn: row[5],
+    timeOut: row[6],
+    break: row[7],
+    workTime: row[8],
+    status: row[9],
+    statusType: row[10],
+    hasError: row[11],
+    updatedBy: row[12],
+    updatedAt: row[13],
+    createdAt: row[14],
+    synced: row[15],
+    deleted: row[16]
+  }
+}
+
+// Central query-funktion för work_entries
+async function queryWorkEntries(where: string, params: any[] = []): Promise<WorkEntry[]> {
+  const columns = workEntryColumns.join(', ')
   if (Capacitor.isNativePlatform()) {
     const db = getDB()
-    const res = await db.query('SELECT * FROM work_entries WHERE deleted = 0')
-      if (!res.values) {
-        return []
-      }
-    return res.values.map((row: any[]) => ({
-      id: row[0],
-      work_day_id: row[1],
-      name: row[2],
-      type: row[3],
-      personalNumber: row[4],
-      timeIn: row[5],
-      timeOut: row[6],
-      break: row[7],
-      workTime: row[8],
-      status: row[9],
-      statusType: row[10],
-      hasError: row[11],
-      updatedBy: row[12],
-      updatedAt: row[13],
-      createdAt: row[14],
-      synced: row[15],
-      deleted: row[16]
-    }))
+    const res = await db.query(`SELECT ${columns} FROM work_entries ${where}`.trim(), params)
+    if (!res.values) return []
+    return res.values.map(mapRowToWorkEntry)
   } else {
     const { sqlJsDb } = getDB() as any
-    const results = sqlJsDb.exec('SELECT * FROM work_entries WHERE deleted = 0')
-      if (results.length === 0) {
-        return []
-      }
-    const [result] = results
-    return result.values.map((row: any[]) => ({
-      id: row[0],
-      work_day_id: row[1],
-      name: row[2],
-      type: row[3],
-      personalNumber: row[4],
-      timeIn: row[5],
-      timeOut: row[6],
-      break: row[7],
-      workTime: row[8],
-      status: row[9],
-      statusType: row[10],
-      hasError: row[11],
-      updatedBy: row[12],
-      updatedAt: row[13],
-      createdAt: row[14],
-      synced: row[15],
-      deleted: row[16]
-    }))
+    const results = sqlJsDb.exec(`SELECT ${columns} FROM work_entries ${where}`.trim(), params)
+    if (results.length === 0) return []
+    return results[0].values.map(mapRowToWorkEntry)
   }
+}
+
+// Get all work_entries (not deleted)
+export async function getWorkEntries(): Promise<WorkEntry[]> {
+  return queryWorkEntries('WHERE deleted = 0')
 }
 
 // Get unsynced work_entries
-export async function getUnsyncedWorkEntries() {
-  if (Capacitor.isNativePlatform()) {
-    const db = getDB()
-    const res = await db.query('SELECT * FROM work_entries WHERE synced = 0 AND deleted = 0')
-      if (!res.values) {
-        return []
-      }
-    return res.values.map((row: any[]) => ({
-      id: row[0],
-      work_day_id: row[1],
-      name: row[2],
-      type: row[3],
-      personalNumber: row[4],
-      timeIn: row[5],
-      timeOut: row[6],
-      break: row[7],
-      workTime: row[8],
-      status: row[9],
-      statusType: row[10],
-      hasError: row[11],
-      updatedBy: row[12],
-      updatedAt: row[13],
-      createdAt: row[14],
-      synced: row[15],
-      deleted: row[16]
-    }))
-  } else {
-    const { sqlJsDb } = getDB() as any
-    const results = sqlJsDb.exec('SELECT * FROM work_entries WHERE synced = 0 AND deleted = 0')
-      if (results.length === 0) {
-        return []
-      }
-    const rows = results[0].values
-    return rows.map((row: any[]) => ({
-      id: row[0],
-      work_day_id: row[1],
-      name: row[2],
-      type: row[3],
-      personalNumber: row[4],
-      timeIn: row[5],
-      timeOut: row[6],
-      break: row[7],
-      workTime: row[8],
-      status: row[9],
-      statusType: row[10],
-      hasError: row[11],
-      updatedBy: row[12],
-      updatedAt: row[13],
-      createdAt: row[14],
-      synced: row[15],
-      deleted: row[16]
-    }))
-  }
+export async function getUnsyncedWorkEntries(): Promise<WorkEntry[]> {
+  return queryWorkEntries('WHERE synced = 0 AND deleted = 0')
 }
 
 // Get deleted work_entries that are not yet synced
-export async function getDeletedWorkEntries() {
-  if (Capacitor.isNativePlatform()) {
-    const db = getDB()
-    const res = await db.query('SELECT * FROM work_entries WHERE deleted = 1 AND synced = 0')
-      if (!res.values) {
-        return []
-      }
-    return res.values.map((row: any[]) => ({
-      id: row[0],
-      work_day_id: row[1],
-      name: row[2],
-      type: row[3],
-      personalNumber: row[4],
-      timeIn: row[5],
-      timeOut: row[6],
-      break: row[7],
-      workTime: row[8],
-      status: row[9],
-      statusType: row[10],
-      hasError: row[11],
-      updatedBy: row[12],
-      updatedAt: row[13],
-      createdAt: row[14],
-      synced: row[15],
-      deleted: row[16]
-    }))
-  } else {
-    const { sqlJsDb } = getDB() as any
-    const results = sqlJsDb.exec('SELECT * FROM work_entries WHERE deleted = 1 AND synced = 0')
-      if (results.length === 0) {
-        return []
-      }
-    const rows = results[0].values
-    return rows.map((row: any[]) => ({
-      id: row[0],
-      work_day_id: row[1],
-      name: row[2],
-      type: row[3],
-      personalNumber: row[4],
-      timeIn: row[5],
-      timeOut: row[6],
-      break: row[7],
-      workTime: row[8],
-      status: row[9],
-      statusType: row[10],
-      hasError: row[11],
-      updatedBy: row[12],
-      updatedAt: row[13],
-      createdAt: row[14],
-      synced: row[15],
-      deleted: row[16]
-    }))
-  }
+export async function getDeletedWorkEntries(): Promise<WorkEntry[]> {
+  return queryWorkEntries('WHERE deleted = 1 AND synced = 0')
 }
 
 // Upsert (insert/update) for work_entries
@@ -261,5 +170,24 @@ export async function upsertWorkEntry(entry: any) {
       // safeEntry.id = res?.[0]?.values?.[0]?.[0]
     }
     saveDatabase()
+  }
+}
+
+export function workEntryToEntry(w: WorkEntry): Entry {
+  return {
+    id: w.id ?? 0,
+    name: w.name != null ? String(w.name) : '',
+    type: w.type != null ? String(w.type) : '',
+    personalNumber: w.personalNumber != null ? String(w.personalNumber) : '',
+    timeIn: w.timeIn != null ? String(w.timeIn) : '',
+    timeOut: w.timeOut != null ? String(w.timeOut) : null,
+    break: w.break != null ? String(w.break) : null,
+    workTime: w.workTime != null ? String(w.workTime) : null,
+    status: w.status != null ? String(w.status) : null,
+    statusType: w.statusType != null ? String(w.statusType) : '',
+    hasError: !!w.hasError,
+    updatedBy: w.updatedBy != null ? String(w.updatedBy) : undefined,
+    updatedAt: w.updatedAt != null ? String(w.updatedAt) : undefined,
+    work_day_id: w.work_day_id ?? undefined,
   }
 }

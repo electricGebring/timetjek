@@ -1,41 +1,54 @@
 import { getDB } from '../index'
 import { Capacitor } from '@capacitor/core'
+import type { Todo } from './types'
+
+// Kolumnnamn i rätt ordning för todos
+const todoColumns = [
+  'id',
+  'title',
+  'done',
+  'synced',
+  'deleted',
+  'updatedAt',
+  'createdAt'
+]
+
+// Mappar en rad-array till ett Todo-objekt
+function mapRowToTodo(row: any[]): Todo {
+  return {
+    id: row[0],
+    title: row[1],
+    done: row[2],
+    synced: row[3],
+    deleted: row[4],
+    updatedAt: row[5],
+    createdAt: row[6]
+  }
+}
+
+// Central query-funktion för todos
+async function queryTodos(where: string, params: any[] = []): Promise<Todo[]> {
+  const columns = todoColumns.join(', ')
+  if (Capacitor.isNativePlatform()) {
+    const db = getDB()
+    const res = await db.query(`SELECT ${columns} FROM todos ${where}`.trim(), params)
+    if (!res.values) return []
+    return res.values.map(mapRowToTodo)
+  } else {
+    const { sqlJsDb } = getDB() as any
+    const results = sqlJsDb.exec(`SELECT ${columns} FROM todos ${where}`.trim(), params)
+    if (results.length === 0) return []
+    return results[0].values.map(mapRowToTodo)
+  }
+}
 
 /**
  * Fetches all todos from the database.
  * Handles both native (Capacitor SQLite) and web (sql.js) platforms.
  * @returns Array of todo objects containing id, title and done
  */
-export async function getTodos() {
-  if (Capacitor.isNativePlatform()) {
-    const db = getDB()
-    const res = await db.query('SELECT * FROM todos WHERE deleted = 0')
-    if (!res.values) return []
-    return res.values.map((row: [number, string, number, number, number, number | undefined, number | undefined]) => ({
-      id: row[0],
-      title: row[1],
-      done: row[2],
-      synced: row[3],
-      deleted: row[4],
-      updatedAt: row[5] ?? Date.now(),
-      createdAt: row[6] ?? row[5] ?? Date.now() // Fallback to updatedAt if createdAt missing
-    }))
-  } else {
-    const { sqlJsDb } = getDB() as any
-    const results = sqlJsDb.exec('SELECT * FROM todos WHERE deleted = 0')
-    if (results.length === 0) return []
-
-    const [result] = results
-    return result.values.map((row: any[]) => ({
-      id: row[0],
-      title: row[1],
-      done: row[2],
-      synced: row[3],
-      deleted: row[4],
-      updatedAt: row[5] ?? Date.now(),
-      createdAt: row[6] ?? row[5] ?? Date.now() // Fallback to updatedAt if createdAt missing
-    }))
-  }
+export async function getTodos(): Promise<Todo[]> {
+  return queryTodos('WHERE deleted = 0')
 }
 
 /**
@@ -59,62 +72,16 @@ export async function addTodo(title: string) {
 /**
  * Gets unsynced todos (synced = 0)
  */
-export async function getUnsyncedTodos() {
-  if (Capacitor.isNativePlatform()) {
-    const db = getDB()
-    const res = await db.query('SELECT * FROM todos WHERE synced = 0 AND deleted = 0')
-    return res.values ?? []
-  } else {
-    const { sqlJsDb } = getDB() as any
-    const results = sqlJsDb.exec('SELECT * FROM todos WHERE synced = 0 AND deleted = 0')
-    if (results.length === 0) return []
-
-    const [result] = results
-    return result.values.map((row: any[]) => ({
-      id: row[0],
-      title: row[1],
-      done: row[2],
-      synced: row[3],
-      deleted: row[4],
-      updatedAt: row[5] ?? Date.now(),
-      createdAt: row[6] ?? row[5] ?? Date.now() // Fallback to updatedAt if createdAt missing
-    }))
-  }
+export async function getUnsyncedTodos(): Promise<Todo[]> {
+  return queryTodos('WHERE synced = 0 AND deleted = 0')
 }
 
 /**
  * Gets a single todo by ID
  */
-export async function getTodoById(id: number) {
-  if (Capacitor.isNativePlatform()) {
-    const db = getDB()
-    const res = await db.query('SELECT * FROM todos WHERE id = ?', [id])
-    if (!res.values || res.values.length === 0) return null
-    const row = res.values[0]
-    return {
-      id: row[0],
-      title: row[1],
-      done: row[2],
-      synced: row[3],
-      deleted: row[4],
-      updatedAt: row[5] ?? Date.now(),
-      createdAt: row[6] ?? row[5] ?? Date.now() // Fallback to updatedAt if createdAt missing
-    }
-  } else {
-    const { sqlJsDb } = getDB() as any
-    const results = sqlJsDb.exec('SELECT * FROM todos WHERE id = ?', [id])
-    if (results.length === 0 || results[0].values.length === 0) return null
-    const row = results[0].values[0]
-    return {
-      id: row[0],
-      title: row[1],
-      done: row[2],
-      synced: row[3],
-      deleted: row[4],
-      updatedAt: row[5] ?? Date.now(),
-      createdAt: row[6] ?? row[5] ?? Date.now() // Fallback to updatedAt if createdAt missing
-    }
-  }
+export async function getTodoById(id: number): Promise<Todo | null> {
+  const todos = await queryTodos('WHERE id = ?', [id])
+  return todos[0] ?? null
 }
 
 /**
@@ -149,27 +116,8 @@ export async function deleteTodo(id: number) {
 /**
  * Gets deleted but not yet synced todos
  */
-export async function getDeletedTodos() {
-  if (Capacitor.isNativePlatform()) {
-    const db = getDB()
-    const res = await db.query('SELECT * FROM todos WHERE deleted = 1 AND synced = 0')
-    return res.values ?? []
-  } else {
-    const { sqlJsDb } = getDB() as any
-    const results = sqlJsDb.exec('SELECT * FROM todos WHERE deleted = 1 AND synced = 0')
-    if (results.length === 0) return []
-
-    const [result] = results
-    return result.values.map((row: any[]) => ({
-      id: row[0],
-      title: row[1],
-      done: row[2],
-      synced: row[3],
-      deleted: row[4],
-      updatedAt: row[5] ?? Date.now(),
-      createdAt: row[6] ?? row[5] ?? Date.now() // Fallback to updatedAt if createdAt missing
-    }))
-  }
+export async function getDeletedTodos(): Promise<Todo[]> {
+  return queryTodos('WHERE deleted = 1 AND synced = 0')
 }
 
 /**

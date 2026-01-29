@@ -1,3 +1,4 @@
+import type { ConflictResolutionStrategy } from '@/sync/conflict-resolver'
 /**
  * Table sync adapter - provides table-specific dependencies for SyncEngine
  * This allows SyncEngine to work with different tables
@@ -15,7 +16,7 @@ export type TableSyncAdapter = {
   deleteItem: (id: number) => Promise<void>
   fetchAll: () => Promise<any[]>
   fetchSince: (timestamp: number) => Promise<any[]>
-  mergeRemote: (remoteItem: any, strategy?: string) => Promise<{ resolved: any; conflictDetected: boolean }>
+  mergeRemote: (remoteItem: any, strategy?: ConflictResolutionStrategy) => Promise<{ resolved: any; conflictDetected: boolean }>
   updateStore: () => Promise<void>
 }
 

@@ -1,4 +1,23 @@
 <script setup lang="ts">
+function formatUpdatedAt(updatedAt: string | number | null | undefined): string {
+  if (!updatedAt) return '';
+  let date: Date;
+  if (typeof updatedAt === 'string') {
+    // If string is a number (possibly with decimal), treat as timestamp
+    if (/^\d+(\.\d+)?$/.test(updatedAt)) {
+      date = new Date(parseFloat(updatedAt));
+    } else {
+      date = new Date(updatedAt);
+    }
+  } else if (typeof updatedAt === 'number') {
+    date = new Date(updatedAt);
+  } else {
+    return '';
+  }
+  // Format as YYYY-MM-DD HH:mm:ss
+  const pad = (n: number) => n.toString().padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+}
 import { ref, onMounted } from 'vue'
 import HeaderBar from '@/components/HeaderBar.vue'
 // import { fetchWorkSchemeData } from '@/api/workscheme'
@@ -56,8 +75,6 @@ const getTypeColor = (type: string) => {
   return colors[type] || 'bg-gray-50 text-gray-700'
 }
 
-const currentPage = ref(1)
-const totalPages = ref(10)
 </script>
 
 <template>
@@ -192,7 +209,7 @@ const totalPages = ref(10)
                   <div v-else-if="entry.status" :class="getStatusColor(entry.statusType)">
                     <div class="font-semibold">{{ entry.status }}</div>
                     <div v-if="entry.updatedBy" class="text-xs text-gray-500">
-                      av {{ entry.updatedBy }} {{ entry.updatedAt }}
+                      av {{ entry.updatedBy }} {{ formatUpdatedAt(entry.updatedAt) }}
                     </div>
                   </div>
                 </td>

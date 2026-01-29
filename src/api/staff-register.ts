@@ -9,11 +9,9 @@ export async function fetchStaffRegisterEntries(): Promise<Entry[]> {
   const response = await fetch(API_URL)
   const data = await response.json()
   if (!data[0]?.days) return []
-  const flat = data[0].days.flatMap((day: any) =>
+  return data[0].days.flatMap((day: any) =>
     day.entries.map((entry: any) => ({
-      ...entry,
-      work_day_id: day.date
+      ...entry
     }))
-  )
-  return flat
+  );
 }

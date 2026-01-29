@@ -1,4 +1,4 @@
-import { STAFF_REGISTER_SCHEMA, STAFF_REGISTER_MIGRATIONS } from './schema'
+import { STAFF_REGISTER_SCHEMA } from './schema'
 import { runMigrations } from '../migrate'
 
 /**
@@ -8,9 +8,9 @@ import { runMigrations } from '../migrate'
 export async function initStaffRegisterDb(db: any, isNative: boolean) {
   if (isNative) {
     await db.execute(STAFF_REGISTER_SCHEMA)
-    await runMigrations((sql) => db.execute(sql), STAFF_REGISTER_MIGRATIONS)
+    await runMigrations()
   } else {
     db.run(STAFF_REGISTER_SCHEMA)
-    await runMigrations((sql) => db.run(sql), STAFF_REGISTER_MIGRATIONS)
+    await runMigrations()
   }
 }

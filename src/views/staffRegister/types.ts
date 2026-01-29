@@ -12,6 +12,7 @@ export interface Entry {
   hasError?: boolean
   updatedBy?: string
   updatedAt?: string
+  work_day_id?: number
 }
 
 interface Day {

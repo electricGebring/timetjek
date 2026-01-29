@@ -38,7 +38,7 @@ export class SyncEngine implements SyncPort {
 
   async start(reason: SyncReason): Promise<void> {
     if (this.running) {
-      // this.logger.log(`[SyncEngine] Already running, skipping start (${reason})`)
+      this.logger.log(`[SyncEngine] Already running, skipping start (${reason})`)
       return
     }
     this.running = true
@@ -101,6 +101,7 @@ export class SyncEngine implements SyncPort {
         }))
         
         const batchResult = await this.adapter.batchUpsert(itemsToBatch)
+        this.logger.log(`[SyncEngine] Batch pushed ${batchResult.length} items from ${this.tableName}`)
         // this.logger.log(`[SyncEngine] Batch pushed ${batchResult.length} items from ${this.tableName}`)
 
         // Mark all as synced
@@ -258,9 +259,9 @@ export class SyncEngine implements SyncPort {
       // Update store with merged data from DB
       await this.adapter.updateStore()
 
-      // this.logger.log(
-      //   `[SyncEngine] Pulled ${apiItems.length} items from API for ${this.tableName}${isIncremental ? ' (incremental)' : ' (full)'}${conflictCount > 0 ? ", resolved "+conflictCount+" conflicts" : ''}`
-      // )
+      this.logger.log(
+        `[SyncEngine] Pulled ${apiItems.length} items from API for ${this.tableName}${isIncremental ? ' (incremental)' : ' (full)'}${conflictCount > 0 ? ", resolved "+conflictCount+" conflicts" : ''}`
+      )
     } catch (error) {
       this.logger.error(`[SyncEngine] Failed to pull remote changes for ${this.tableName}`, error)
       throw error // Re-throw to let start() handle it

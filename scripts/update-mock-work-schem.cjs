@@ -78,7 +78,8 @@ function updateData() {
     statusType: "break",
     synced: 0,
     deleted: 0,
-    createdAt: newCreatedAt
+    createdAt: newCreatedAt,
+    work_day_id: 1739232000000
   };
   day.entries.unshift(newEntry);
   console.log('Inserted new entry with id', newEntry.id, 'for date 2025-02-11');

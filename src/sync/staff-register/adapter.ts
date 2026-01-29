@@ -3,18 +3,22 @@ import type { TableSyncAdapter } from '../table-sync-adapter'
 import * as repo from '@/db/staff-register/repo'
 import { fetchStaffRegisterEntries } from '@/api/staff-register'
 import type { Entry } from '@/views/staffRegister/types'
+import type { ConflictResolutionStrategy } from '@/sync/conflict-resolver'
+
 
 export function createStaffRegisterAdapter(): TableSyncAdapter {
   return {
     tableName: 'work_entries',
-    getUnsynced: async (): Promise<Entry[]> => repo.getUnsyncedWorkEntries(),
-    getDeleted: async (): Promise<Entry[]> => repo.getDeletedWorkEntries(),
+    getUnsynced: async (): Promise<Entry[]> =>
+      (await repo.getUnsyncedWorkEntries()).filter((e) => e.id !== null).map(repo.workEntryToEntry),
+    getDeleted: async (): Promise<Entry[]> =>
+      (await repo.getDeletedWorkEntries()).filter((e) => e.id !== null).map(repo.workEntryToEntry),
     markAsSynced: async (id: number): Promise<void> => {
-      const entries = await repo.getWorkEntries();
-      const entry = entries.find((e: Entry) => e.id === id);
-      if (!entry) return;
-      entry.synced = 1;
-      await repo.upsertWorkEntry(entry);
+      const entries = await repo.getWorkEntries()
+      const entry = entries.find((e) => e.id === id)
+      if (!entry) return
+      entry.synced = 1
+      await repo.upsertWorkEntry(entry)
     },
     permanentDelete: async (id: number): Promise<void> => {
       await repo.permanentDeleteWorkEntry(id)
@@ -57,7 +61,6 @@ export function createStaffRegisterAdapter(): TableSyncAdapter {
         console.warn('[StaffRegisterAdapter] createItem blocked: offline mode')
         return item
       }
-      if (!item.id) delete item.id;
       await repo.upsertWorkEntry(item)
       return item
     },
@@ -66,26 +69,36 @@ export function createStaffRegisterAdapter(): TableSyncAdapter {
     },
     fetchAll: async (): Promise<Entry[]> => fetchStaffRegisterEntries(),
     fetchSince: async (): Promise<Entry[]> => fetchStaffRegisterEntries(),
-    mergeRemote: async (remoteItem: Entry, strategy = 'last-write-wins'): Promise<{ resolved: Entry, conflictDetected: boolean }> => {
+    mergeRemote: async (
+      remoteItem: Entry,
+      strategy: ConflictResolutionStrategy = 'last-write-wins'
+    ): Promise<{ resolved: Entry; conflictDetected: boolean }> => {
       // Förbättrade loggar för att snabbt se deleted-status
       if (!remoteItem.id) {
-        return { resolved: remoteItem, conflictDetected: true };
+        return { resolved: remoteItem, conflictDetected: true }
       }
-      const local = (await repo.getWorkEntries()).find(e => e.id === remoteItem.id)
+      const local = (await repo.getWorkEntries()).find((e) => e.id === remoteItem.id)
       // [SYNC][mergeRemote] log borttagen
       if (!local) {
         await repo.upsertWorkEntry(remoteItem)
         return { resolved: remoteItem, conflictDetected: false }
       }
       const { defaultConflictResolver } = await import('@/sync/conflict-resolver')
-      const result = defaultConflictResolver.resolve(local, remoteItem, strategy)
+
+      const toResolverFormat = (entry: any) => ({
+        ...entry,
+        updatedAt: entry.updatedAt ? Date.parse(entry.updatedAt) : undefined
+      })
+      //const result = defaultConflictResolver.resolve(local, remoteItem, strategy)
+      const result = defaultConflictResolver.resolve(toResolverFormat(local), toResolverFormat(remoteItem), strategy)
+
       // [SYNC][mergeRemote][RESOLVED] log borttagen
       await repo.upsertWorkEntry(result.resolved)
       return { resolved: result.resolved, conflictDetected: result.conflictDetected }
     },
     updateStore: async (): Promise<void> => {
-      const domain = await import('@/domain/staff-register/domain');
-      await domain.updateStoreFromDb();
-    },
+      const domain = await import('@/domain/staff-register/domain')
+      await domain.updateStoreFromDb()
+    }
   }
 }
