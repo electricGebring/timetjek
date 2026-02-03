@@ -6,6 +6,14 @@ import type { Entry } from '@/views/staffRegister/types'
 import type { ConflictResolutionStrategy } from '@/sync/conflict-resolver'
 
 export function createStaffRegisterAdapter(): TableSyncAdapter {
+  const safeFetchEntries = async (api: typeof import('@/api/staff-register')) => {
+    try {
+      return await api.fetchStaffRegisterEntries()
+    } catch (_error) {
+      return null
+    }
+  }
+
   return {
     tableName: 'work_entries',
     getUnsynced: async (): Promise<Entry[]> => {
@@ -33,7 +41,8 @@ export function createStaffRegisterAdapter(): TableSyncAdapter {
       }
 
       const api = await import('@/api/staff-register')
-      const allEntries = await api.fetchStaffRegisterEntries()
+      const allEntries = await safeFetchEntries(api)
+      if (!allEntries) return []
       const results = []
 
       for (const item of items) {
@@ -75,7 +84,8 @@ export function createStaffRegisterAdapter(): TableSyncAdapter {
       const api = await import('@/api/staff-register')
 
       // If item already has an ID from API (> 7), update instead
-      const allEntries = await api.fetchStaffRegisterEntries()
+      const allEntries = await safeFetchEntries(api)
+      if (!allEntries) return item
       const existsInApi = allEntries.some((e) => e.id === item.id)
 
       let resultItem: Entry
@@ -92,8 +102,20 @@ export function createStaffRegisterAdapter(): TableSyncAdapter {
     deleteItem: async (id: number): Promise<void> => {
       await repo.permanentDeleteWorkEntry(id)
     },
-    fetchAll: async (): Promise<Entry[]> => fetchStaffRegisterEntries(),
-    fetchSince: async (): Promise<Entry[]> => fetchStaffRegisterEntries(),
+    fetchAll: async (): Promise<Entry[]> => {
+      try {
+        return await fetchStaffRegisterEntries()
+      } catch (_error) {
+        return []
+      }
+    },
+    fetchSince: async (): Promise<Entry[]> => {
+      try {
+        return await fetchStaffRegisterEntries()
+      } catch (_error) {
+        return []
+      }
+    },
     mergeRemote: async (
       remoteItem: Entry,
       strategy: ConflictResolutionStrategy = 'last-write-wins'
