@@ -8,4 +8,5 @@
  */
 
 // Re-export domain logic for todos and staff-register
-export * from './todos/domain'
+export { updateStoreFromDb as updateTodosStoreFromDb, getAll, create, deleteTodo, mergeRemoteTodo } from './todos/domain'
+export { updateStoreFromDb as updateStaffRegisterStoreFromDb, getAllWorkEntries, canCheckIn, canCheckOut, createWorkEntry, deleteWorkEntry, getUnsyncedWorkEntries, getDeletedWorkEntries, upsertWorkEntryFromApi, getWorkSchemeGrouped } from './staff-register/domain'

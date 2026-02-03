@@ -1,4 +1,4 @@
-// Typdefinition för en todo-rad i databasen
+// Type definition for a todo row in database
 export interface Todo {
   id: number
   title: string

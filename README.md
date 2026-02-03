@@ -13,6 +13,117 @@ Project for Timetjek in collaboration with DevelopersShore https://drive.google.
 - **Tailwind CSS v4** - Utility-first CSS framework
 - **Pinia** - State management for Vue
 
+## Architecture & Sync System
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         USER INTERACTION                                     │
+│  StaffRegister.vue: @click="handleCheckOut"                                 │
+└──────────────────────────┬──────────────────────────────────────────────────┘
+                           │
+                           ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         STORE (Pinia)                                        │
+│  src/stores/staff-register/store.ts                                         │
+│  ────────────────────────────────────────────────────────────────────────   │
+│  updateWorkEntry(entry: any) {                                              │
+│    await domain.updateWorkEntry(entry)                                      │
+│  }                                                                            │
+└──────────────────────────┬──────────────────────────────────────────────────┘
+                           │
+                           ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         DOMAIN (Business Logic)                              │
+│  src/domain/staff-register/domain.ts                                        │
+│  ────────────────────────────────────────────────────────────────────────   │
+│  export async function updateWorkEntry(entry: any) {                        │
+│    if (!entry.id) throw new Error('Cannot update entry without id')         │
+│    await staffRepo.upsertWorkEntry(entry)                                   │
+│    await triggerSyncIfOnline('mutation')  ◄── KEY TRIGGER                   │
+│  }                                                                            │
+└──────────────────────────┬──────────────────────────────────────────────────┘
+          ┌────────────────┴────────────────┐
+          │ (två vägar parallellt)          │
+          ▼                                  ▼
+    ┌──────────────┐          ┌────────────────────────┐
+    │  DB WRITE    │          │  SYNC TRIGGER          │
+    │ (Omedelbar)  │          │ (Fire & forget)        │
+    └──────────────┘          │                        │
+         │                    │ src/domain/services/   │
+         │                    │ sync-trigger.ts        │
+         │                    │ ──────────────────────  │
+         │                    │ if (online && !running)│
+         │                    │   sync.start('mutation')
+         │                    └────────────┬───────────┘
+         │                                  │
+         │                    ┌─────────────▼──────────┐
+         │                    │   CONNECTIVITY CHECK   │
+         │                    │ connectivity.getCurrent()
+         │                    └─────────────┬──────────┘
+         │                                  │
+         │                                  ▼
+         │                    ┌────────────────────────┐
+         │                    │  SYNC MANAGER          │
+         │                    │ src/sync/sync-manager. │
+         │                    │ ──────────────────────  │
+         │                    │ syncAll(reason:        │
+         │                    │   'mutation')          │
+         │                    └────────────┬───────────┘
+         │                                  │
+         │                                  ▼
+         │                    ┌────────────────────────┐
+         │                    │  SYNC ENGINE           │
+         │                    │ src/sync/sync-engine.ts│
+         │                    │ ──────────────────────  │
+         │                    │ 1. drainOutbox()       │
+         │                    │    getUnsynced()       │
+         │                    │    batchUpsert() ◄─────┼── Push to API
+         │                    │                        │
+         │                    │ 2. drainDeletions()    │
+         │                    │                        │
+         │                    │ 3. pullRemoteChanges() │
+         │                    │    mergeRemote()       │
+         │                    └────────────┬───────────┘
+         │                                  │
+         │                    ┌─────────────▼──────────┐
+         │                    │  TABLE ADAPTER         │
+         │                    │ src/sync/staff-register/
+         │                    │ adapter.ts             │
+         │                    │ ──────────────────────  │
+         │                    │ batchUpsert(items) {   │
+         │                    │   for item: {          │
+         │                    │     if exists in API:  │
+         │                    │       updateEntry()    │
+         │                    │     else:              │
+         │                    │       createEntry()    │
+         │                    │     markAsSynced(1)    │
+         │                    │   }                    │
+         │                    │ }                      │
+         │                    └────────────┬───────────┘
+         │                                  │
+         │                    ┌─────────────▼──────────┐
+         │                    │  API (Mock JSON)       │
+         │                    │ src/api/staff-register.│
+         │                    │ updateEntry(item) {    │
+         │                    │   PATCH /entries/{id}  │
+         │                    │ }                      │
+         │                    └────────────┬───────────┘
+         │                                  │
+         └──────────────┬───────────────────┘
+                        │
+                        ▼
+         ┌──────────────────────────────────┐
+         │  updateStore()                   │
+         │  domain.updateStoreFromDb()      │
+         │  store.setWorkEntries(...)       │
+         └──────────────┬───────────────────┘
+                        │
+                        ▼
+         ┌──────────────────────────────────┐
+         │  COMPONENT RE-RENDER             │
+         │  sortedEntriesByDay computed     │
+         │  UI uppdaterad med ny timeOut    │
+         └──────────────────────────────────┘
+
 ## Getting Started
 
 ### Prerequisites
@@ -124,3 +235,4 @@ export async function initStaffRegisterDb(db: any, isNative: boolean) {
 ## License
 
 Private
+

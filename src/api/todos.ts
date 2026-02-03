@@ -25,7 +25,7 @@ export async function fetchTodos(): Promise<Todo[]> {
  */
 export async function createTodo(title: string, id?: number, updatedAt?: number): Promise<Todo> {
   const body: any = { title, done: 0 }
-  if (id) body.id = id // Låt API använda lokalt ID
+  if (id) body.id = id // Let API use local ID
   if (updatedAt) body.updatedAt = updatedAt
   const response = await fetch(API_URL, {
     method: 'POST',

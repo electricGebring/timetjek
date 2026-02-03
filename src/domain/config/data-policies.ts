@@ -39,7 +39,7 @@ export const DATA_POLICIES: Record<string, DataRetentionPolicy> = {
     softDeleteOnly: true,
     autoSync: true,
   },
-  // staffRegister kan vara kvar om du vill använda den som alias, men det är work_entries som styr sync
+  // staffRegister can be kept as an alias if desired, but work_entries controls sync
   // Example: Online-only data (no local storage)
   // notifications: {
   //   tableName: 'notifications',

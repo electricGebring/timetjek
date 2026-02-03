@@ -40,12 +40,28 @@ export async function canCheckOut(work_day_id: number): Promise<boolean> {
 
 // Create a new work_entry with business rule validation
 export async function createWorkEntry(entry: any) {
-  if (entry.timeIn && !(await canCheckIn(entry.work_day_id))) {
+  // Always load fresh data from DB before validation
+  const all = await staffRepo.getWorkEntries()
+  const todays = all.filter(e => e.work_day_id === entry.work_day_id)
+  const hasOpen = todays.some(e => e.timeIn && !e.timeOut)
+  
+  if (entry.timeIn && hasOpen) {
     throw new Error('Already checked in – check out required first.')
   }
-  if (entry.timeOut && !(await canCheckOut(entry.work_day_id))) {
+  if (entry.timeOut && !hasOpen) {
     throw new Error('Cannot check out before checking in.')
   }
+  console.log('Creating work entry with domain logic:', entry)
+  await staffRepo.upsertWorkEntry(entry)
+  await triggerSyncIfOnline('mutation')
+}
+
+// Update an existing work_entry (no validation needed for updates)
+export async function updateWorkEntry(entry: any) {
+  if (!entry.id) {
+    throw new Error('Cannot update entry without id')
+  }
+  console.log('Updating work entry:', entry)
   await staffRepo.upsertWorkEntry(entry)
   await triggerSyncIfOnline('mutation')
 }
@@ -70,4 +86,22 @@ export async function getDeletedWorkEntries() {
 // Upsert from API (or merge logic)
 export async function upsertWorkEntryFromApi(entry: any) {
   await staffRepo.upsertWorkEntry(entry)
+}
+
+export async function getWorkSchemeGrouped() {
+  const entries = await getAllWorkEntries(); // eller din fetch-funktion
+  const daysMap: Record<string, { date: string, dateLabel: string, entries: any[] }> = {};
+  for (const entry of entries) {
+    const date = entry.createdAt?.slice(0, 10) ?? '';
+    if (!date) continue; // skip entries without a valid date
+    if (!daysMap[date]) {
+      daysMap[date] = {
+        date,
+        dateLabel: date, // eller formatera datumet snyggt
+        entries: []
+      };
+    }
+    daysMap[date].entries.push(entry);
+  }
+  return { days: Object.values(daysMap).sort((a, b) => a.date.localeCompare(b.date)) };
 }

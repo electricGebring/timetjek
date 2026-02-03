@@ -1,4 +1,4 @@
-// Typdefinition för en work_entry-rad i databasen
+// Type definition for a work_entry row in database
 export interface WorkEntry {
   id: number | null
   work_day_id: number | null

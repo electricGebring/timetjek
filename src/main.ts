@@ -26,7 +26,7 @@ import { createStaffRegisterAdapter } from '@/sync/staff-register/adapter'
 async function bootstrap() {
   // Initialize database (tables, migrations, etc)
   await initDB()
-  // Kör DB-migreringar efter att databasen är initierad
+  // Run database migrations after database is initialized
   await runMigrations()
 
   // Register sync adapters for each entity/table

@@ -55,9 +55,9 @@ export class SyncManager {
    * Sync all tables that should be synced
    */
   async syncAll(reason: SyncReason): Promise<void> {
-    // Extra skydd: kör aldrig sync om offline (web)
+    // Extra safety: never run sync when offline (web)
     if (typeof window !== 'undefined' && typeof navigator !== 'undefined' && navigator.onLine === false) {
-      this.logger.warn('[SyncManager] Avbryter sync: navigator.onLine är false (offline-läge)')
+      this.logger.warn('[SyncManager] Aborting sync: navigator.onLine is false (offline mode)')
       return
     }
     const policies = getPoliciesForSync()

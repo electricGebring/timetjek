@@ -28,3 +28,11 @@ export interface WorkSchemeTypes {
   totalWorkTime: string
   days: Day[]
 }
+
+export interface GroupedWorkEntries {
+  days: Array<{
+    date: string
+    dateLabel: string
+    entries: any[]
+  }>
+}

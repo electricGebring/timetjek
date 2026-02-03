@@ -40,7 +40,7 @@ export const STAFF_REGISTER_SCHEMA = `
   );
 `;
 
-// Migration för befintliga databaser (lägg till notes-kolumnen om den saknas)
+// Migration for existing databases (add notes column if missing)
 export const STAFF_REGISTER_MIGRATIONS: string[] = [
   'ALTER TABLE work_entries ADD COLUMN notes TEXT'
 ];

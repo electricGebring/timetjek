@@ -2,7 +2,7 @@ import { getDB } from '../index'
 import { Capacitor } from '@capacitor/core'
 import type { Todo } from './types'
 
-// Kolumnnamn i rätt ordning för todos
+// Column names in correct order for todos
 const todoColumns = [
   'id',
   'title',
@@ -26,7 +26,7 @@ function mapRowToTodo(row: any[]): Todo {
   }
 }
 
-// Central query-funktion för todos
+// Central query function for todos
 async function queryTodos(where: string, params: any[] = []): Promise<Todo[]> {
   const columns = todoColumns.join(', ')
   if (Capacitor.isNativePlatform()) {

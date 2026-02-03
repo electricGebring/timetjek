@@ -1,32 +1,40 @@
-
 import { defineStore } from 'pinia'
 import * as domain from '@/domain/staff-register/domain'
+import type { GroupedWorkEntries } from '@/views/staffRegister/types'
 
 export const useStaffRegisterStore = defineStore('staffRegister', {
   state: () => ({
     workEntries: [] as any[],
+    groupedWorkEntries: null as GroupedWorkEntries | null,
     loading: false,
-    error: null as string | null,
+    error: null as string | null
   }),
   actions: {
     setWorkEntries(entries: any[]) {
       this.workEntries = entries
     },
-    addWorkEntry(entry: any) {
-      this.workEntries.push(entry)
+    setGroupedWorkEntries(grouped: GroupedWorkEntries) {
+      this.groupedWorkEntries = grouped
     },
-    updateWorkEntry(updated: any) {
-      const idx = this.workEntries.findIndex(e => e.id === updated.id)
-      if (idx !== -1) this.workEntries[idx] = updated
+    async addWorkEntryWithDefaults(entry: any) {
+      await domain.createWorkEntry(entry)
+    },
+    async updateWorkEntry(entry: any) {
+      await domain.updateWorkEntry(entry)
     },
     removeWorkEntry(id: number) {
-      this.workEntries = this.workEntries.filter(e => e.id !== id)
+      this.workEntries = this.workEntries.filter((e) => e.id !== id)
     },
     setLoading(val: boolean) {
       this.loading = val
     },
     setError(msg: string | null) {
       this.error = msg
+    },
+    async loadGroupedWorkEntries() {
+      const grouped = await domain.getWorkSchemeGrouped()
+      console.log('Loaded grouped work entries:', grouped)
+      this.setGroupedWorkEntries(grouped)
     },
 
     /**
@@ -36,6 +44,7 @@ export const useStaffRegisterStore = defineStore('staffRegister', {
       this.setLoading(true)
       try {
         const entries = await domain.getAllWorkEntries()
+        console.log('Loaded work entries:', entries)
         this.setWorkEntries(entries)
         this.setError(null)
       } catch (e: any) {

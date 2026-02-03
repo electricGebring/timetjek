@@ -1,20 +1,9 @@
-// Permanent deletion of work_entry (used by sync-adapter)
-export async function permanentDeleteWorkEntry(id: number) {
-  if (Capacitor.isNativePlatform()) {
-    const db = getDB()
-    await db.run('DELETE FROM work_entries WHERE id = ?', [id])
-  } else {
-    const { sqlJsDb, saveDatabase } = getDB() as any
-    sqlJsDb.run('DELETE FROM work_entries WHERE id = ?', [id])
-    saveDatabase()
-  }
-}
 import { getDB } from '../index'
 import { Capacitor } from '@capacitor/core'
 import type { WorkEntry } from './types'
 import type { Entry } from '@/views/staffRegister/types'
 
-// Kolumnnamn i rätt ordning för work_entries
+// Column names in correct order for work_entries
 const workEntryColumns = [
   'id',
   'work_day_id',
@@ -35,7 +24,7 @@ const workEntryColumns = [
   'deleted'
 ]
 
-// Mappar en rad-array till ett WorkEntry-objekt
+// Maps a row array to a WorkEntry object
 function mapRowToWorkEntry(row: any[]): WorkEntry {
   return {
     id: row[0],
@@ -58,7 +47,7 @@ function mapRowToWorkEntry(row: any[]): WorkEntry {
   }
 }
 
-// Central query-funktion för work_entries
+// Central query function for work_entries
 async function queryWorkEntries(where: string, params: any[] = []): Promise<WorkEntry[]> {
   const columns = workEntryColumns.join(', ')
   if (Capacitor.isNativePlatform()) {
@@ -91,7 +80,6 @@ export async function getDeletedWorkEntries(): Promise<WorkEntry[]> {
 
 // Upsert (insert/update) for work_entries
 export async function upsertWorkEntry(entry: any) {
-  // Set default values for all fields that can be undefined
   const safeEntry = {
     id: entry.id ?? null,
     work_day_id: entry.work_day_id ?? null,
@@ -111,6 +99,7 @@ export async function upsertWorkEntry(entry: any) {
     synced: entry.synced ?? 0,
     deleted: entry.deleted ?? 0
   }
+  
   if (Capacitor.isNativePlatform()) {
     const db = getDB()
     let rowExists = false
@@ -124,21 +113,29 @@ export async function upsertWorkEntry(entry: any) {
         [
           safeEntry.work_day_id, safeEntry.name, safeEntry.type, safeEntry.personalNumber, safeEntry.timeIn, safeEntry.timeOut, safeEntry.break,
           safeEntry.workTime, safeEntry.status, safeEntry.statusType, safeEntry.hasError, safeEntry.updatedBy, safeEntry.updatedAt, safeEntry.createdAt,
-          safeEntry.synced, safeEntry.deleted, safeEntry.id
+          0, safeEntry.deleted, safeEntry.id
         ]
       )
     } else {
-      await db.run(
-        'INSERT INTO work_entries (id, work_day_id, name, type, personalNumber, timeIn, timeOut, break, workTime, status, statusType, hasError, updatedBy, updatedAt, createdAt, synced, deleted) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        [
-          safeEntry.id, safeEntry.work_day_id, safeEntry.name, safeEntry.type, safeEntry.personalNumber, safeEntry.timeIn, safeEntry.timeOut,
-          safeEntry.break, safeEntry.workTime, safeEntry.status, safeEntry.statusType, safeEntry.hasError, safeEntry.updatedBy, safeEntry.updatedAt, safeEntry.createdAt,
-          safeEntry.synced, safeEntry.deleted
-        ]
-      )
-      // If you want to fetch id directly after insert:
-      // const res = await db.query('SELECT last_insert_rowid() as id')
-      // safeEntry.id = res.values?.[0]?.[0]
+      if (safeEntry.id) {
+        await db.run(
+          'INSERT INTO work_entries (id, work_day_id, name, type, personalNumber, timeIn, timeOut, break, workTime, status, statusType, hasError, updatedBy, updatedAt, createdAt, synced, deleted) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+          [
+            safeEntry.id, safeEntry.work_day_id, safeEntry.name, safeEntry.type, safeEntry.personalNumber, safeEntry.timeIn, safeEntry.timeOut,
+            safeEntry.break, safeEntry.workTime, safeEntry.status, safeEntry.statusType, safeEntry.hasError, safeEntry.updatedBy, safeEntry.updatedAt, safeEntry.createdAt,
+            safeEntry.synced, safeEntry.deleted
+          ]
+        )
+      } else {
+        await db.run(
+          'INSERT INTO work_entries (work_day_id, name, type, personalNumber, timeIn, timeOut, break, workTime, status, statusType, hasError, updatedBy, updatedAt, createdAt, synced, deleted) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+          [
+            safeEntry.work_day_id, safeEntry.name, safeEntry.type, safeEntry.personalNumber, safeEntry.timeIn, safeEntry.timeOut,
+            safeEntry.break, safeEntry.workTime, safeEntry.status, safeEntry.statusType, safeEntry.hasError, safeEntry.updatedBy, safeEntry.updatedAt, safeEntry.createdAt,
+            safeEntry.synced, safeEntry.deleted
+          ]
+        )
+      }
     }
   } else {
     const { sqlJsDb, saveDatabase } = getDB() as any
@@ -153,22 +150,42 @@ export async function upsertWorkEntry(entry: any) {
         [
           safeEntry.work_day_id, safeEntry.name, safeEntry.type, safeEntry.personalNumber, safeEntry.timeIn, safeEntry.timeOut, safeEntry.break,
           safeEntry.workTime, safeEntry.status, safeEntry.statusType, safeEntry.hasError, safeEntry.updatedBy, safeEntry.updatedAt, safeEntry.createdAt,
-          safeEntry.synced, safeEntry.deleted, safeEntry.id
+         0, safeEntry.deleted, safeEntry.id
         ]
       )
     } else {
-      sqlJsDb.run(
-        'INSERT INTO work_entries (id, work_day_id, name, type, personalNumber, timeIn, timeOut, break, workTime, status, statusType, hasError, updatedBy, updatedAt, createdAt, synced, deleted) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        [
-          safeEntry.id, safeEntry.work_day_id, safeEntry.name, safeEntry.type, safeEntry.personalNumber, safeEntry.timeIn, safeEntry.timeOut,
-          safeEntry.break, safeEntry.workTime, safeEntry.status, safeEntry.statusType, safeEntry.hasError, safeEntry.updatedBy, safeEntry.updatedAt, safeEntry.createdAt,
-          safeEntry.synced, safeEntry.deleted
-        ]
-      )
-      // If you want to fetch id directly after insert:
-      // const res = sqlJsDb.exec('SELECT last_insert_rowid() as id')
-      // safeEntry.id = res?.[0]?.values?.[0]?.[0]
+      if (safeEntry.id) {
+        sqlJsDb.run(
+          'INSERT INTO work_entries (id, work_day_id, name, type, personalNumber, timeIn, timeOut, break, workTime, status, statusType, hasError, updatedBy, updatedAt, createdAt, synced, deleted) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+          [
+            safeEntry.id, safeEntry.work_day_id, safeEntry.name, safeEntry.type, safeEntry.personalNumber, safeEntry.timeIn, safeEntry.timeOut,
+            safeEntry.break, safeEntry.workTime, safeEntry.status, safeEntry.statusType, safeEntry.hasError, safeEntry.updatedBy, safeEntry.updatedAt, safeEntry.createdAt,
+            safeEntry.synced, safeEntry.deleted
+          ]
+        )
+      } else {
+        sqlJsDb.run(
+          'INSERT INTO work_entries (work_day_id, name, type, personalNumber, timeIn, timeOut, break, workTime, status, statusType, hasError, updatedBy, updatedAt, createdAt, synced, deleted) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+          [
+            safeEntry.work_day_id, safeEntry.name, safeEntry.type, safeEntry.personalNumber, safeEntry.timeIn, safeEntry.timeOut,
+            safeEntry.break, safeEntry.workTime, safeEntry.status, safeEntry.statusType, safeEntry.hasError, safeEntry.updatedBy, safeEntry.updatedAt, safeEntry.createdAt,
+            safeEntry.synced, safeEntry.deleted
+          ]
+        )
+      }
     }
+    saveDatabase()
+  }
+}
+
+// Permanent deletion of work_entry (used by sync-adapter)
+export async function permanentDeleteWorkEntry(id: number) {
+  if (Capacitor.isNativePlatform()) {
+    const db = getDB()
+    await db.run('DELETE FROM work_entries WHERE id = ?', [id])
+  } else {
+    const { sqlJsDb, saveDatabase } = getDB() as any
+    sqlJsDb.run('DELETE FROM work_entries WHERE id = ?', [id])
     saveDatabase()
   }
 }
