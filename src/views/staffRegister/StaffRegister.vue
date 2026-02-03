@@ -59,19 +59,10 @@ const sortedEntriesByDay = computed(() => {
   return result
 })
 
-const headerDate = ref('')
-const headerTime = ref('')
+
 onMounted(async () => {
   await store.loadWorkEntries()
   await store.loadGroupedWorkEntries()
-  // Try to fetch headerDate/headerTime from first entry if they exist
-  if (store.groupedWorkEntries && store.groupedWorkEntries.days.length > 0) {
-    const firstDay = store.groupedWorkEntries.days[0]
-    if (firstDay.entries.length > 0) {
-      headerDate.value = firstDay.entries[0].headerDate || ''
-      headerTime.value = firstDay.entries[0].headerTime || ''
-    }
-  }
   ;(window as any).staffRegisterData = store.workEntries
 
   // Listen for sync-completed events and reload data
@@ -296,11 +287,7 @@ const handleBreak = async () => {
 
 <template>
   <div class="min-h-screen bg-gray-100">
-    <!-- App header (blue bar) -->
-    <HeaderBar
-      :header-date="headerDate"
-      :header-time="headerTime"
-    />
+    <HeaderBar/>
 
     <main class="mx-auto max-w-6xl px-8 py-6">
       <!-- Breadcrumbs -->
