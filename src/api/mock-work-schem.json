@@ -17,7 +17,7 @@
       "statusType": "working",
       "hasError": false,
       "updatedBy": "Jakob A...",
-      "updatedAt": "2026-02-03T13:45:25.422Z",
+      "updatedAt": "2026-02-03T14:01:45.676Z",
       "work_day_id": 1739232000000
     },
     {
@@ -36,7 +36,7 @@
       "statusType": "working",
       "hasError": false,
       "updatedBy": "Jakob A...",
-      "updatedAt": "2026-02-03T13:45:25.541Z",
+      "updatedAt": "2026-02-03T14:01:45.704Z",
       "work_day_id": 1739232000000
     },
     {
@@ -55,7 +55,7 @@
       "statusType": "break",
       "hasError": false,
       "updatedBy": "Jakob A...",
-      "updatedAt": "2026-02-03T13:45:25.579Z",
+      "updatedAt": "2026-02-03T14:01:45.732Z",
       "work_day_id": 1739232000000
     },
     {
@@ -74,7 +74,7 @@
       "statusType": "normal",
       "hasError": false,
       "updatedBy": "Jakob A...",
-      "updatedAt": "2026-02-03T13:45:25.606Z",
+      "updatedAt": "2026-02-03T14:01:45.758Z",
       "work_day_id": 1739232000000
     },
     {
@@ -93,7 +93,7 @@
       "statusType": "normal",
       "hasError": false,
       "updatedBy": "Jakob A...",
-      "updatedAt": "2026-02-03T13:45:25.628Z",
+      "updatedAt": "2026-02-03T14:01:44.567Z",
       "work_day_id": 1739232000000
     },
     {
@@ -112,7 +112,7 @@
       "statusType": "working",
       "hasError": false,
       "updatedBy": "Jakob A...",
-      "updatedAt": "2026-02-03T13:45:25.675Z",
+      "updatedAt": "2026-02-03T14:01:45.816Z",
       "work_day_id": 1739232000000
     },
     {
@@ -131,7 +131,7 @@
       "statusType": "working",
       "hasError": false,
       "updatedBy": "Jakob A...",
-      "updatedAt": "2026-02-03T13:45:25.698Z",
+      "updatedAt": "2026-02-03T14:01:45.844Z",
       "work_day_id": 1739232000000
     },
     {
@@ -146,7 +146,7 @@
       "status": "Rast",
       "statusType": "break",
       "hasError": false,
-      "updatedAt": "2026-02-03T13:45:25.717Z",
+      "updatedAt": "2026-02-03T14:01:45.883Z",
       "work_day_id": 1770073200000,
       "createdAt": "2026-02-03T13:11:52.608Z",
       "synced": 0,
@@ -164,7 +164,7 @@
       "status": null,
       "statusType": "updated",
       "hasError": false,
-      "updatedAt": "2026-02-03T13:45:25.737Z",
+      "updatedAt": "2026-02-03T14:01:45.915Z",
       "work_day_id": 1770073200000,
       "createdAt": "2026-02-03T13:12:01.082Z",
       "synced": 0,
@@ -182,7 +182,7 @@
       "status": null,
       "statusType": "updated",
       "hasError": false,
-      "updatedAt": "2026-02-03T13:45:25.764Z",
+      "updatedAt": "2026-02-03T14:01:45.945Z",
       "work_day_id": 1770073200000,
       "createdAt": "2026-02-03T13:18:36.172Z",
       "synced": 0,
@@ -200,7 +200,7 @@
       "status": "Rast",
       "statusType": "break",
       "hasError": false,
-      "updatedAt": "2026-02-03T13:45:25.790Z",
+      "updatedAt": "2026-02-03T14:01:45.996Z",
       "work_day_id": 1770073200000,
       "createdAt": "2026-02-03T13:18:40.251Z",
       "synced": 0,
@@ -218,7 +218,7 @@
       "status": null,
       "statusType": "updated",
       "hasError": false,
-      "updatedAt": "2026-02-03T13:45:25.812Z",
+      "updatedAt": "2026-02-03T14:01:46.029Z",
       "work_day_id": 1770073200000,
       "createdAt": "2026-02-03T13:18:41.829Z",
       "synced": 0,
@@ -236,7 +236,7 @@
       "status": null,
       "statusType": "updated",
       "hasError": false,
-      "updatedAt": "2026-02-03T13:45:25.829Z",
+      "updatedAt": "2026-02-03T14:01:46.065Z",
       "work_day_id": 1770073200000,
       "createdAt": "2026-02-03T13:41:41.267Z",
       "synced": 0,
@@ -254,7 +254,7 @@
       "status": null,
       "statusType": "updated",
       "hasError": false,
-      "updatedAt": "2026-02-03T13:45:25.853Z",
+      "updatedAt": "2026-02-03T14:01:46.097Z",
       "work_day_id": 1770073200000,
       "createdAt": "2026-02-03T13:41:49.086Z",
       "synced": 0,
@@ -272,7 +272,7 @@
       "status": null,
       "statusType": "updated",
       "hasError": false,
-      "updatedAt": "2026-02-03T13:45:25.875Z",
+      "updatedAt": "2026-02-03T14:01:46.129Z",
       "work_day_id": 1770073200000,
       "createdAt": "2026-02-03T13:42:06.550Z",
       "synced": 0,
@@ -290,7 +290,7 @@
       "status": "Rast",
       "statusType": "break",
       "hasError": false,
-      "updatedAt": "2026-02-03T13:45:25.894Z",
+      "updatedAt": "2026-02-03T14:01:46.163Z",
       "work_day_id": 1770073200000,
       "createdAt": "2026-02-03T13:42:19.387Z",
       "synced": 0,

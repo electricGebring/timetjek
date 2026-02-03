@@ -1,7 +1,72 @@
-<script setup>
-defineProps({
+<script setup lang="ts">
+import { computed, onMounted, onUnmounted, ref } from 'vue'
+
+const props = defineProps({
   headerDate: { type: String, default: '' },
   headerTime: { type: String, default: '' }
+})
+
+const now = ref(new Date());
+let timerId;
+let tempTimerId;
+
+const formatHeaderDate = (date) => {
+  const formatted = new Intl.DateTimeFormat('sv-SE', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short'
+  }).format(date)
+  return formatted.charAt(0).toUpperCase() + formatted.slice(1)
+}
+
+const formatHeaderTime = (date) =>
+  new Intl.DateTimeFormat('sv-SE', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false
+  }).format(date)
+
+const displayDate = computed(() => props.headerDate || formatHeaderDate(now.value))
+const displayTime = computed(() => props.headerTime || formatHeaderTime(now.value))
+const temperature = ref(null)
+
+const displayTemperature = computed(() => (temperature.value === null ? '—°' : `${temperature.value}°`))
+
+const fetchTemperature = async () => {
+  if (!('geolocation' in navigator)) return
+
+  try {
+    const position = await new Promise((resolve, reject) => {
+      navigator.geolocation.getCurrentPosition(resolve, reject, {
+        maximumAge: 10 * 60 * 1000,
+        timeout: 5000
+      })
+    })
+
+    const { latitude, longitude } = position.coords
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m&temperature_unit=celsius&timezone=auto`
+    const response = await fetch(url)
+    if (!response.ok) return
+    const data = await response.json()
+    const temp = data?.current?.temperature_2m
+    if (typeof temp === 'number') temperature.value = Math.round(temp)
+  } catch (_error) {
+    // ignore
+  }
+}
+
+onMounted(() => {
+  timerId = window.setInterval(() => {
+    now.value = new Date()
+  }, 1000)
+  fetchTemperature()
+  tempTimerId = window.setInterval(fetchTemperature, 10 * 60 * 1000)
+})
+
+onUnmounted(() => {
+  if (timerId) window.clearInterval(timerId)
+  if (tempTimerId) window.clearInterval(tempTimerId)
 })
 </script>
 
@@ -23,15 +88,15 @@ defineProps({
       <!-- Right area (content aligned to the right) -->
       <div class="flex flex-1 items-center justify-end pr-8 pl-6">
         <div class="flex items-center gap-3 text-base font-semibold whitespace-nowrap">
-          <span>5°</span>
+          <span>{{ displayTemperature }}</span>
           <FontAwesomeIcon
             icon="cog"
             class="text-lg"
           />
           <span class="text-white/70">|</span>
-          <span>{{ headerDate }}</span>
+          <span>{{ displayDate }}</span>
           <span class="text-white/70">|</span>
-          <span>{{ headerTime }}</span>
+          <span>{{ displayTime }}</span>
         </div>
       </div>
     </div>
