@@ -11,8 +11,6 @@ export async function fetchStaffRegisterEntries(): Promise<Entry[]> {
 }
 
 export async function createEntry(item: Entry): Promise<Entry> {
-  console.log('Creating new entry via API BABABABABABABBA:', item)
-
   const allEntries = await fetchStaffRegisterEntries()
   const maxId = Math.max(...allEntries.map(e => e.id || 0), 0)
   const newId = maxId + 1
@@ -39,9 +37,6 @@ export async function createEntry(item: Entry): Promise<Entry> {
 }
 
 export async function updateEntry(item: Entry): Promise<Entry> {
-  console.log('Preparing to update entry via API:______________', item)
-  console.log('Updating entry via API:', item)
-
   const now = new Date().toISOString()
   const currentResponse = await fetch(`${API_URL}/${item.id}`)
   if (!currentResponse.ok) throw new Error(`Failed to fetch entry: ${currentResponse.statusText}`)

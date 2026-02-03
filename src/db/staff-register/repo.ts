@@ -154,9 +154,7 @@ export async function upsertWorkEntry(entry: any) {
         ]
       )
     } else {
-      console.log('no exist')
       if (safeEntry.id) {
-        console.log('BANAN')
         sqlJsDb.run(
           'INSERT INTO work_entries (id, work_day_id, name, type, personalNumber, timeIn, timeOut, break, workTime, status, statusType, hasError, updatedBy, updatedAt, createdAt, synced, deleted) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
           [
@@ -166,7 +164,7 @@ export async function upsertWorkEntry(entry: any) {
           ]
         )
       } else {
-        console.log('HALLÅÅÅÅÅÅÅÅÅ')
+
         sqlJsDb.run(
           'INSERT INTO work_entries (work_day_id, name, type, personalNumber, timeIn, timeOut, break, workTime, status, statusType, hasError, updatedBy, updatedAt, createdAt, synced, deleted) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
           [

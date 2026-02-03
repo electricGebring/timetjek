@@ -17,7 +17,7 @@
       "statusType": "working",
       "hasError": false,
       "updatedBy": "Jakob A...",
-      "updatedAt": "2026-02-03T13:26:49.758Z",
+      "updatedAt": "2026-02-03T13:45:25.422Z",
       "work_day_id": 1739232000000
     },
     {
@@ -36,7 +36,7 @@
       "statusType": "working",
       "hasError": false,
       "updatedBy": "Jakob A...",
-      "updatedAt": "2026-02-03T13:26:49.792Z",
+      "updatedAt": "2026-02-03T13:45:25.541Z",
       "work_day_id": 1739232000000
     },
     {
@@ -55,7 +55,7 @@
       "statusType": "break",
       "hasError": false,
       "updatedBy": "Jakob A...",
-      "updatedAt": "2026-02-03T13:26:49.827Z",
+      "updatedAt": "2026-02-03T13:45:25.579Z",
       "work_day_id": 1739232000000
     },
     {
@@ -74,7 +74,7 @@
       "statusType": "normal",
       "hasError": false,
       "updatedBy": "Jakob A...",
-      "updatedAt": "2026-02-03T13:26:49.859Z",
+      "updatedAt": "2026-02-03T13:45:25.606Z",
       "work_day_id": 1739232000000
     },
     {
@@ -93,7 +93,7 @@
       "statusType": "normal",
       "hasError": false,
       "updatedBy": "Jakob A...",
-      "updatedAt": "2026-02-03T13:26:50.907Z",
+      "updatedAt": "2026-02-03T13:45:25.628Z",
       "work_day_id": 1739232000000
     },
     {
@@ -112,7 +112,7 @@
       "statusType": "working",
       "hasError": false,
       "updatedBy": "Jakob A...",
-      "updatedAt": "2026-02-03T13:26:50.945Z",
+      "updatedAt": "2026-02-03T13:45:25.675Z",
       "work_day_id": 1739232000000
     },
     {
@@ -131,7 +131,7 @@
       "statusType": "working",
       "hasError": false,
       "updatedBy": "Jakob A...",
-      "updatedAt": "2026-02-03T13:26:50.975Z",
+      "updatedAt": "2026-02-03T13:45:25.698Z",
       "work_day_id": 1739232000000
     },
     {
@@ -146,7 +146,7 @@
       "status": "Rast",
       "statusType": "break",
       "hasError": false,
-      "updatedAt": "2026-02-03T13:26:51.008Z",
+      "updatedAt": "2026-02-03T13:45:25.717Z",
       "work_day_id": 1770073200000,
       "createdAt": "2026-02-03T13:11:52.608Z",
       "synced": 0,
@@ -164,7 +164,7 @@
       "status": null,
       "statusType": "updated",
       "hasError": false,
-      "updatedAt": "2026-02-03T13:26:51.088Z",
+      "updatedAt": "2026-02-03T13:45:25.737Z",
       "work_day_id": 1770073200000,
       "createdAt": "2026-02-03T13:12:01.082Z",
       "synced": 0,
@@ -182,7 +182,7 @@
       "status": null,
       "statusType": "updated",
       "hasError": false,
-      "updatedAt": "2026-02-03T13:26:51.115Z",
+      "updatedAt": "2026-02-03T13:45:25.764Z",
       "work_day_id": 1770073200000,
       "createdAt": "2026-02-03T13:18:36.172Z",
       "synced": 0,
@@ -200,7 +200,7 @@
       "status": "Rast",
       "statusType": "break",
       "hasError": false,
-      "updatedAt": "2026-02-03T13:26:52.194Z",
+      "updatedAt": "2026-02-03T13:45:25.790Z",
       "work_day_id": 1770073200000,
       "createdAt": "2026-02-03T13:18:40.251Z",
       "synced": 0,
@@ -218,9 +218,81 @@
       "status": null,
       "statusType": "updated",
       "hasError": false,
-      "updatedAt": "2026-02-03T13:26:52.222Z",
+      "updatedAt": "2026-02-03T13:45:25.812Z",
       "work_day_id": 1770073200000,
       "createdAt": "2026-02-03T13:18:41.829Z",
+      "synced": 0,
+      "deleted": 0
+    },
+    {
+      "id": 13,
+      "name": "Anna Svensson",
+      "type": "A",
+      "personalNumber": "19870312-1234",
+      "timeIn": "14:41:40",
+      "timeOut": "14:41:44",
+      "break": null,
+      "workTime": "0 min",
+      "status": null,
+      "statusType": "updated",
+      "hasError": false,
+      "updatedAt": "2026-02-03T13:45:25.829Z",
+      "work_day_id": 1770073200000,
+      "createdAt": "2026-02-03T13:41:41.267Z",
+      "synced": 0,
+      "deleted": 0
+    },
+    {
+      "id": 14,
+      "name": "Anna Svensson",
+      "type": "A",
+      "personalNumber": "19870312-1234",
+      "timeIn": "14:41:48",
+      "timeOut": "14:41:53",
+      "break": null,
+      "workTime": "0 min",
+      "status": null,
+      "statusType": "updated",
+      "hasError": false,
+      "updatedAt": "2026-02-03T13:45:25.853Z",
+      "work_day_id": 1770073200000,
+      "createdAt": "2026-02-03T13:41:49.086Z",
+      "synced": 0,
+      "deleted": 0
+    },
+    {
+      "id": 15,
+      "name": "Anna Svensson",
+      "type": "A",
+      "personalNumber": "19870312-1234",
+      "timeIn": "14:42:06",
+      "timeOut": "14:42:11",
+      "break": null,
+      "workTime": "0 min",
+      "status": null,
+      "statusType": "updated",
+      "hasError": false,
+      "updatedAt": "2026-02-03T13:45:25.875Z",
+      "work_day_id": 1770073200000,
+      "createdAt": "2026-02-03T13:42:06.550Z",
+      "synced": 0,
+      "deleted": 0
+    },
+    {
+      "id": 16,
+      "name": "Anna Svensson",
+      "type": "A",
+      "personalNumber": "19870312-1234",
+      "timeIn": "14:42:17",
+      "timeOut": null,
+      "break": null,
+      "workTime": null,
+      "status": "Rast",
+      "statusType": "break",
+      "hasError": false,
+      "updatedAt": "2026-02-03T13:45:25.894Z",
+      "work_day_id": 1770073200000,
+      "createdAt": "2026-02-03T13:42:19.387Z",
       "synced": 0,
       "deleted": 0
     }

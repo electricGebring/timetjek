@@ -76,7 +76,6 @@ onMounted(async () => {
 
   // Listen for sync-completed events and reload data
   window.addEventListener('sync-completed', async () => {
-    console.log('Sync completed, reloading data...')
     await store.loadWorkEntries()
   })
 })
@@ -211,9 +210,6 @@ const handleCheckOut = async () => {
       statusType: 'updated',
       updatedAt: isoDate
     }
-
-    console.log('Check-out - openEntry found:', openEntry)
-    console.log('Check-out - updatedEntry to save:', updatedEntry)
 
     await store.updateWorkEntry(updatedEntry)
     await store.loadWorkEntries()

@@ -33,7 +33,6 @@ export const useStaffRegisterStore = defineStore('staffRegister', {
     },
     async loadGroupedWorkEntries() {
       const grouped = await domain.getWorkSchemeGrouped()
-      console.log('Loaded grouped work entries:', grouped)
       this.setGroupedWorkEntries(grouped)
     },
 
@@ -44,7 +43,6 @@ export const useStaffRegisterStore = defineStore('staffRegister', {
       this.setLoading(true)
       try {
         const entries = await domain.getAllWorkEntries()
-        console.log('Loaded work entries:', entries)
         this.setWorkEntries(entries)
         this.setError(null)
       } catch (e: any) {

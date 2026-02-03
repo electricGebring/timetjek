@@ -6,18 +6,15 @@ import type { Entry } from '@/views/staffRegister/types'
 import type { ConflictResolutionStrategy } from '@/sync/conflict-resolver'
 
 export function createStaffRegisterAdapter(): TableSyncAdapter {
-  console.log('StaffRegisterAdapter---------------------')
   return {
     tableName: 'work_entries',
     getUnsynced: async (): Promise<Entry[]> => {
       const unsynced = (await repo.getUnsyncedWorkEntries()).filter((e) => e.id !== null).map(repo.workEntryToEntry)
-      console.log('getUnsynced', unsynced)
       return unsynced
     },
     getDeleted: async (): Promise<Entry[]> =>
       (await repo.getDeletedWorkEntries()).filter((e) => e.id !== null).map(repo.workEntryToEntry),
     markAsSynced: async (id: number): Promise<void> => {
-      console.log('markAsSynced for id:', id)
       const entries = await repo.getWorkEntries()
       const entry = entries.find((e) => e.id === id)
       if (!entry) return
@@ -30,7 +27,6 @@ export function createStaffRegisterAdapter(): TableSyncAdapter {
     // NOTE: The following offline-block is for mock-API/dev only!
     // Remove this check when using a real API in production.
     batchUpsert: async (items: Entry[]): Promise<Entry[]> => {
-      console.log('-------------------batchUpsert called with items:', items )
       if (typeof window !== 'undefined' && typeof navigator !== 'undefined' && navigator.onLine === false) {
         console.warn('[StaffRegisterAdapter] batchUpsert blocked: offline mode')
         return []
@@ -45,12 +41,9 @@ export function createStaffRegisterAdapter(): TableSyncAdapter {
 
         const existsInApi = allEntries.some((e) => e.id === item.id)
         let resultItem: Entry
-        console.log('________________________batchUpsert item:', item)
         if (existsInApi) {
-          console.log('---------------Item exists in API, calling updateEntry from batchUpsert:', item)
           resultItem = await api.updateEntry(item)
         } else {
-          console.log('---------------Item does not exist in API, calling createEntry from batchUpsert:', item)
           resultItem = await api.createEntry(item)
         }
 
@@ -75,7 +68,6 @@ export function createStaffRegisterAdapter(): TableSyncAdapter {
     // NOTE: The following offline-block is for mock-API/dev only!
     // Remove this check when using a real API in production.
     createItem: async (item: Entry): Promise<Entry> => {
-      console.log('-------------------createItem called with item:', item)
       if (typeof window !== 'undefined' && typeof navigator !== 'undefined' && navigator.onLine === false) {
         console.warn('[StaffRegisterAdapter] createItem blocked: offline mode')
         return item
@@ -88,10 +80,8 @@ export function createStaffRegisterAdapter(): TableSyncAdapter {
 
       let resultItem: Entry
       if (existsInApi) {
-        console.log('---------------Item exists in API, calling updateEntry from createItem:', item)
         resultItem = await api.updateEntry(item)
       } else {
-        console.log('---------------Item does not exist in API, calling createEntry from createItem:', item)
         resultItem = await api.createEntry(item)
       }
 
@@ -121,7 +111,6 @@ export function createStaffRegisterAdapter(): TableSyncAdapter {
       // IMPORTANT: If local entry is unsynced, skip merge and keep local changes
       // Let drainOutbox push these changes in next sync cycle
       if (local.synced === 0) {
-        console.log(`[mergeRemote] Skipping merge for unsynced local entry ID ${local.id} - keeping local changes`)
         return { resolved: local, conflictDetected: false }
       }
 

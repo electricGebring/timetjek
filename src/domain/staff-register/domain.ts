@@ -51,7 +51,6 @@ export async function createWorkEntry(entry: any) {
   if (entry.timeOut && !hasOpen) {
     throw new Error('Cannot check out before checking in.')
   }
-  console.log('Creating work entry with domain logic:', entry)
   await staffRepo.upsertWorkEntry(entry)
   await triggerSyncIfOnline('mutation')
 }
@@ -61,7 +60,6 @@ export async function updateWorkEntry(entry: any) {
   if (!entry.id) {
     throw new Error('Cannot update entry without id')
   }
-  console.log('Updating work entry:', entry)
   await staffRepo.upsertWorkEntry(entry)
   await triggerSyncIfOnline('mutation')
 }

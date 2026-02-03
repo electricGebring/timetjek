@@ -93,7 +93,6 @@ export class SyncEngine implements SyncPort {
 
     // Try batch operation first (if API supports it)
     if (unsyncedItems.length > 1) {
-      console.log(unsyncedItems, 'unsyncedItems')
       try {
         const now = Math.floor(Date.now() / 1000)
         const itemsToBatch = unsyncedItems.map((item: any) => ({
