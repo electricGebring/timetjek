@@ -6,16 +6,18 @@ import type { Entry } from '@/views/staffRegister/types'
 import type { ConflictResolutionStrategy } from '@/sync/conflict-resolver'
 
 export function createStaffRegisterAdapter(): TableSyncAdapter {
+  console.log('StaffRegisterAdapter---------------------')
   return {
     tableName: 'work_entries',
     getUnsynced: async (): Promise<Entry[]> => {
       const unsynced = (await repo.getUnsyncedWorkEntries()).filter((e) => e.id !== null).map(repo.workEntryToEntry)
-      console.log('[adapter] getUnsynced returned:', unsynced.length, 'items', unsynced)
+      console.log('getUnsynced', unsynced)
       return unsynced
     },
     getDeleted: async (): Promise<Entry[]> =>
       (await repo.getDeletedWorkEntries()).filter((e) => e.id !== null).map(repo.workEntryToEntry),
     markAsSynced: async (id: number): Promise<void> => {
+      console.log('markAsSynced for id:', id)
       const entries = await repo.getWorkEntries()
       const entry = entries.find((e) => e.id === id)
       if (!entry) return
@@ -28,6 +30,7 @@ export function createStaffRegisterAdapter(): TableSyncAdapter {
     // NOTE: The following offline-block is for mock-API/dev only!
     // Remove this check when using a real API in production.
     batchUpsert: async (items: Entry[]): Promise<Entry[]> => {
+      console.log('-------------------batchUpsert called with items:', items )
       if (typeof window !== 'undefined' && typeof navigator !== 'undefined' && navigator.onLine === false) {
         console.warn('[StaffRegisterAdapter] batchUpsert blocked: offline mode')
         return []

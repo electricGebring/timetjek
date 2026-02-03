@@ -37,54 +37,98 @@ function createBackup() {
   }
 }
 
+function formatMinutes(totalMinutes) {
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+
+  if (hours > 0 && minutes > 0) {
+    return `${hours} tim ${minutes} min`;
+  } else if (hours > 0) {
+    return `${hours} tim`;
+  } else {
+    return `${minutes} min`;
+  }
+}
+
 function updateData() {
   createBackup();
   const raw = fs.readFileSync(DATA_PATH, 'utf8');
   const data = JSON.parse(raw);
-  
+
   if (!data.entries || !Array.isArray(data.entries)) {
     console.error('No entries array found.');
     process.exit(1);
   }
-  
-  // Hitta högsta befintliga id
-  const maxId = data.entries.reduce((max, e) => Math.max(max, e.id || 0), 0);
-  
-  // Hitta minsta createdAt bland entries för 2025-02-11
-  const entries20250211 = data.entries.filter(e => e.createdAt && e.createdAt.startsWith('2025-02-11'));
-  let minCreatedAt = entries20250211.reduce((min, e) => {
-    const t = new Date(e.createdAt).getTime();
-    return t < min ? t : min;
-  }, Date.now());
-  
-  // Om ingen entry för 2025-02-11 finns, ta nuvarande tid
-  if (!minCreatedAt || minCreatedAt === Date.now()) minCreatedAt = Date.now();
-  
-  // Sätt createdAt till 1 sekund före minsta befintliga
-  const newCreatedAt = new Date(minCreatedAt - 1000).toISOString();
-  
-  const newEntry = {
-    id: maxId + 1,
-    name: "Anna Svensson",
-    type: "A",
-    personalNumber: "19870312-1234",
-    timeIn: "13:45:00",
-    timeOut: null,
-    break: null,
-    workTime: null,
-    status: "På rast",
-    statusType: "break",
-    synced: 0,
-    deleted: 0,
-    createdAt: newCreatedAt,
-    updatedAt: new Date().toISOString(),
-    updatedBy: "Script",
-    work_day_id: 1739232000000
+
+  const baseDate = '2025-02-11';
+  const work_day_id = 1739232000000;
+
+  // Find max id
+  let nextId = data.entries.reduce((max, e) => Math.max(max, e.id || 0), 0) + 1;
+
+  // Find latest timeOut for 2025-02-11, fallback to 13:00:00 if not found
+  const dayEntries = data.entries.filter((e) => (e.createdAt || '').startsWith(baseDate));
+  const lastTimeOut = dayEntries
+    .map((e) => e.timeOut)
+    .filter(Boolean)
+    .sort()
+    .pop() || '13:00:00';
+
+  // Helper: add minutes to HH:mm:ss
+  const addMinutes = (time, minutesToAdd) => {
+    const [h, m, s] = time.split(':').map(Number);
+    const total = h * 60 + m + minutesToAdd;
+    const newH = String(Math.floor(total / 60)).padStart(2, '0');
+    const newM = String(total % 60).padStart(2, '0');
+    return `${newH}:${newM}:${String(s).padStart(2, '0')}`;
   };
-  
-  data.entries.unshift(newEntry);
-  console.log('Inserted new entry with id', newEntry.id, 'for date 2025-02-11');
-  
+
+  // New timeline: start with a break right after lastTimeOut
+  const schedule = [
+    { type: 'break', durationMin: 15 },   // Rast 15 min
+    { type: 'work', durationMin: 90 },    // Arbete 1h30
+    { type: 'break', durationMin: 10 },   // Rast 10 min
+    { type: 'work', durationMin: 120 },   // Arbete 2h
+    { type: 'break', durationMin: 30 },   // Rast 30 min
+    { type: 'work', durationMin: 60 }     // Arbete 1h
+  ];
+
+  let cursor = lastTimeOut;
+  const newEntries = [];
+
+  schedule.forEach((slot) => {
+    const timeIn = cursor;
+    const timeOut = addMinutes(cursor, slot.durationMin);
+    cursor = timeOut;
+
+    const isBreak = slot.type === 'break';
+
+    newEntries.push({
+      id: nextId++,
+      name: 'Anna Svensson',
+      type: 'A',
+      personalNumber: '19870312-1234',
+      timeIn,
+      timeOut,
+      break: isBreak ? formatMinutes(slot.durationMin) : null,
+      workTime: isBreak ? null : formatMinutes(slot.durationMin),
+      status: isBreak ? 'Rast' : null,
+      statusType: isBreak ? 'break' : 'updated',
+      hasError: false,
+      updatedBy: 'Script',
+      createdAt: `${baseDate}T${timeIn}Z`,
+      updatedAt: new Date().toISOString(),
+      work_day_id,
+      date: baseDate,
+      dateLabel: baseDate,
+      synced: 0,
+      deleted: 0
+    });
+  });
+
+  data.entries.push(...newEntries);
+  console.log(`Appended ${newEntries.length} entries after ${lastTimeOut} for ${baseDate}`);
+
   fs.writeFileSync(DATA_PATH, JSON.stringify(data, null, 2), 'utf8');
   console.log('mock-work-schem.json updated successfully.');
 }

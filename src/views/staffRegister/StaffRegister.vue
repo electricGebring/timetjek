@@ -245,7 +245,20 @@ const handleBreak = async () => {
       .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''))[0]
 
     if (!openWork) {
-      alert('Ingen öppen instämpling hittades')
+      // NEW: allow break without open check-in
+      await store.addWorkEntryWithDefaults({
+        name: 'Anna Svensson',
+        type: 'A',
+        personalNumber: '19870312-1234',
+        work_day_id,
+        timeIn: timeOut,
+        status: 'Rast',
+        statusType: 'break',
+        createdAt: isoDate,
+        updatedAt: isoDate
+      })
+
+      await store.loadWorkEntries()
       return
     }
 
