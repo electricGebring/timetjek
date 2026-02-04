@@ -3,10 +3,37 @@ import type { Entry } from '@/views/staffRegister/types'
 const API_URL = 'http://localhost:3002/entries'
 
 /**
+ * Fetch with exponential backoff retry for connection errors
+ */
+async function fetchWithRetry(url: string, options?: RequestInit, maxRetries = 3): Promise<Response> {
+  let lastError: Error | null = null
+  
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      const response = await fetch(url, options)
+      return response
+    } catch (error) {
+      lastError = error as Error
+      // Only retry on connection errors
+      if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
+        if (attempt < maxRetries - 1) {
+          const delay = 100 * Math.pow(2, attempt) // 100ms, 200ms, 400ms
+          await new Promise(r => setTimeout(r, delay))
+          continue
+        }
+      }
+      throw error
+    }
+  }
+  
+  throw lastError || new Error('Fetch failed after retries')
+}
+
+/**
  * Fetches all staff register entries from the API, flat list (alla dagar sammanslagna)
  */
 export async function fetchStaffRegisterEntries(): Promise<Entry[]> {
-  const response = await fetch(API_URL)
+  const response = await fetchWithRetry(API_URL)
   return response.json()
 }
 
@@ -26,7 +53,7 @@ export async function createEntry(item: Entry): Promise<Entry> {
     deleted: item.deleted ?? 0
   }
 
-  const response = await fetch(API_URL, {
+  const response = await fetchWithRetry(API_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(entryToCreate)
@@ -38,7 +65,7 @@ export async function createEntry(item: Entry): Promise<Entry> {
 
 export async function updateEntry(item: Entry): Promise<Entry> {
   const now = new Date().toISOString()
-  const currentResponse = await fetch(`${API_URL}/${item.id}`)
+  const currentResponse = await fetchWithRetry(`${API_URL}/${item.id}`)
   if (!currentResponse.ok) throw new Error(`Failed to fetch entry: ${currentResponse.statusText}`)
   const current = await currentResponse.json()
 
@@ -49,7 +76,7 @@ export async function updateEntry(item: Entry): Promise<Entry> {
     updatedAt: now
   }
 
-  const response = await fetch(`${API_URL}/${item.id}`, {
+  const response = await fetchWithRetry(`${API_URL}/${item.id}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(entryToUpdate)
