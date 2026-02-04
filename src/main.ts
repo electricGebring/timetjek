@@ -19,7 +19,8 @@ import { FontAwesomeIcon } from './fontawesome/icons'
 
 // Import generic sync adapter registration and table adapters
 import { registerTableAdapter } from '@/sync/table-sync-adapter'
-import { createTodosAdapter } from '@/sync/todos/adapter'
+// NOTE: Todos sync adapter is disabled to avoid errors when json-server is not running.
+// import { createTodosAdapter } from '@/sync/todos/adapter'
 import { createStaffRegisterAdapter } from '@/sync/staff-register/adapter'
 
 // Main bootstrap function for app startup
@@ -31,7 +32,8 @@ async function bootstrap() {
 
   // Register sync adapters for each entity/table
   // This makes the sync layer generic and scalable
-  registerTableAdapter('todos', createTodosAdapter)
+  // NOTE: Todos sync is disabled to avoid json-server connection errors.
+  // registerTableAdapter('todos', createTodosAdapter)
   registerTableAdapter('work_entries', createStaffRegisterAdapter)
 
   // Create and mount Vue app

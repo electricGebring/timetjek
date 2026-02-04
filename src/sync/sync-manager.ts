@@ -34,7 +34,8 @@ export class SyncManager {
     if (!this.syncEngines.has(tableName)) {
       const adapter = getTableAdapter(tableName)
       if (!adapter) {
-        this.logger.error(`[SyncManager] No adapter found for table: ${tableName}`)
+        // NOTE: Missing adapter means this table is intentionally not synced.
+        // this.logger.error(`[SyncManager] No adapter found for table: ${tableName}`)
         return null
       }
 
@@ -66,7 +67,8 @@ export class SyncManager {
       policies.map(async (policy) => {
         const engine = this.getSyncEngine(policy.tableName)
         if (!engine) {
-          this.logger.warn(`[SyncManager] No sync engine for ${policy.tableName}`)
+          // NOTE: No engine means sync is intentionally skipped for this table.
+          // this.logger.warn(`[SyncManager] No sync engine for ${policy.tableName}`)
           return
         }
 
