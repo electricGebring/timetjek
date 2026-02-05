@@ -22,6 +22,8 @@ import { ref, onMounted } from 'vue'
 import HeaderBar from '@/components/HeaderBar.vue'
 // import { fetchWorkSchemeData } from '@/api/workscheme'
 import { useStaffRegisterStore } from '@/stores/staff-register/store'
+import { workEntryStatus } from '@/stores/staff-register/constants'
+import type { TimeRegistrationStatus } from '@/enums/TimeRegistrationStatus'
 
 const store = useStaffRegisterStore()
 import { computed } from 'vue'
@@ -47,11 +49,11 @@ const sortedEntriesByDay = computed(() => {
     currentDay.entries.push(entry)
   }
 
-  // Sort entries within each day (newest first based on timeIn)
+  // Sort entries within each day (newest first based on check_in_at)
   result.forEach((day) => {
     day.entries.sort((a, b) => {
-      const timeA = a.timeIn || a.createdAt || ''
-      const timeB = b.timeIn || b.createdAt || ''
+      const timeA = a.check_in_at || a.createdAt || ''
+      const timeB = b.check_in_at || b.createdAt || ''
       return timeB.localeCompare(timeA) // newest first
     })
   })
@@ -98,7 +100,75 @@ const getTypeColor = (type: string) => {
   return colors[type] || 'bg-gray-50 text-gray-700'
 }
 
+// Format ISO datetime to HH:MM
+const formatTime = (isoDateTime: string | null): string => {
+  if (!isoDateTime) return '—'
+  const date = new Date(isoDateTime)
+  const parts = date.toISOString().split('T')
+  const timePart = parts[1]
+  if (!timePart) return '—'
+  const fullTime = timePart.split('.')[0] || '—'
+  return fullTime.substring(0, 5) // HH:MM only
+}
+
+// Format seconds to "X h Y min" format
+const formatWorkTime = (seconds: number | null): string => {
+  if (!seconds) return '—'
+  const hours = Math.floor(seconds / 3600)
+  const minutes = Math.floor((seconds % 3600) / 60)
+  if (hours > 0 && minutes > 0) return `${hours}h ${minutes}min`
+  if (hours > 0) return `${hours}h`
+  return `${minutes}min`
+}
+
+// Format break time: calculate duration in minutes/hours
+const formatBreak = (breakValue: string | null, isOpen: boolean): string => {
+  if (!breakValue) return '—'
+  
+  const parts = breakValue.split('-')
+  if (parts.length !== 2) {
+    return '—'
+  }
+  
+  const start = parts[0]
+  const end = parts[1]
+  
+  // If end is 00:00:00, break is ongoing - show nothing
+  if (!end || end === '00:00:00') {
+    return '—'
+  }
+  
+  // If we have an actual end time, calculate duration regardless of isOpen
+  // (old entries might not have check_out_at set but still have complete break times)
+  
+  // Parse times and calculate duration
+  const [startH, startM, startS] = start.split(':').map(Number)
+  const [endH, endM, endS] = end.split(':').map(Number)
+  
+  const startMinutes = startH * 60 + startM + startS / 60
+  const endMinutes = endH * 60 + endM + endS / 60
+  const durationMinutes = Math.round(endMinutes - startMinutes)
+  
+  // Always show duration, even if 0
+  if (durationMinutes < 60) {
+    return `${durationMinutes}min`
+  }
+  
+  const hours = Math.floor(durationMinutes / 60)
+  const minutes = durationMinutes % 60
+  
+  if (minutes === 0) {
+    return `${hours}h`
+  }
+  
+  return `${hours}h ${minutes}min`
+}
+
 const isProcessing = ref(false)
+
+const formatSeconds = (seconds: number | null): string => {
+  return formatWorkTime(seconds)
+}
 
 // ...existing code...
 const formatMinutes = (totalMinutes: number) => {
@@ -114,173 +184,43 @@ const handleCheckIn = async () => {
   isProcessing.value = true
 
   try {
-    const now = new Date()
     const work_day_id = Number(new Date().setHours(0, 0, 0, 0))
-    const isoDate = now.toISOString()
-    const timeIn = now.toTimeString().slice(0, 8)
-
-    const todaysEntries = store.workEntries.filter((e) => e.work_day_id === work_day_id)
-
-    // 1) If a break entry is open, close it first
-    const openBreak = todaysEntries
-      .filter((e) => e.status === 'Rast' && e.timeIn && !e.timeOut)
-      .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''))[0]
-
-    if (openBreak) {
-      const breakInParts = openBreak.timeIn.split(':')
-      const breakOutParts = timeIn.split(':')
-      const breakInMinutes = parseInt(breakInParts[0] || '0') * 60 + parseInt(breakInParts[1] || '0')
-      const breakOutMinutes = parseInt(breakOutParts[0] || '0') * 60 + parseInt(breakOutParts[1] || '0')
-      const breakMinutes = breakOutMinutes - breakInMinutes
-
-      await store.updateWorkEntry({
-        ...openBreak,
-        timeOut: timeIn,
-        break: formatMinutes(breakMinutes),
-        status: 'Rast',
-        statusType: 'break',
-        updatedAt: isoDate
-      })
-    }
-
-    // 2) Create a new work entry
-    await store.addWorkEntryWithDefaults({
-      name: 'Anna Svensson',
-      type: 'A',
-      personalNumber: '19870312-1234',
-      work_day_id,
-      timeIn,
-      status: 'På arbete',
-      statusType: 'working',
-      createdAt: isoDate,
-      updatedAt: isoDate
-    })
-
-    await store.loadWorkEntries()
+    await store.checkIn(work_day_id)
   } catch (e: any) {
     alert(e.message || 'Instämpling misslyckades')
-    console.error('Check-in failed:', e.message)
+    console.error('Check-in failed:', e)
   } finally {
     isProcessing.value = false
   }
 }
 
 const handleCheckOut = async () => {
+  if (isProcessing.value) return
+  isProcessing.value = true
+
   try {
-    const now = new Date()
     const work_day_id = Number(new Date().setHours(0, 0, 0, 0))
-    const todaysEntries = store.workEntries.filter((e) => e.work_day_id === work_day_id)
-
-    const openEntry = todaysEntries
-      .filter((e) => e.timeIn && !e.timeOut)
-      .sort((a, b) => {
-        const timeA = a.createdAt || ''
-        const timeB = b.createdAt || ''
-        return timeB.localeCompare(timeA)
-      })[0]
-
-    if (!openEntry) {
-      alert('Ingen öppen instämpling hittades')
-      return
-    }
-
-    const timeOut = now.toTimeString().slice(0, 8)
-    const isoDate = now.toISOString()
-
-    const timeInParts = openEntry.timeIn.split(':')
-    const timeOutParts = timeOut.split(':')
-    const timeInMinutes = parseInt(timeInParts[0]) * 60 + parseInt(timeInParts[1])
-    const timeOutMinutes = parseInt(timeOutParts[0]) * 60 + parseInt(timeOutParts[1])
-    const workTimeMinutes = timeOutMinutes - timeInMinutes
-
-    const updatedEntry = {
-      ...openEntry,
-      timeOut,
-      workTime: formatMinutes(workTimeMinutes),
-      status: null,
-      statusType: 'updated',
-      updatedAt: isoDate
-    }
-
-    await store.updateWorkEntry(updatedEntry)
-    await store.loadWorkEntries()
+    await store.checkOut(work_day_id)
   } catch (e: any) {
     alert(e.message || 'Utstämpling misslyckades')
-    console.error('Check-out failed:', e.message)
+    console.error('Check-out failed:', e)
+  } finally {
+    isProcessing.value = false
   }
 }
 
 const handleBreak = async () => {
+  if (isProcessing.value) return
+  isProcessing.value = true
+
   try {
-    const now = new Date()
     const work_day_id = Number(new Date().setHours(0, 0, 0, 0))
-    const isoDate = now.toISOString()
-    const timeOut = now.toTimeString().slice(0, 8)
-
-    const todaysEntries = store.workEntries.filter((e) => e.work_day_id === work_day_id)
-
-    // If a break is already open, do nothing
-    const openBreak = todaysEntries.find((e) => e.status === 'Rast' && e.timeIn && !e.timeOut)
-    if (openBreak) {
-      alert('Du är redan på rast')
-      return
-    }
-
-    // 1) Close the open work entry (if any)
-    const openWork = todaysEntries
-      .filter((e) => e.timeIn && !e.timeOut && e.status !== 'Rast')
-      .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''))[0]
-
-    if (!openWork) {
-      // NEW: allow break without open check-in
-      await store.addWorkEntryWithDefaults({
-        name: 'Anna Svensson',
-        type: 'A',
-        personalNumber: '19870312-1234',
-        work_day_id,
-        timeIn: timeOut,
-        status: 'Rast',
-        statusType: 'break',
-        createdAt: isoDate,
-        updatedAt: isoDate
-      })
-
-      await store.loadWorkEntries()
-      return
-    }
-
-    const timeInParts = openWork.timeIn.split(':')
-    const timeOutParts = timeOut.split(':')
-    const timeInMinutes = parseInt(timeInParts[0]) * 60 + parseInt(timeInParts[1])
-    const timeOutMinutes = parseInt(timeOutParts[0]) * 60 + parseInt(timeOutParts[1])
-    const workTimeMinutes = timeOutMinutes - timeInMinutes
-
-    await store.updateWorkEntry({
-      ...openWork,
-      timeOut,
-      workTime: workTimeMinutes,
-      status: null,
-      statusType: 'updated',
-      updatedAt: isoDate
-    })
-
-    // 2) Create new break entry
-    await store.addWorkEntryWithDefaults({
-      name: 'Anna Svensson',
-      type: 'A',
-      personalNumber: '19870312-1234',
-      work_day_id,
-      timeIn: timeOut,
-      status: 'Rast',
-      statusType: 'break',
-      createdAt: isoDate,
-      updatedAt: isoDate
-    })
-
-    await store.loadWorkEntries()
+    await store.goOnBreak(work_day_id)
   } catch (e: any) {
     alert(e.message || 'Gå på rast misslyckades')
-    console.error('Break failed:', e.message)
+    console.error('Break failed:', e)
+  } finally {
+    isProcessing.value = false
   }
 }
 </script>
@@ -367,6 +307,26 @@ const handleBreak = async () => {
         </div>
       </section>
 
+      <!-- Status summary -->
+      <section class="mb-6 grid grid-cols-4 gap-4">
+        <div class="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+          <div class="text-sm font-semibold text-gray-600">ÖPPNA</div>
+          <div class="text-2xl font-bold text-blue-600">{{ store.statusSummary.OPEN || 0 }}</div>
+        </div>
+        <div class="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+          <div class="text-sm font-semibold text-gray-600">SLUTFÖRDA</div>
+          <div class="text-2xl font-bold text-green-600">{{ store.statusSummary.CLOSED || 0 }}</div>
+        </div>
+        <div class="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+          <div class="text-sm font-semibold text-gray-600">SAKNADE TIDER</div>
+          <div class="text-2xl font-bold text-red-600">{{ store.statusSummary.FORGOT_CHECK_OUT || 0 }}</div>
+        </div>
+        <div class="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+          <div class="text-sm font-semibold text-gray-600">TOTALT ARBETAT</div>
+          <div class="text-2xl font-bold text-purple-600">{{ formatWorkTime(store.totalWorkingSeconds) }}</div>
+        </div>
+      </section>
+
       <!-- Filters row -->
       <section class="mb-6 flex items-center justify-between gap-6">
         <!-- Filter/info row, can be customized or removed -->
@@ -444,12 +404,12 @@ const handleBreak = async () => {
                     >
                   </td>
                   <td class="px-5 py-4 text-gray-900">{{ entry.personalNumber }}</td>
-                  <td class="px-5 py-4 text-gray-900">{{ entry.timeIn }}</td>
+                  <td class="px-5 py-4 text-gray-900">{{ formatTime(entry.check_in_at) }}</td>
                   <td class="px-5 py-4">
                     <span
-                      v-if="entry.timeOut"
+                      v-if="entry.check_out_at"
                       class="text-gray-900"
-                      >{{ entry.timeOut }}</span
+                      >{{ formatTime(entry.check_out_at) }}</span
                     >
                     <span
                       v-else
@@ -461,7 +421,7 @@ const handleBreak = async () => {
                     <span
                       v-if="entry.break"
                       class="text-gray-900"
-                      >{{ entry.break }}</span
+                      >{{ formatBreak(entry.break, !entry.check_out_at) }}</span
                     >
                     <span
                       v-else
@@ -471,9 +431,9 @@ const handleBreak = async () => {
                   </td>
                   <td class="px-5 py-4">
                     <span
-                      v-if="entry.workTime"
+                      v-if="entry.total_working_seconds"
                       class="text-gray-900"
-                      >{{ entry.workTime }}</span
+                      >{{ formatWorkTime(entry.total_working_seconds) }}</span
                     >
                     <span
                       v-else
@@ -482,29 +442,20 @@ const handleBreak = async () => {
                     >
                   </td>
                   <td class="px-5 py-4">
-                    <div v-if="entry.hasError">
-                      <span
-                        class="inline-flex items-center gap-2 font-semibold"
-                        :class="getStatusColor(entry.statusType)"
-                      >
-                        <FontAwesomeIcon
-                          icon="circle-exclamation"
-                          class="text-red-600"
-                        />
-                        {{ entry.status }}
-                      </span>
+                    <div v-if="entry.break" class="flex items-center gap-2 font-semibold text-orange-600">
+                      {{ entry.check_out_at ? 'Rast' : 'På rast' }}
                     </div>
                     <div
-                      v-else-if="entry.status"
-                      :class="getStatusColor(entry.statusType)"
+                      v-else-if="entry.status && workEntryStatus[entry.status]"
+                      class="flex items-center gap-2"
                     >
-                      <div class="font-semibold">{{ entry.status }}</div>
-                      <div
-                        v-if="entry.updatedBy"
-                        class="text-xs text-gray-500"
-                      >
-                        av {{ entry.updatedBy }} {{ formatUpdatedAt(entry.updatedAt) }}
-                      </div>
+                      <FontAwesomeIcon 
+                        :icon="workEntryStatus[entry.status].icon" 
+                        :class="workEntryStatus[entry.status].class" 
+                      />
+                      <span :class="workEntryStatus[entry.status].class" class="font-semibold">
+                        {{ workEntryStatus[entry.status].text }}
+                      </span>
                     </div>
                   </td>
                 </tr>

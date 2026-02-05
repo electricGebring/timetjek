@@ -5,6 +5,8 @@ import { getDB } from './index'
 // Import SQL migrations at the top for Vite/web
 import migration_001 from '../../migrations/20260128_001_create_work_entries.sql?raw'
 import migration_002 from '../../migrations/20260201_001_add_outbox.sql?raw'
+import migration_003 from '../../migrations/20260205_002_upgrade_work_entries.sql?raw'
+import migration_004 from '../../migrations/20260205_001_add_total_break_seconds.sql?raw'
 
 type Migration = { id: string, sql: string }
 let migrations: Migration[] = []
@@ -20,13 +22,23 @@ if (typeof window === 'undefined') {
     {
       id: '20260201_001_add_outbox',
       sql: fs.readFileSync('migrations/20260201_001_add_outbox.sql', 'utf-8')
+    },
+    {
+      id: '20260205_002_upgrade_work_entries',
+      sql: fs.readFileSync('migrations/20260205_002_upgrade_work_entries.sql', 'utf-8')
+    },
+    {
+      id: '20260205_001_add_total_break_seconds',
+      sql: fs.readFileSync('migrations/20260205_001_add_total_break_seconds.sql', 'utf-8')
     }
   ]
 } else {
   // Web/Vite: use imported SQL strings
   migrations = [
     { id: '20260128_001_create_work_entries', sql: migration_001 },
-    { id: '20260201_001_add_outbox', sql: migration_002 }
+    { id: '20260201_001_add_outbox', sql: migration_002 },
+    { id: '20260205_002_upgrade_work_entries', sql: migration_003 },
+    { id: '20260205_001_add_total_break_seconds', sql: migration_004 }
   ]
 }
 

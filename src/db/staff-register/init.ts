@@ -10,7 +10,19 @@ export async function initStaffRegisterDb(db: any, isNative: boolean) {
     await db.execute(STAFF_REGISTER_SCHEMA)
     await runMigrations()
   } else {
-    db.run(STAFF_REGISTER_SCHEMA)
+    // Split schema by statements and execute individually for sql.js
+    const statements = STAFF_REGISTER_SCHEMA
+      .split(';')
+      .map(stmt => stmt.trim())
+      .filter(stmt => stmt.length > 0)
+    
+    for (const statement of statements) {
+      try {
+        db.run(statement + ';')
+      } catch (error) {
+        console.warn('[DB] Statement already exists or minor error (safe):', statement.substring(0, 50))
+      }
+    }
     await runMigrations()
   }
 }

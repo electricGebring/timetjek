@@ -12,6 +12,10 @@ export async function updateStoreFromDb() {
  */
 import * as staffRepo from '@/db/staff-register/repo'
 import { triggerSyncIfOnline } from '../services/sync-trigger'
+import { TimeRegistrationStatus } from '@/enums/TimeRegistrationStatus'
+
+// Export the converter function
+export const workEntryToEntry = staffRepo.workEntryToEntry
 
 // Get all work_entries
 export async function getAllWorkEntries() {
@@ -38,20 +42,26 @@ export async function canCheckOut(work_day_id: number): Promise<boolean> {
   return hasOpenCheckIn(todays)
 }
 
-// Create a new work_entry with business rule validation
+// Create a new work_entry
 export async function createWorkEntry(entry: any) {
-  // Always load fresh data from DB before validation
-  const all = await staffRepo.getWorkEntries()
-  const todays = all.filter(e => e.work_day_id === entry.work_day_id)
-  const hasOpen = todays.some(e => e.timeIn && !e.timeOut)
+  // Set defaults
+  const now = new Date().toISOString()
+  const safeEntry = {
+    ...entry,
+    status: entry.status ?? TimeRegistrationStatus.OPEN,
+    check_in_at: entry.check_in_at ?? now,
+    check_out_at: entry.check_out_at ?? null,
+    break: entry.break ?? null,
+    total_working_seconds: entry.total_working_seconds ?? null,
+    total_break_seconds: entry.total_break_seconds ?? null,
+    createdAt: now,
+    updatedAt: now,
+    deleted_at: null,
+    synced: 0,
+    deleted: 0
+  }
   
-  if (entry.timeIn && hasOpen) {
-    throw new Error('Already checked in – check out required first.')
-  }
-  if (entry.timeOut && !hasOpen) {
-    throw new Error('Cannot check out before checking in.')
-  }
-  await staffRepo.upsertWorkEntry(entry)
+  await staffRepo.upsertWorkEntry(safeEntry)
   await triggerSyncIfOnline('mutation')
 }
 
@@ -60,6 +70,35 @@ export async function updateWorkEntry(entry: any) {
   if (!entry.id) {
     throw new Error('Cannot update entry without id')
   }
+
+  // If check-out data is being added
+  if (entry.check_out_at) {
+    // Calculate working time for non-break entries
+    if (entry.check_in_at && !entry.total_working_seconds && !entry.break) {
+      entry.total_working_seconds = staffRepo.calculateTotalWorkingSeconds(
+        entry.check_in_at,
+        entry.check_out_at,
+        null
+      )
+    }
+    
+    // Calculate break duration for break entries
+    if (entry.break && !entry.total_break_seconds) {
+      const breakDuration = staffRepo.calculateTotalWorkingSeconds(
+        entry.check_in_at,
+        entry.check_out_at,
+        entry.break
+      )
+      entry.total_break_seconds = breakDuration
+    }
+    
+    // Set status to CLOSED if still OPEN
+    if (entry.status === TimeRegistrationStatus.OPEN) {
+      entry.status = TimeRegistrationStatus.CLOSED
+    }
+  }
+
+  entry.updatedAt = new Date().toISOString()
   await staffRepo.upsertWorkEntry(entry)
   await triggerSyncIfOnline('mutation')
 }
