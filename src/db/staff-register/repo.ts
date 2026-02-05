@@ -206,6 +206,9 @@ export function workEntryToEntry(w: WorkEntry): Entry {
     hasError: !!w.hasError,
     updatedBy: w.updatedBy != null ? String(w.updatedBy) : undefined,
     updatedAt: w.updatedAt != null ? String(w.updatedAt) : undefined,
+    createdAt: w.createdAt != null ? String(w.createdAt) : new Date().toISOString(),
+    synced: w.synced ?? 0,
+    deleted: w.deleted ?? 0,
     work_day_id: w.work_day_id ?? undefined,
   }
 }

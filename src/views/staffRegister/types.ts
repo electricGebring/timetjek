@@ -1,5 +1,6 @@
 export interface Entry {
   id: number
+  createdAt: string
   name: string
   type: string
   personalNumber: string
@@ -12,6 +13,8 @@ export interface Entry {
   hasError?: boolean
   updatedBy?: string
   updatedAt?: string
+  synced: number
+  deleted: number
   work_day_id?: number
 }
 

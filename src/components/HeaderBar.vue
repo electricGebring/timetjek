@@ -7,10 +7,10 @@ const props = defineProps({
 })
 
 const now = ref(new Date());
-let timerId;
-let tempTimerId;
+let timerId: number | undefined;
+let tempTimerId: number | undefined;
 
-const formatHeaderDate = (date) => {
+const formatHeaderDate = (date: Date) => {
   const formatted = new Intl.DateTimeFormat('sv-SE', {
     weekday: 'short',
     day: 'numeric',
@@ -19,7 +19,7 @@ const formatHeaderDate = (date) => {
   return formatted.charAt(0).toUpperCase() + formatted.slice(1)
 }
 
-const formatHeaderTime = (date) =>
+const formatHeaderTime = (date: Date) =>
   new Intl.DateTimeFormat('sv-SE', {
     hour: '2-digit',
     minute: '2-digit',
@@ -29,7 +29,7 @@ const formatHeaderTime = (date) =>
 
 const displayDate = computed(() => props.headerDate || formatHeaderDate(now.value))
 const displayTime = computed(() => props.headerTime || formatHeaderTime(now.value))
-const temperature = ref(null)
+const temperature = ref<number | null>(null)
 
 const displayTemperature = computed(() => (temperature.value === null ? '—°' : `${temperature.value}°`))
 
@@ -37,7 +37,7 @@ const fetchTemperature = async () => {
   if (!('geolocation' in navigator)) return
 
   try {
-    const position = await new Promise((resolve, reject) => {
+    const position = await new Promise<GeolocationPosition>((resolve, reject) => {
       navigator.geolocation.getCurrentPosition(resolve, reject, {
         maximumAge: 10 * 60 * 1000,
         timeout: 5000

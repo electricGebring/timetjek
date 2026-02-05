@@ -129,8 +129,8 @@ const handleCheckIn = async () => {
     if (openBreak) {
       const breakInParts = openBreak.timeIn.split(':')
       const breakOutParts = timeIn.split(':')
-      const breakInMinutes = parseInt(breakInParts[0]) * 60 + parseInt(breakInParts[1])
-      const breakOutMinutes = parseInt(breakOutParts[0]) * 60 + parseInt(breakOutParts[1])
+      const breakInMinutes = parseInt(breakInParts[0] || '0') * 60 + parseInt(breakInParts[1] || '0')
+      const breakOutMinutes = parseInt(breakOutParts[0] || '0') * 60 + parseInt(breakOutParts[1] || '0')
       const breakMinutes = breakOutMinutes - breakInMinutes
 
       await store.updateWorkEntry({

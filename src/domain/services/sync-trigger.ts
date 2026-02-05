@@ -46,10 +46,10 @@ export async function triggerSyncIfOnline(reason: 'manual' | 'mutation' = 'manua
   // Debounce sync by 100ms to allow batch operations to complete
   pendingSyncTimeout = setTimeout(async () => {
     try {
-      const state = await globalConnectivity.getCurrent()
-      if (state.online && !globalSyncPort.isRunning()) {
+      const state = await globalConnectivity!.getCurrent()
+      if (state.online && !globalSyncPort!.isRunning()) {
         // Fire and forget - don't await (non-blocking)
-        globalSyncPort.start(reason as unknown as SyncReason).catch((err) => {
+        globalSyncPort!.start(reason as unknown as SyncReason).catch((err) => {
           console.warn('[SyncTrigger] Immediate sync failed:', err)
           // Sync will still happen via coordinator/periodic sync
         })
