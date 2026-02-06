@@ -9,10 +9,9 @@ let sqlJsDb: Database | null = null
 /**
  * Initializes the database for the application.
  * Uses Capacitor SQLite for native platforms (iOS/Android)
- * and sql.js for web. Creates the todos table if it doesn't exist.
+ * and sql.js for web. Creates work_entries and sync_metadata tables.
  */
 export async function initDB() {
-  const { initTodosDb } = await import('./todos/init')
   const { initStaffRegisterDb } = await import('./staff-register/init')
   if (Capacitor.isNativePlatform()) {
     if (!sqlite) {
@@ -20,7 +19,6 @@ export async function initDB() {
     }
     capacitorDb = await sqlite.createConnection('appdb', false, 'no-encryption', 1, false)
     await capacitorDb.open()
-    await initTodosDb(capacitorDb, true)
     await initStaffRegisterDb(capacitorDb, true)
     const { initSyncMetadataTable } = await import('./sync-metadata/repo')
     await initSyncMetadataTable()
@@ -63,7 +61,6 @@ export async function initDB() {
       throw new Error('Failed to initialize sql.js database')
     }
     const db = sqlJsDb
-    await initTodosDb(db, false)
     await initStaffRegisterDb(db, false)
     const { initSyncMetadataTable } = await import('./sync-metadata/repo')
     await initSyncMetadataTable()
@@ -111,9 +108,8 @@ export function getDB() {
  * Only available in development/web platform.
  * 
  * Usage in Chrome Console:
- *   window.dbQuery('SELECT * FROM todos')
+ *   window.dbQuery('SELECT * FROM work_entries')
  *   window.dbQuery('SELECT * FROM sync_metadata')
- *   window.dbQuery('SELECT COUNT(*) as count FROM todos WHERE synced = 0')
  */
 if (typeof window !== 'undefined' && !Capacitor.isNativePlatform()) {
   (window as any).dbQuery = (sql: string) => {

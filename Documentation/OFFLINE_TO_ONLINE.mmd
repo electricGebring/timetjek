@@ -1,0 +1,63 @@
+%% Offline-to-online: what happens when the device comes online
+%% Sequence from connectivity change through sync to backend
+
+flowchart TB
+  subgraph Trigger["1. Connectivity change"]
+    Network["Capacitor Network API"]
+    Event["'online' event"]
+    Network -->|status change| Event
+  end
+
+  subgraph Coordinator["2. Coordinator"]
+    Coord["OnlineOfflineCoordinator\n.handleConnectivity(online)"]
+    StartSync["sync.start('connectivity-online')"]
+    StopIfOffline["If offline: sync.stop()\nno further steps"]
+    Event --> Coord
+    Coord -->|online| StartSync
+    Coord -->|offline| StopIfOffline
+  end
+
+  subgraph SyncPort["3. Sync adapter"]
+    Adapter["SyncPort adapter\n(wraps SyncManager)"]
+    SyncAll["syncManager.syncAll('connectivity-online')"]
+    StartSync --> Adapter
+    Adapter --> SyncAll
+  end
+
+  subgraph PerTable["4. Per table (e.g. work_entries)"]
+    GetEngine["getSyncEngine(tableName)"]
+    EngineStart["SyncEngine.start(reason)"]
+    GetEngine --> EngineStart
+    SyncAll --> GetEngine
+  end
+
+  subgraph EngineSteps["5. SyncEngine steps (in order)"]
+    MetaSyncing["sync_metadata: state = 'syncing'"]
+    DrainOutbox["Drain outbox\n• getUnsynced()\n• createItem / batchUpsert to API\n• markAsSynced() locally"]
+    DrainDel["Drain deletions\n• getDeleted()\n• deleteItem / batchDelete on API\n• permanentDelete() locally"]
+    PullRemote["Pull remote changes\n• fetchSince(lastSync) or fetchAll()\n• mergeRemote() per item\n• conflict strategy from data policy\n  (last-write-wins, local-wins, …)\n• repo.upsert"]
+    MetaSuccess["sync_metadata: markSyncSuccess()"]
+    MetaSyncing --> DrainOutbox --> DrainDel --> PullRemote --> MetaSuccess
+    EngineStart --> MetaSyncing
+  end
+
+  subgraph Backend["6. Backend"]
+    API["API client\n(POST/PATCH/DELETE/GET)"]
+    Server["Backend server\n/entries"]
+    DrainOutbox --> API
+    DrainDel --> API
+    PullRemote --> API
+    API --> Server
+  end
+
+  subgraph Done["7. Done"]
+    Idle["Sync idle.\nLocal and backend in sync."]
+    MetaSuccess --> Idle
+  end
+
+  class Network,Event trigger
+  class Coord,StartSync,StopIfOffline coord
+  class Adapter,SyncAll,GetEngine,EngineStart sync
+  class MetaSyncing,DrainOutbox,DrainDel,PullRemote,MetaSuccess engine
+  class API,Server api
+  class Idle done

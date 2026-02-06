@@ -85,3 +85,14 @@ export async function updateEntry(item: Entry): Promise<Entry> {
   if (!response.ok) throw new Error(`Failed to update entry: ${response.statusText}`)
   return response.json()
 }
+
+/**
+ * Delete an entry on the API. Local DB cleanup is done by SyncEngine (permanentDelete) after success.
+ */
+export async function deleteEntry(id: number): Promise<void> {
+  const response = await fetchWithRetry(`${API_URL}/${id}`, { method: 'DELETE' })
+  // 404 = already deleted on server, treat as success
+  if (!response.ok && response.status !== 404) {
+    throw new Error(`Failed to delete entry ${id}: ${response.statusText}`)
+  }
+}

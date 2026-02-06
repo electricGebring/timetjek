@@ -5,8 +5,6 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "api:todos": "json-server src/api/mock-todos.json --port 3001 --watch",
-    "api:todos:batch": "node scripts/json-server-batch.cjs",
     "api:work": "json-server src/api/mock-work-schem.json --port 3002 --watch",
     "build": "vue-tsc -b && vite build",
     "preview": "vite preview",
@@ -29,7 +27,8 @@
     "sql.js": "^1.13.0",
     "vue": "^3.5.24",
     "vue-i18n": "^11.2.8",
-    "vue-router": "^4.6.4"
+    "vue-router": "^4.6.4",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.18",

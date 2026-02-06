@@ -1,0 +1,57 @@
+%% Offline-first strategy: local storage as source of truth, sync when online
+%% Describes the overall approach to offline/online storage and sync
+
+flowchart TB
+  subgraph Principle["Offline-first principle"]
+    LocalFirst["Local storage is source of truth"]
+    WriteLocal["Writes always go to local DB first"]
+    SyncWhenOnline["Sync to backend when online"]
+    LocalFirst --> WriteLocal
+    WriteLocal --> SyncWhenOnline
+  end
+
+  subgraph Offline["When OFFLINE"]
+    UserOff["User actions"]
+    StoreOff["Store / Domain"]
+    RepoOff["Repository"]
+    SQLiteOff["SQLite\n(work_entries, etc.)"]
+    OutboxOff["Outbox\n(synced = 0)"]
+    UserOff --> StoreOff --> RepoOff --> SQLiteOff
+    SQLiteOff --> OutboxOff
+    NoteOff["App works fully.\nChanges queued in outbox."]
+  end
+
+  subgraph Online["When ONLINE"]
+    SameFlow["Same local-first flow"]
+    PlusSync["+ Sync layer runs"]
+    Backend["Backend API"]
+    SameFlow --> PlusSync --> Backend
+  end
+
+  subgraph SyncMechanism["Sync mechanism"]
+    Coordinator["OnlineOfflineCoordinator\n(detects online/offline)"]
+    SyncManager["SyncManager\n(one sync at a time)"]
+    DrainOutbox["1. Drain outbox\n(push unsynced → API)"]
+    DrainDel["2. Drain deletions\n(delete on API, then local)"]
+    Pull["3. Pull remote\n(fetch, merge, conflict resolve\nper-table strategy)"]
+    Coordinator --> SyncManager
+    SyncManager --> DrainOutbox --> DrainDel --> Pull
+  end
+
+  subgraph Result["Result"]
+    LocalSynced["Local DB stays in sync\nwith backend when online"]
+    OfflineReady["Offline changes sync\nwhen back online"]
+    LocalSynced --> OfflineReady
+  end
+
+  Principle --> Offline
+  Principle --> Online
+  SyncWhenOnline --> SyncMechanism
+  SyncMechanism --> Result
+  Offline -.->|"user goes online"| SyncMechanism
+
+  class LocalFirst,WriteLocal,SyncWhenOnline principle
+  class UserOff,StoreOff,RepoOff,SQLiteOff,OutboxOff,NoteOff offline
+  class SameFlow,PlusSync,Backend online
+  class Coordinator,SyncManager,DrainOutbox,DrainDel,Pull sync
+  class LocalSynced,OfflineReady result

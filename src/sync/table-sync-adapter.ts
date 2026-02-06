@@ -1,9 +1,15 @@
 import type { ConflictResolutionStrategy } from '@/sync/conflict-resolver'
-/**
- * Table sync adapter - provides table-specific dependencies for SyncEngine
- * This allows SyncEngine to work with different tables
- */
 
+/**
+ * Table sync adapter – table-specific implementation for SyncEngine.
+ *
+ * Adapter contract (SyncEngine relies on this):
+ * - deleteItem(id): Delete this id on the API only. Do not remove from local DB.
+ * - batchDelete(ids): Delete these ids on the API only. Do not remove from local DB.
+ * - permanentDelete(id): Remove this id from the local DB only. SyncEngine calls this after successful API delete(s).
+ * - getUnsynced / getDeleted: Read from local DB. markAsSynced: Update local DB only.
+ * - batchUpsert / createItem: Push to API; adapter may update local DB (e.g. mark synced) as needed.
+ */
 export type TableSyncAdapter = {
   tableName: string
   getUnsynced: () => Promise<any[]>

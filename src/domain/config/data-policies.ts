@@ -1,21 +1,28 @@
 /**
  * Data retention and sync policies configuration
- * Define per-table policies for offline support, retention, and sync behavior
+ * Define per-table policies for offline support, retention, sync behavior, and conflict resolution
  */
 
-export type DataSyncMode = 'offline-first' | 'online-only' | 'cache-only'
+import { ConflictResolutionStrategy } from '@/enums/ConflictResolutionStrategy'
+import { SyncMode } from '@/enums/SyncMode'
+
+/** Re-export for use across the project */
+export { ConflictResolutionStrategy } from '@/enums/ConflictResolutionStrategy'
+export { SyncMode } from '@/enums/SyncMode'
 
 export type DataRetentionPolicy = {
   /** Table/entity name */
   tableName: string
   /** Sync mode: offline-first (syncs), online-only (no local storage), cache-only (local but no sync) */
-  syncMode: DataSyncMode
+  syncMode: SyncMode
   /** Retention period in days (only applies to offline-first and cache-only) */
   retentionDays?: number
   /** Only clean up soft-deleted items (for offline-first) */
   softDeleteOnly?: boolean
   /** Whether to sync this table automatically */
   autoSync?: boolean
+  /** Conflict resolution when local and remote differ */
+  conflictStrategy?: ConflictResolutionStrategy
   /** Custom cleanup function (optional) */
   customCleanup?: (tableName: string) => Promise<number>
 }
@@ -25,42 +32,14 @@ export type DataRetentionPolicy = {
  * Register your data types here with their retention policies
  */
 export const DATA_POLICIES: Record<string, DataRetentionPolicy> = {
-  todos: {
-    tableName: 'todos',
-    syncMode: 'offline-first',
-    retentionDays: 30,
-    softDeleteOnly: true,
-    autoSync: true,
-  },
   work_entries: {
     tableName: 'work_entries',
-    syncMode: 'offline-first',
+    syncMode: SyncMode.OFFLINE_FIRST,
     retentionDays: 30,
     softDeleteOnly: true,
     autoSync: true,
-  },
-  // staffRegister can be kept as an alias if desired, but work_entries controls sync
-  // Example: Online-only data (no local storage)
-  // notifications: {
-  //   tableName: 'notifications',
-  //   syncMode: 'online-only',
-  //   autoSync: false, // Fetched on-demand only
-  // },
-  // Example: Cache-only data (local but no sync)
-  // settings: {
-  //   tableName: 'settings',
-  //   syncMode: 'cache-only',
-  //   retentionDays: 90, // Keep settings longer
-  //   autoSync: false,
-  // },
-  // Example: Different retention period
-  // logs: {
-  //   tableName: 'logs',
-  //   syncMode: 'offline-first',
-  //   retentionDays: 7, // Only keep logs for 7 days
-  //   softDeleteOnly: false, // Clean up all old logs
-  //   autoSync: true,
-  // },
+    conflictStrategy: ConflictResolutionStrategy.LAST_WRITE_WINS
+  }
 }
 
 /**
@@ -76,7 +55,7 @@ export function getDataPolicy(tableName: string): DataRetentionPolicy | undefine
 export function shouldSyncTable(tableName: string): boolean {
   const policy = getDataPolicy(tableName)
   if (!policy) return false // Unknown tables are not synced by default
-  if (policy.syncMode === 'online-only') return false // Online-only doesn't sync
+  if (policy.syncMode === SyncMode.ONLINE_ONLY) return false // Online-only doesn't sync
   return policy.autoSync !== false // Default to true unless explicitly false
 }
 
@@ -86,7 +65,7 @@ export function shouldSyncTable(tableName: string): boolean {
 export function supportsOfflineStorage(tableName: string): boolean {
   const policy = getDataPolicy(tableName)
   if (!policy) return false
-  return policy.syncMode === 'offline-first' || policy.syncMode === 'cache-only'
+  return policy.syncMode === SyncMode.OFFLINE_FIRST || policy.syncMode === SyncMode.CACHE_ONLY
 }
 
 /**
@@ -106,6 +85,15 @@ export function shouldSoftDeleteOnly(tableName: string): boolean {
 }
 
 /**
+ * Get conflict resolution strategy for a table (used during pull/merge).
+ * Default: LAST_WRITE_WINS. Use LOCAL_WINS for draft-like data, REMOTE_WINS for server-authoritative.
+ */
+export function getConflictStrategy(tableName: string): ConflictResolutionStrategy {
+  const policy = getDataPolicy(tableName)
+  return policy?.conflictStrategy ?? ConflictResolutionStrategy.LAST_WRITE_WINS
+}
+
+/**
  * Register a new data policy
  */
 export function registerDataPolicy(policy: DataRetentionPolicy): void {
@@ -118,7 +106,7 @@ export function registerDataPolicy(policy: DataRetentionPolicy): void {
 export function getPoliciesNeedingCleanup(): DataRetentionPolicy[] {
   return Object.values(DATA_POLICIES).filter(
     (policy) =>
-      (policy.syncMode === 'offline-first' || policy.syncMode === 'cache-only') &&
+      (policy.syncMode === SyncMode.OFFLINE_FIRST || policy.syncMode === SyncMode.CACHE_ONLY) &&
       policy.retentionDays !== undefined &&
       policy.retentionDays > 0
   )

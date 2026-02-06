@@ -1,0 +1,60 @@
+%% Data flow: when data changes from Vue → Store → Sync → API
+%% Shows the path of a mutation through the app to the backend
+
+flowchart LR
+  subgraph UI["1. UI"]
+    User["User action"]
+    Component["Vue component\n(StaffRegister.vue)"]
+    User --> Component
+  end
+
+  subgraph State["2. State"]
+    Store["Pinia store\n(useStaffRegisterStore)"]
+    Component -->|dispatch action| Store
+  end
+
+  subgraph Domain["3. Domain"]
+    UseCase["Domain use case\n(createWorkEntry,\ndeleteWorkEntry, …)"]
+    Store -->|calls| UseCase
+  end
+
+  subgraph Persist["4. Local persist"]
+    Repo["Repository\n(work_entries)"]
+    DB["SQLite\n(insert/update,\nsynced = 0 = outbox)"]
+    UseCase -->|write| Repo
+    Repo --> DB
+  end
+
+  subgraph Trigger["5. Sync trigger"]
+    SyncTrigger["SyncTrigger\n(if online, debounced)"]
+    UseCase -->|on mutation| SyncTrigger
+    SyncTrigger -->|start| SyncMgr
+  end
+
+  subgraph Sync["6. Sync layer"]
+    SyncMgr["SyncManager\n.syncAll()"]
+    Engine["SyncEngine\n(drain outbox → deletions → pull)\nconflict strategy per table"]
+    Adapter["Table adapter\n(staff-register)"]
+    SyncMgr --> Engine
+    Engine --> Adapter
+  end
+
+  subgraph API["7. API & backend"]
+    APIClient["API client\n(staff-register.ts)"]
+    Backend["Backend API\n/entries"]
+    Adapter -->|POST/PATCH/DELETE/GET| APIClient
+    APIClient --> Backend
+  end
+
+  subgraph Done["8. After API"]
+    MarkSynced["markAsSynced\nor permanentDelete"]
+    Adapter -->|on success| MarkSynced
+    MarkSynced --> Repo
+  end
+
+  class User,Component ui
+  class Store state
+  class UseCase domain
+  class Repo,DB storage
+  class SyncTrigger,SyncMgr,Engine,Adapter sync
+  class APIClient,Backend api

@@ -13,11 +13,14 @@ type SyncManagerDeps = {
 
 /**
  * Manages sync for multiple tables based on their data policies
- * Only syncs tables that are configured for offline-first mode
+ * Only syncs tables that are configured for offline-first mode.
+ * At most one syncAll() runs at a time (guard prevents overlapping runs).
  */
 export class SyncManager {
   private syncEngines: Map<string, SyncEngine> = new Map()
   private logger: Pick<Console, 'log' | 'warn' | 'error'>
+  /** Prevents overlapping syncAll() runs; overlapping triggers become no-ops */
+  private syncInProgress = false
 
   constructor(deps: SyncManagerDeps = {}) {
     this.logger = deps.logger ?? console
@@ -53,38 +56,44 @@ export class SyncManager {
   }
 
   /**
-   * Sync all tables that should be synced
+   * Sync all tables that should be synced.
+   * Only one syncAll() runs at a time; overlapping calls return early.
    */
   async syncAll(reason: SyncReason): Promise<void> {
+    if (this.syncInProgress) {
+      this.logger.log('[SyncManager] Sync already in progress, skipping')
+      return
+    }
     // Extra safety: never run sync when offline (web)
     if (typeof window !== 'undefined' && typeof navigator !== 'undefined' && navigator.onLine === false) {
       this.logger.warn('[SyncManager] Aborting sync: navigator.onLine is false (offline mode)')
       return
     }
-    const policies = getPoliciesForSync()
 
-    const results = await Promise.allSettled(
-      policies.map(async (policy) => {
-        const engine = this.getSyncEngine(policy.tableName)
-        if (!engine) {
-          // NOTE: No engine means sync is intentionally skipped for this table.
-          // this.logger.warn(`[SyncManager] No sync engine for ${policy.tableName}`)
-          return
-        }
+    this.syncInProgress = true
+    try {
+      const policies = getPoliciesForSync()
 
-        try {
-          await engine.start(reason)
-          // this.logger.log(`[SyncManager] Synced ${policy.tableName}`)
-        } catch (error) {
-          this.logger.error(`[SyncManager] Failed to sync ${policy.tableName}:`, error)
-          throw error
-        }
-      })
-    )
+      const results = await Promise.allSettled(
+        policies.map(async (policy) => {
+          const engine = this.getSyncEngine(policy.tableName)
+          if (!engine) return
 
-    const failed = results.filter((r) => r.status === 'rejected')
-    if (failed.length > 0) {
-      this.logger.warn(`[SyncManager] ${failed.length} tables failed to sync`)
+          try {
+            await engine.start(reason)
+          } catch (error) {
+            this.logger.error(`[SyncManager] Failed to sync ${policy.tableName}:`, error)
+            throw error
+          }
+        })
+      )
+
+      const failed = results.filter((r) => r.status === 'rejected')
+      if (failed.length > 0) {
+        this.logger.warn(`[SyncManager] ${failed.length} tables failed to sync`)
+      }
+    } finally {
+      this.syncInProgress = false
     }
   }
 

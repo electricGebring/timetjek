@@ -4,7 +4,7 @@
 
 import { getDB } from '@/db/index'
 import { Capacitor } from '@capacitor/core'
-import { getDataPolicy, getPoliciesNeedingCleanup } from '../config/data-policies'
+import { getPoliciesNeedingCleanup } from '../config/data-policies'
 
 export type CleanupConfig = {
   retentionDays: number
@@ -98,22 +98,6 @@ export async function cleanupExpiredData(config: CleanupConfig): Promise<number>
       return count as number
     }
   }
-}
-
-/**
- * Clean up all expired todos using configured policy
- */
-export async function cleanupExpiredTodos(): Promise<number> {
-  const policy = getDataPolicy('todos')
-  if (!policy || !policy.retentionDays) {
-    return 0 // No cleanup if no policy or no retention configured
-  }
-
-  return cleanupExpiredData({
-    retentionDays: policy.retentionDays,
-    tableName: 'todos',
-    softDeleteOnly: policy.softDeleteOnly ?? true,
-  })
 }
 
 /**

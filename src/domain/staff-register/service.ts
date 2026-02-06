@@ -2,6 +2,7 @@
 // Minimal and reusable service layer for staff register (check-in/out)
 // All code and comments in English
 
+import { CheckInOutStatus } from '@/enums/CheckInOutStatus'
 import * as domain from './domain'
 
 export class StaffRegisterService {
@@ -14,18 +15,16 @@ export class StaffRegisterService {
   // Get all stamp events (history)
   async getStampHistory(work_day_id?: number) {
     const all = await domain.getAllWorkEntries()
-    return work_day_id
-      ? all.filter(e => e.work_day_id === work_day_id)
-      : all
+    return work_day_id ? all.filter((e) => e.work_day_id === work_day_id) : all
   }
 
   // Get current status (checked in or out) for a work day
-  async getCurrentStatus(work_day_id: number): Promise<'checked-in' | 'checked-out'> {
+  async getCurrentStatus(work_day_id: number): Promise<CheckInOutStatus> {
     const all = await domain.getAllWorkEntries()
-    const todays = all.filter(e => e.work_day_id === work_day_id)
-    // If there is an open check-in (timeIn set, timeOut missing), status is 'checked-in'
-    const open = [...todays].reverse().find(e => e.timeIn && !e.timeOut)
-    return open ? 'checked-in' : 'checked-out'
+    const todays = all.filter((e) => e.work_day_id === work_day_id)
+    // If there is an open check-in (timeIn set, timeOut missing), status is checked-in
+    const open = [...todays].reverse().find((e) => e.check_in_at && !e.check_out_at)
+    return open ? CheckInOutStatus.CHECKED_IN : CheckInOutStatus.CHECKED_OUT
   }
 
   // Reset all local data (for development only)

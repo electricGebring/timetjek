@@ -1,4 +1,5 @@
 import type { SyncPort, SyncReason } from '../domain/ports/sync.port'
+import { getConflictStrategy } from '@/domain/config/data-policies'
 import * as syncMetadata from '@/db/sync-metadata/repo'
 import { retryWithBackoff, isRetryableError } from './retry-utils'
 import { getTableAdapter, type TableSyncAdapter } from './table-sync-adapter'
@@ -10,16 +11,21 @@ type SyncEngineDeps = {
 }
 
 /**
- * SyncEngine implements the outbox pattern:
- * 1. Drain outbox: Push local changes (unsynced todos) to API
- * 2. Drain deletions: Delete todos from API that are marked as deleted locally
- * 3. Pull remote changes: Fetch from API and merge with local database
+ * SyncEngine implements the outbox pattern for one table.
+ * 1. Drain outbox: Push local changes (unsynced items) to API; then mark synced locally.
+ * 2. Drain deletions: Delete items from API that are marked deleted locally; then permanentDelete locally.
+ * 3. Pull remote changes: Fetch from API, merge with local DB (conflict resolution), update store.
+ *
+ * Adapter contract: deleteItem(id) and batchDelete(ids) perform API deletes only.
+ * SyncEngine calls permanentDelete(id) after successful API delete(s).
  */
 export class SyncEngine implements SyncPort {
   private running = false
   private logger: Pick<Console, 'log' | 'warn' | 'error'>
   private tableName: string
   private adapter: TableSyncAdapter
+  /** Used by stop() to abort in-flight sync at next step boundary */
+  private abortController: AbortController | null = null
 
   constructor(deps: SyncEngineDeps) {
     if (!deps) {
@@ -42,46 +48,46 @@ export class SyncEngine implements SyncPort {
       return
     }
     this.running = true
-
-    // this.logger.log(`[SyncEngine] start (${reason}) for table: ${this.tableName}`)
+    this.abortController = new AbortController()
+    const signal = this.abortController.signal
 
     try {
-      // Set sync state to syncing
       await syncMetadata.setSyncState(this.tableName, 'syncing')
 
-      // 1. Drain outbox: Push local todos to API
-      await this.drainOutbox()
+      if (signal.aborted) return
+      await this.drainOutbox(signal)
 
-      // 2. Drain deletions: Remove deleted todos from API
-      await this.drainDeletions()
+      if (signal.aborted) return
+      await this.drainDeletions(signal)
 
-      // 3. Pull remote changes: Fetch from API and merge with local database
-      await this.pullRemoteChanges()
+      if (signal.aborted) return
+      await this.pullRemoteChanges(signal)
 
-      // Mark sync as successful
+      if (signal.aborted) return
+
+      if (signal.aborted) return
       await syncMetadata.markSyncSuccess(this.tableName)
-      // this.logger.log(`[SyncEngine] Sync completed successfully for ${this.tableName}`)
     } catch (err: any) {
       this.logger.error(`[SyncEngine] Sync failed for ${this.tableName}`, err)
-      // Mark sync as failed
       await syncMetadata.markSyncError(this.tableName, err?.message || 'Unknown error')
-      // On error, we still mark as not running to allow retry
     } finally {
       this.running = false
+      this.abortController = null
     }
   }
 
   async stop(): Promise<void> {
-    if (!this.running) return
-    // this.logger.log('[SyncEngine] stop')
-    this.running = false
+    if (!this.abortController) return
+    this.abortController.abort()
+    // running is cleared in start()'s finally when the run exits at next step boundary
   }
 
   /**
    * Drain outbox: Send unsynced items to API
    * Uses batch operations when possible for better efficiency
    */
-  private async drainOutbox(): Promise<void> {
+  private async drainOutbox(signal?: AbortSignal): Promise<void> {
+    if (signal?.aborted) return
     const unsyncedItems = await this.adapter.getUnsynced()
 
     if (unsyncedItems.length === 0) {
@@ -147,7 +153,8 @@ export class SyncEngine implements SyncPort {
    * Drain deletions: Delete items from API that are marked as deleted locally
    * Uses batch operations when possible for better efficiency
    */
-  private async drainDeletions(): Promise<void> {
+  private async drainDeletions(signal?: AbortSignal): Promise<void> {
+    if (signal?.aborted) return
     const deletedItems = await this.adapter.getDeleted()
 
     if (deletedItems.length === 0) {
@@ -164,10 +171,9 @@ export class SyncEngine implements SyncPort {
         await this.adapter.batchDelete(idsToDelete)
         // this.logger.log(`[SyncEngine] Batch deleted ${idsToDelete.length} items from ${this.tableName}`)
 
-        // Permanently delete all after successful batch delete
+        // Permanently delete all locally after successful API batch delete
         for (const item of deletedItems) {
-          await this.adapter.deleteItem(item.id)
-          //await this.adapter.permanentDelete(item.id)
+          await this.adapter.permanentDelete(item.id)
         }
 
         return // Success - exit early
@@ -181,8 +187,8 @@ export class SyncEngine implements SyncPort {
     for (const item of deletedItems) {
       try {
         await this.adapter.deleteItem(item.id)
-        // Permanently delete after successful API delete
-        //await this.adapter.permanentDelete(item.id)
+        // Permanently delete locally after successful API delete
+        await this.adapter.permanentDelete(item.id)
         // this.logger.log(`[SyncEngine] Deleted item from API (${this.tableName}): ${item.id}`)
       } catch (error: any) {
         // If 404, the item doesn't exist in API - safe to delete locally
@@ -202,8 +208,8 @@ export class SyncEngine implements SyncPort {
    * Uses incremental sync when possible - only fetches changes since last sync
    * Uses conflict resolution to handle concurrent edits
    */
-  private async pullRemoteChanges(): Promise<void> {
-    // this.logger.log(`[SyncEngine] Pulling remote changes for ${this.tableName}`)
+  private async pullRemoteChanges(signal?: AbortSignal): Promise<void> {
+    if (signal?.aborted) return
 
     try {
       // Get last sync timestamp for incremental sync
@@ -245,22 +251,31 @@ export class SyncEngine implements SyncPort {
         isIncremental = false
       }
 
+      const strategy = getConflictStrategy(this.tableName)
       let conflictCount = 0
+      let mergeErrors = 0
 
-      // Merge API items into local database with conflict resolution
+      // Merge API items into local database with per-table conflict strategy (per-item try/catch for resilience)
       for (const item of apiItems) {
-        const result = await this.adapter.mergeRemote(item, 'last-write-wins')
-        if (result.conflictDetected) {
-          conflictCount++
-          // this.logger.log(`[SyncEngine] Resolved conflict for ${this.tableName} item ${item.id}`)
+        if (signal?.aborted) return
+        try {
+          const result = await this.adapter.mergeRemote(item, strategy)
+          if (result.conflictDetected) conflictCount++
+        } catch (err: any) {
+          mergeErrors++
+          this.logger.error(`[SyncEngine] mergeRemote failed for ${this.tableName} item ${item?.id}`, err)
         }
+      }
+
+      if (mergeErrors > 0) {
+        this.logger.warn(`[SyncEngine] ${mergeErrors} item(s) failed to merge for ${this.tableName}`)
       }
 
       // Update store with merged data from DB
       await this.adapter.updateStore()
 
       this.logger.log(
-        `[SyncEngine] Pulled ${apiItems.length} items from API for ${this.tableName}${isIncremental ? ' (incremental)' : ' (full)'}${conflictCount > 0 ? ", resolved "+conflictCount+" conflicts" : ''}`
+        `[SyncEngine] Pulled ${apiItems.length} items from API for ${this.tableName}${isIncremental ? ' (incremental)' : ' (full)'}${conflictCount > 0 ? `, resolved ${conflictCount} conflicts` : ''}${mergeErrors > 0 ? `, ${mergeErrors} merge error(s)` : ''}`
       )
     } catch (error) {
       this.logger.error(`[SyncEngine] Failed to pull remote changes for ${this.tableName}`, error)

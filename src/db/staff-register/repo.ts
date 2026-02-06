@@ -2,85 +2,27 @@ import { getDB } from '../index'
 import { Capacitor } from '@capacitor/core'
 import type { WorkEntry } from './types'
 import type { Entry } from '@/views/staffRegister/types'
+import type { TimeRegistrationApplication } from '@/enums/TimeRegistrationApplication'
 import { TimeRegistrationStatus } from '@/enums/TimeRegistrationStatus'
+import { WORK_ENTRY_COLUMNS, parseWorkEntryRow } from './work-entry.schema'
 
-// Column names in correct order for work_entries
-const workEntryColumns = [
-  'id',
-  'employee_id',
-  'workplace_id',
-  'cost_center_id',
-  'work_day_id',
-  'status',
-  'check_in_at',
-  'check_in_time_at',
-  'check_in_latitude',
-  'check_in_longitude',
-  'check_in_application',
-  'check_out_at',
-  'check_out_time_at',
-  'check_out_latitude',
-  'check_out_longitude',
-  'check_out_application',
-  'break',
-  'meal_benefit_has_breakfast',
-  'meal_benefit_has_lunch',
-  'name',
-  'type',
-  'personalNumber',
-  'administrator_comment',
-  'total_working_seconds',
-  'total_break_seconds',
-  'hasError',
-  'updatedBy',
-  'createdAt',
-  'updatedAt',
-  'deleted_at',
-  'synced',
-  'deleted'
-]
+/** Build a raw record from a row array (same order as WORK_ENTRY_COLUMNS) */
+function rowToRecord(row: unknown[]): Record<string, unknown> {
+  const record: Record<string, unknown> = {}
+  WORK_ENTRY_COLUMNS.forEach((col, i) => {
+    record[col] = row[i]
+  })
+  return record
+}
 
-// Maps a row array to a WorkEntry object
-function mapRowToWorkEntry(row: any[]): WorkEntry {
-  return {
-    id: row[0],
-    employee_id: row[1],
-    workplace_id: row[2],
-    cost_center_id: row[3],
-    work_day_id: row[4],
-    status: row[5] as any,
-    check_in_at: row[6],
-    check_in_time_at: row[7],
-    check_in_latitude: row[8],
-    check_in_longitude: row[9],
-    check_in_application: row[10] as any,
-    check_out_at: row[11],
-    check_out_time_at: row[12],
-    check_out_latitude: row[13],
-    check_out_longitude: row[14],
-    check_out_application: row[15] as any,
-    break: row[16],
-    meal_benefit_has_breakfast: !!row[17],
-    meal_benefit_has_lunch: !!row[18],
-    name: row[19],
-    type: row[20],
-    personalNumber: row[21],
-    administrator_comment: row[22],
-    total_working_seconds: row[23],
-    total_break_seconds: row[24] ?? null,
-    hasError: row[25] ?? 0,
-    updatedBy: row[26] ?? null,
-    createdAt: row[27],
-    updatedAt: row[28],
-    deleted_at: row[29],
-    synced: row[30],
-    deleted: row[31]
-  }
+/** Maps a raw row array to a WorkEntry using Zod schema (validation + coercion) */
+function mapRowToWorkEntry(row: unknown[]): WorkEntry {
+  return parseWorkEntryRow(rowToRecord(row))
 }
 
 // Central query function for work_entries
 async function queryWorkEntries(where: string, params: any[] = []): Promise<WorkEntry[]> {
-  const columns = workEntryColumns.join(', ')
+  const columns = WORK_ENTRY_COLUMNS.join(', ')
   if (Capacitor.isNativePlatform()) {
     const db = getDB()
     const res = await db.query(`SELECT ${columns} FROM work_entries ${where}`.trim(), params)
@@ -335,17 +277,17 @@ export function workEntryToEntry(w: WorkEntry): Entry {
     workplace_id: w.workplace_id ?? 1,
     cost_center_id: w.cost_center_id ?? null,
     work_day_id: w.work_day_id ?? 0,
-    status: w.status ?? TimeRegistrationStatus.OPEN,
+    status: (w.status ?? TimeRegistrationStatus.OPEN) as TimeRegistrationStatus,
     check_in_at: w.check_in_at ?? '',
     check_in_time_at: w.check_in_time_at ?? '',
     check_in_latitude: w.check_in_latitude ?? 0,
     check_in_longitude: w.check_in_longitude ?? 0,
-    check_in_application: w.check_in_application ?? 'APP',
+    check_in_application: (w.check_in_application ?? 'APP') as TimeRegistrationApplication,
     check_out_at: w.check_out_at ?? null,
     check_out_time_at: w.check_out_time_at ?? null,
     check_out_latitude: w.check_out_latitude ?? null,
     check_out_longitude: w.check_out_longitude ?? null,
-    check_out_application: w.check_out_application ?? null,
+    check_out_application: w.check_out_application as TimeRegistrationApplication | null,
     break: w.break ?? null,
     meal_benefit_has_breakfast: w.meal_benefit_has_breakfast ?? false,
     meal_benefit_has_lunch: w.meal_benefit_has_lunch ?? false,

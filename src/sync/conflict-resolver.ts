@@ -2,7 +2,12 @@
  * Conflict resolution strategies for syncing data
  */
 
-export type ConflictResolutionStrategy = 'last-write-wins' | 'local-wins' | 'remote-wins' | 'field-merge'
+import {
+  ConflictResolutionStrategy as Strategy,
+  type ConflictResolutionStrategy
+} from '@/enums/ConflictResolutionStrategy'
+
+export type { ConflictResolutionStrategy } from '@/enums/ConflictResolutionStrategy'
 
 export type ConflictResolutionResult<T> = {
   resolved: T
@@ -25,14 +30,14 @@ export class DefaultConflictResolver implements ConflictResolver {
   resolve<T extends { updatedAt?: number }>(
     local: T,
     remote: T,
-    strategy: ConflictResolutionStrategy = 'last-write-wins'
+    strategy: ConflictResolutionStrategy = Strategy.LAST_WRITE_WINS
   ): ConflictResolutionResult<T> {
     // If no timestamps, default to remote (server is source of truth)
     if (!local.updatedAt && !remote.updatedAt) {
       return {
         resolved: remote,
-        strategy: 'remote-wins',
-        conflictDetected: false,
+        strategy: Strategy.REMOTE_WINS,
+        conflictDetected: false
       }
     }
 
@@ -40,56 +45,56 @@ export class DefaultConflictResolver implements ConflictResolver {
     if (!local.updatedAt) {
       return {
         resolved: remote,
-        strategy: 'remote-wins',
-        conflictDetected: true,
+        strategy: Strategy.REMOTE_WINS,
+        conflictDetected: true
       }
     }
 
     if (!remote.updatedAt) {
       return {
         resolved: local,
-        strategy: 'local-wins',
-        conflictDetected: true,
+        strategy: Strategy.LOCAL_WINS,
+        conflictDetected: true
       }
     }
 
     // Both have timestamps - apply strategy
     switch (strategy) {
-      case 'last-write-wins':
+      case Strategy.LAST_WRITE_WINS:
         return {
           resolved: remote.updatedAt >= local.updatedAt ? remote : local,
-          strategy: 'last-write-wins',
-          conflictDetected: remote.updatedAt !== local.updatedAt,
+          strategy: Strategy.LAST_WRITE_WINS,
+          conflictDetected: remote.updatedAt !== local.updatedAt
         }
 
-      case 'local-wins':
+      case Strategy.LOCAL_WINS:
         return {
           resolved: local,
-          strategy: 'local-wins',
-          conflictDetected: true,
+          strategy: Strategy.LOCAL_WINS,
+          conflictDetected: true
         }
 
-      case 'remote-wins':
+      case Strategy.REMOTE_WINS:
         return {
           resolved: remote,
-          strategy: 'remote-wins',
-          conflictDetected: true,
+          strategy: Strategy.REMOTE_WINS,
+          conflictDetected: true
         }
 
-      case 'field-merge':
+      case Strategy.FIELD_MERGE:
         // For field merge, we'd need to know which fields changed
         // For now, fall back to last-write-wins
         return {
           resolved: remote.updatedAt >= local.updatedAt ? remote : local,
-          strategy: 'last-write-wins',
-          conflictDetected: remote.updatedAt !== local.updatedAt,
+          strategy: Strategy.LAST_WRITE_WINS,
+          conflictDetected: remote.updatedAt !== local.updatedAt
         }
 
       default:
         return {
           resolved: remote,
-          strategy: 'remote-wins',
-          conflictDetected: true,
+          strategy: Strategy.REMOTE_WINS,
+          conflictDetected: true
         }
     }
   }

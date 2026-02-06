@@ -1,9 +1,12 @@
 import type { TableSyncAdapter } from '../table-sync-adapter'
 
 import * as repo from '@/db/staff-register/repo'
-import { fetchStaffRegisterEntries } from '@/api/staff-register'
+import { fetchStaffRegisterEntries, deleteEntry } from '@/api/staff-register'
 import type { Entry } from '@/views/staffRegister/types'
-import type { ConflictResolutionStrategy } from '@/sync/conflict-resolver'
+import {
+  ConflictResolutionStrategy,
+  type ConflictResolutionStrategy as ConflictStrategyType
+} from '@/enums/ConflictResolutionStrategy'
 
 export function createStaffRegisterAdapter(): TableSyncAdapter {
   const safeFetchEntries = async (api: typeof import('@/api/staff-register')) => {
@@ -62,16 +65,19 @@ export function createStaffRegisterAdapter(): TableSyncAdapter {
 
       return results
     },
-    // NOTE: The following offline-block is for mock-API/dev only!
-    // Remove this check when using a real API in production.
+    // API deletes only; SyncEngine calls permanentDelete for each id after success
     batchDelete: async (ids: number[]): Promise<void> => {
       if (typeof window !== 'undefined' && typeof navigator !== 'undefined' && navigator.onLine === false) {
-        // MOCK-API DEV: Prevent sync to local db when offline (remove for real API)
         console.warn('[StaffRegisterAdapter] batchDelete blocked: offline mode')
         return
       }
       for (const id of ids) {
-        await repo.permanentDeleteWorkEntry(id)
+        try {
+          await deleteEntry(id)
+        } catch (e) {
+          if ((e as any)?.message?.includes('404')) continue
+          throw e
+        }
       }
     },
     // NOTE: The following offline-block is for mock-API/dev only!
@@ -99,8 +105,13 @@ export function createStaffRegisterAdapter(): TableSyncAdapter {
       await repo.upsertWorkEntry({ ...resultItem, synced: 1 })
       return resultItem
     },
+    // API delete only; SyncEngine calls permanentDelete after success
     deleteItem: async (id: number): Promise<void> => {
-      await repo.permanentDeleteWorkEntry(id)
+      if (typeof window !== 'undefined' && typeof navigator !== 'undefined' && navigator.onLine === false) {
+        console.warn('[StaffRegisterAdapter] deleteItem blocked: offline mode')
+        return
+      }
+      await deleteEntry(id)
     },
     fetchAll: async (): Promise<Entry[]> => {
       try {
@@ -118,7 +129,7 @@ export function createStaffRegisterAdapter(): TableSyncAdapter {
     },
     mergeRemote: async (
       remoteItem: Entry,
-      strategy: ConflictResolutionStrategy = 'last-write-wins'
+      strategy: ConflictStrategyType = ConflictResolutionStrategy.LAST_WRITE_WINS
     ): Promise<{ resolved: Entry; conflictDetected: boolean }> => {
       if (!remoteItem.id) {
         return { resolved: remoteItem, conflictDetected: true }
@@ -133,7 +144,7 @@ export function createStaffRegisterAdapter(): TableSyncAdapter {
       // IMPORTANT: If local entry is unsynced, skip merge and keep local changes
       // Let drainOutbox push these changes in next sync cycle
       if (local.synced === 0) {
-        return { resolved: local, conflictDetected: false }
+        return { resolved: local as Entry, conflictDetected: false }
       }
 
       const { defaultConflictResolver } = await import('@/sync/conflict-resolver')

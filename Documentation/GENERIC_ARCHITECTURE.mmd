@@ -1,0 +1,65 @@
+%% Generic Outbox pattern for offline-first storage
+%% Technology-agnostic description of the pattern
+
+flowchart TB
+  subgraph WritePath["Write path (always local first)"]
+    Client["Client / UI"]
+    AppLogic["Application logic"]
+    LocalWrite["Local write\n(insert/update)"]
+    OutboxFlag["Mark as unsynced\n(outbox flag / queue)"]
+    Client --> AppLogic --> LocalWrite --> OutboxFlag
+  end
+
+  subgraph LocalStorage["Local storage"]
+    DB["Local database"]
+    Table["Table(s)\n+ synced flag or outbox table"]
+    Outbox["Outbox\n(pending sync items)"]
+    DB --> Table
+    Table --> Outbox
+    OutboxFlag --> Table
+  end
+
+  subgraph Connectivity["Connectivity"]
+    Network["Network monitor"]
+    Online["Online?"]
+    Network --> Online
+  end
+
+  subgraph SyncProcess["Sync process (when online)"]
+    Trigger["Sync triggered\n(online event / interval / manual)"]
+    Drain["Drain outbox\n1. Read unsynced items\n2. Send to backend (API)\n3. On success: mark synced\n   (or remove from outbox)"]
+    Deletions["Drain deletions\n(optional: soft-deleted items\n→ delete on API → remove locally)"]
+    Pull["Pull remote\n(optional: fetch server changes\n→ merge → conflict resolve\nstrategy per table)"]
+    Trigger --> Drain --> Deletions --> Pull
+  end
+
+  subgraph Backend["Backend"]
+    API["API / server"]
+    Drain --> API
+    Pull --> API
+  end
+
+  subgraph Result["Result"]
+    Converged["Local and server converge\nwhen online"]
+    OfflineOK["App works offline\nchanges queued in outbox"]
+    Converged --> OfflineOK
+  end
+
+  Online -->|yes| Trigger
+  Online -->|no| Result
+  SyncProcess --> Result
+  WritePath --> LocalStorage
+
+  %% Sync process reads from and writes to local storage
+  Outbox -->|read unsynced| Drain
+  Drain -->|mark synced| Table
+  Table -->|read soft-deleted| Deletions
+  Deletions -->|remove locally| Table
+  Pull -->|merge into| Table
+
+  class Client,AppLogic,LocalWrite,OutboxFlag write
+  class DB,Table,Outbox storage
+  class Network,Online connectivity
+  class Trigger,Drain,Deletions,Pull sync
+  class API backend
+  class Converged,OfflineOK result

@@ -1,0 +1,87 @@
+%% Local-first Offline Sync Architecture (Vue + Pinia + Capacitor + SQLite)
+%% LR flow: Backend ← Sync ← Storage ← Domain ← State ← UI
+
+flowchart LR
+  subgraph API["Backend"]
+    Server["Backend API\n(staff-register, workscheme)"]
+    Http["API Client\n(staff-register.ts, workscheme.ts)"]
+    Incremental["Incremental / batch\n(fetchSince, batchUpsert)"]
+  end
+
+  subgraph Sync["Sync Layer"]
+    Net["Network Monitor\n(CapacitorConnectivityAdapter)"]
+    Coordinator["OnlineOfflineCoordinator\n(connectivity → sync)"]
+    SyncTrigger["SyncTrigger\n(immediate sync on mutation,\ndebounced if online)"]
+    SyncManager["SyncManager\n(one sync at a time)\n• work_entries"]
+    SyncEngine["Sync Engine\n(drain outbox → deletions → pull)"]
+    TableAdapter["Table Adapters\n(staff-register: repo + API + merge)"]
+    Conflict["Conflict Resolver\n(per-table strategy:\nlast-write-wins, local-wins, …)"]
+    Retry["Retry Utils\n(exponential backoff)"]
+  end
+
+  subgraph Storage["Offline Storage"]
+    SQLite["SQLite DB\n(Capacitor native / sql.js web)"]
+    OutboxTables["Outbox Tables\n(work_entries, synced flag)"]
+    SyncMeta["Sync Metadata\n(last sync, state, errors)"]
+  end
+
+  subgraph Domain["Domain Layer"]
+    UseCases["Use Cases / Services\n(staff-register/domain)"]
+    Repo["Repositories\n(work_entries, typed)"]
+    Cleanup["Data Cleanup Service\n(TTL, daily schedule)"]
+    Policies["Data Policies Config\n(SyncMode, retention days,\nconflict strategy per table)"]
+  end
+
+  subgraph State["State Layer"]
+    Pinia["Pinia Stores\n(useStaffRegisterStore,\nworkEntries, groupedEntries)"]
+  end
+
+  subgraph UI["Vue UI"]
+    VComp["Vue Components\n(StaffRegister, HeaderBar, …)"]
+  end
+
+  %% Sync orchestration
+  Net -->|online/offline events| Coordinator
+  Coordinator -->|triggers| SyncManager
+  SyncTrigger -->|on mutation| SyncManager
+  Policies -->|which tables to sync| SyncManager
+  SyncManager --> SyncEngine
+  SyncManager --> TableAdapter
+  SyncEngine --> TableAdapter
+  SyncEngine -->|read unsynced / getDeleted| OutboxTables
+  SyncEngine -->|read/write| SyncMeta
+  SyncEngine -->|API calls| Http
+  Http --> Incremental
+  Incremental --> Server
+  Server -->|remote changes| Incremental
+  Incremental --> Http
+  Http -->|apply changes| SyncEngine
+  SyncEngine -->|conflict resolution| Conflict
+  SyncEngine -->|retry logic| Retry
+  TableAdapter -->|merge, markAsSynced, permanentDelete| Repo
+
+  %% Domain -> Storage (single source of truth)
+  Repo -->|read/write| SQLite
+  SQLite --> OutboxTables
+  SQLite --> SyncMeta
+  Policies -->|retention policies| Cleanup
+  Cleanup -->|TTL cleanup| SQLite
+
+  %% UI -> State -> Domain
+  VComp -->|actions / intents| Pinia
+  Pinia -->|calls| UseCases
+  UseCases -->|CRUD| Repo
+  UseCases -->|cleanup| Cleanup
+
+  %% Reactivity: DB -> Store -> UI
+  SQLite -->|query results| Repo
+  Repo -->|hydrates / refreshes| Pinia
+  Pinia -->|reactive bindings| VComp
+
+
+  class VComp ui
+  class Pinia state
+  class UseCases,Repo,Cleanup,Policies domain
+  class Net,Coordinator,SyncTrigger,SyncManager,SyncEngine,TableAdapter,Conflict,Retry sync
+  class SQLite,OutboxTables,SyncMeta storage
+  class Server,Http,Incremental api

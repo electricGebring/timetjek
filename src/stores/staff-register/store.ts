@@ -21,10 +21,15 @@ export const useStaffRegisterStore = defineStore('staffRegister', {
     /** Summary of entries by status */
     statusSummary(): Record<TimeRegistrationStatus, number> {
       return {
-        [TimeRegistrationStatus.OPEN]: this.workEntries.filter(e => e.status === TimeRegistrationStatus.OPEN).length,
-        [TimeRegistrationStatus.CLOSED]: this.workEntries.filter(e => e.status === TimeRegistrationStatus.CLOSED).length,
-        [TimeRegistrationStatus.FORGOT_CHECK_OUT]: this.workEntries.filter(e => e.status === TimeRegistrationStatus.FORGOT_CHECK_OUT).length,
-        [TimeRegistrationStatus.AWAITS_APPROVAL]: this.workEntries.filter(e => e.status === TimeRegistrationStatus.AWAITS_APPROVAL).length
+        [TimeRegistrationStatus.OPEN]: this.workEntries.filter((e) => e.status === TimeRegistrationStatus.OPEN).length,
+        [TimeRegistrationStatus.CLOSED]: this.workEntries.filter((e) => e.status === TimeRegistrationStatus.CLOSED)
+          .length,
+        [TimeRegistrationStatus.FORGOT_CHECK_OUT]: this.workEntries.filter(
+          (e) => e.status === TimeRegistrationStatus.FORGOT_CHECK_OUT
+        ).length,
+        [TimeRegistrationStatus.AWAITS_APPROVAL]: this.workEntries.filter(
+          (e) => e.status === TimeRegistrationStatus.AWAITS_APPROVAL
+        ).length
       }
     }
   },
@@ -63,7 +68,7 @@ export const useStaffRegisterStore = defineStore('staffRegister', {
       try {
         const entries = await domain.getAllWorkEntries()
         // Convert WorkEntry to Entry format
-        const convertedEntries = entries.map(e => domain.workEntryToEntry(e))
+        const convertedEntries = entries.map((e) => domain.workEntryToEntry(e))
         this.setWorkEntries(convertedEntries)
         this.setError(null)
       } catch (e: any) {
@@ -75,28 +80,28 @@ export const useStaffRegisterStore = defineStore('staffRegister', {
 
     async checkIn(work_day_id: number) {
       const all = await domain.getAllWorkEntries()
-      const todays = all.filter(e => e.work_day_id === work_day_id)
-      
+      const todays = all.filter((e) => e.work_day_id === work_day_id)
+
       // Check if there's an open break entry (has break field and is still open)
-      const breakEntry = todays.find(e => e.check_in_at && !e.check_out_at && e.break)
+      const breakEntry = todays.find((e) => e.check_in_at && !e.check_out_at && e.break)
 
       if (breakEntry) {
         // Close the break entry and update break time with actual end time
         const now = new Date().toISOString()
-        const breakStart = breakEntry.break.split('-')[0]
+        const breakStart = breakEntry.break?.split('-')[0] || '00:00:00'
         const breakEnd = now.split('T')[1]?.split('.')[0] || '00:00:00'
-        
+
         await domain.updateWorkEntry({
           ...breakEntry,
           check_out_at: now,
           break: `${breakStart}-${breakEnd}`
         })
-        
+
         // After closing break entry, reload to get updated data
         await this.loadWorkEntries()
       } else {
         // Check if there's already an open work entry
-        const hasOpen = todays.some(e => e.check_in_at && !e.check_out_at)
+        const hasOpen = todays.some((e) => e.check_in_at && !e.check_out_at)
         if (hasOpen) {
           throw new Error('Du är redan instämplad. Stämpla ut först.')
         }
@@ -116,7 +121,7 @@ export const useStaffRegisterStore = defineStore('staffRegister', {
       const entries = await domain.getAllWorkEntries()
       // Find open work entry (not a break entry)
       const openEntry = entries.find(
-        e => e.work_day_id === work_day_id && e.check_in_at && !e.check_out_at && !e.break
+        (e) => e.work_day_id === work_day_id && e.check_in_at && !e.check_out_at && !e.break
       )
 
       if (!openEntry) {
@@ -133,16 +138,16 @@ export const useStaffRegisterStore = defineStore('staffRegister', {
 
     async goOnBreak(work_day_id: number) {
       const entries = await domain.getAllWorkEntries()
-      const todaysEntries = entries.filter(e => e.work_day_id === work_day_id)
+      const todaysEntries = entries.filter((e) => e.work_day_id === work_day_id)
 
       // Check if already on break (entry with break field set but no check_out)
-      const onBreak = todaysEntries.some(e => e.check_in_at && !e.check_out_at && e.break)
+      const onBreak = todaysEntries.some((e) => e.check_in_at && !e.check_out_at && e.break)
       if (onBreak) {
         throw new Error('Du är redan på rast')
       }
 
       // Find open work entry and close it
-      const openEntry = todaysEntries.find(e => e.check_in_at && !e.check_out_at)
+      const openEntry = todaysEntries.find((e) => e.check_in_at && !e.check_out_at)
       if (openEntry) {
         await domain.updateWorkEntry({
           ...openEntry,
@@ -153,16 +158,16 @@ export const useStaffRegisterStore = defineStore('staffRegister', {
       // Create new break entry with break start time (end will be set when returning)
       const now = new Date().toISOString()
       const breakStart = now.split('T')[1]?.split('.')[0] || '00:00:00'
-      
+
       const breakValue = `${breakStart}-00:00:00`
-      
+
       await domain.createWorkEntry({
         work_day_id,
         check_in_at: now,
         check_out_at: null,
-        name: openEntry.name,
-        type: openEntry.type,
-        personalNumber: openEntry.personalNumber,
+        name: openEntry?.name || '',
+        type: openEntry?.type || '',
+        personalNumber: openEntry?.personalNumber || '',
         break: breakValue // Placeholder end time
       })
 
