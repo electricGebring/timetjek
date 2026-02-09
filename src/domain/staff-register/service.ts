@@ -107,12 +107,10 @@ export async function clearAllData() {
     if (Capacitor.isNativePlatform()) {
       // Native: use db.run()
       await db.run('DELETE FROM work_entries')
-      await db.run('DELETE FROM outbox')
     } else {
       // Web: use sqlJsDb.run()
       const { sqlJsDb, saveDatabase } = db as any
       sqlJsDb.run('DELETE FROM work_entries')
-      sqlJsDb.run('DELETE FROM outbox')
       saveDatabase()
     }
     console.log('✓ All local data cleared')
