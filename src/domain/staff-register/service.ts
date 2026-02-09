@@ -96,6 +96,91 @@ export async function getPendingSyncOperations() {
 }
 
 /**
+ * Get all entries (no filters)
+ * @returns All work entries in database
+ */
+export async function getAllEntries() {
+  try {
+    const entries = await getWorkEntries()
+    return entries
+      .filter(e => !e.deleted_at)
+      .sort((a, b) => {
+        const timeA = a.check_in_at ? new Date(a.check_in_at).getTime() : 0
+        const timeB = b.check_in_at ? new Date(b.check_in_at).getTime() : 0
+        return timeB - timeA // newest first
+      })
+  } catch (e) {
+    console.warn('Failed to fetch all entries:', e)
+    return []
+  }
+}
+
+/**
+ * Get database info and statistics
+ * @returns Database metadata and stats
+ */
+export async function getDatabaseInfo() {
+  const db = getDB()
+  try {
+    const { Capacitor } = await import('@capacitor/core')
+    
+    // Count work_entries
+    let totalCount = 0
+    let syncedCount = 0
+    let unsyncedCount = 0
+    let deletedCount = 0
+    
+    if (Capacitor.isNativePlatform()) {
+      const total = await db.query('SELECT COUNT(*) as count FROM work_entries WHERE deleted_at IS NULL')
+      totalCount = total.values?.[0]?.count || 0
+      
+      const synced = await db.query('SELECT COUNT(*) as count FROM work_entries WHERE synced = 1 AND deleted_at IS NULL')
+      syncedCount = synced.values?.[0]?.count || 0
+      
+      const unsynced = await db.query('SELECT COUNT(*) as count FROM work_entries WHERE synced = 0 AND deleted_at IS NULL')
+      unsyncedCount = unsynced.values?.[0]?.count || 0
+      
+      const deleted = await db.query('SELECT COUNT(*) as count FROM work_entries WHERE deleted = 1')
+      deletedCount = deleted.values?.[0]?.count || 0
+    } else {
+      const { sqlJsDb } = db as any
+      
+      const total = sqlJsDb.exec('SELECT COUNT(*) as count FROM work_entries WHERE deleted_at IS NULL')
+      totalCount = total[0]?.values[0]?.[0] || 0
+      
+      const synced = sqlJsDb.exec('SELECT COUNT(*) as count FROM work_entries WHERE synced = 1 AND deleted_at IS NULL')
+      syncedCount = synced[0]?.values[0]?.[0] || 0
+      
+      const unsynced = sqlJsDb.exec('SELECT COUNT(*) as count FROM work_entries WHERE synced = 0 AND deleted_at IS NULL')
+      unsyncedCount = unsynced[0]?.values[0]?.[0] || 0
+      
+      const deleted = sqlJsDb.exec('SELECT COUNT(*) as count FROM work_entries WHERE deleted = 1')
+      deletedCount = deleted[0]?.values[0]?.[0] || 0
+    }
+    
+    return {
+      totalEntries: totalCount,
+      syncedEntries: syncedCount,
+      unsyncedEntries: unsyncedCount,
+      deletedEntries: deletedCount,
+      platform: Capacitor.isNativePlatform() ? 'native' : 'web',
+      databaseType: Capacitor.isNativePlatform() ? 'Capacitor SQLite' : 'sql.js (IndexedDB)',
+    }
+  } catch (e) {
+    console.warn('Failed to fetch database info:', e)
+    return {
+      totalEntries: 0,
+      syncedEntries: 0,
+      unsyncedEntries: 0,
+      deletedEntries: 0,
+      platform: 'unknown',
+      databaseType: 'unknown',
+      error: (e as Error).message,
+    }
+  }
+}
+
+/**
  * Clear all local data (dev only)
  * WARNING: Irreversible!
  */
@@ -129,6 +214,8 @@ if (process.env.NODE_ENV === 'development') {
     getEntriesForDate,
     getCurrentStatus,
     getPendingSyncOperations,
+    getAllEntries,
+    getDatabaseInfo,
     clearAllData,
   }
   console.log('📋 Staff Register Service exposed on window.staffRegisterService')

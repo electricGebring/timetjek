@@ -49,6 +49,32 @@ const sortedEntriesByDay = computed(() => {
   return result
 })
 
+const dateRange = computed(() => {
+  if (store.workEntries.length === 0) return 'Inga poster'
+  
+  const dates = store.workEntries
+    .map(e => e.check_in_at || e.createdAt)
+    .filter(d => d)
+    .map(d => new Date(d))
+  
+  if (dates.length === 0) return 'Inga poster'
+  
+  const minDate = new Date(Math.min(...dates.map(d => d.getTime())))
+  const maxDate = new Date(Math.max(...dates.map(d => d.getTime())))
+  
+  const formatDate = (date: Date) => {
+    const day = date.getDate()
+    const month = date.getMonth() + 1
+    const year = date.getFullYear()
+    return `${day}/${month}/${year}`
+  }
+  
+  if (minDate.toDateString() === maxDate.toDateString()) {
+    return `${formatDate(minDate)}`
+  }
+  
+  return `${formatDate(minDate)} - ${formatDate(maxDate)}`
+})
 
 onMounted(async () => {
   await store.loadWorkEntries()
@@ -229,6 +255,16 @@ const runDebugFunction = async (functionName: string, args?: any) => {
         debugStatus.value = `✓ Väntande sync (${result.length} operationer)`
         debugResult.value = result
         break
+      case 'getAllEntries':
+        result = await service.getAllEntries()
+        debugStatus.value = `✓ Alla entries hämtade (${result.length} totalt)`
+        debugResult.value = result
+        break
+      case 'getDatabaseInfo':
+        result = await service.getDatabaseInfo()
+        debugStatus.value = `✓ Database info hämtad`
+        debugResult.value = result
+        break
       case 'clearAllData':
         if (confirm('VARNING: Detta kommer att ta bort all lokal data. Är du säker?')) {
           await service.clearAllData()
@@ -361,7 +397,7 @@ const runDebugFunction = async (functionName: string, args?: any) => {
           <h2 class="text-xl font-bold text-yellow-700">Debug Panel</h2>
         </div>
         
-        <div class="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-5">
+        <div class="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
           <button
             @click="runDebugFunction('getCurrentStatus')"
             :disabled="debugLoading"
@@ -391,6 +427,20 @@ const runDebugFunction = async (functionName: string, args?: any) => {
             Väntande Sync
           </button>
           <button
+            @click="runDebugFunction('getAllEntries')"
+            :disabled="debugLoading"
+            class="rounded-lg bg-cyan-500 px-3 py-2 text-sm font-semibold text-white hover:bg-cyan-600 disabled:opacity-50"
+          >
+            Alla Entries
+          </button>
+          <button
+            @click="runDebugFunction('getDatabaseInfo')"
+            :disabled="debugLoading"
+            class="rounded-lg bg-indigo-500 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-600 disabled:opacity-50"
+          >
+            DB Info
+          </button>
+          <button
             @click="runDebugFunction('clearAllData')"
             :disabled="debugLoading"
             class="rounded-lg bg-red-500 px-3 py-2 text-sm font-semibold text-white hover:bg-red-600 disabled:opacity-50"
@@ -414,26 +464,17 @@ const runDebugFunction = async (functionName: string, args?: any) => {
       </section>
 
       <!-- Filters row -->
-      <section class="mb-6 flex items-center justify-between gap-6">
-        <!-- Filter/info row, can be customized or removed -->
-        <div class="flex h-16 items-center gap-3 rounded-2xl border border-gray-200 bg-white px-5 shadow-sm">
+      <section class="mb-6">
+        <div class="inline-flex h-16 items-center gap-3 rounded-2xl border border-gray-200 bg-white px-5 shadow-sm">
           <FontAwesomeIcon
             icon="calendar-days"
             class="text-lg text-gray-700"
           />
-          <div class="font-semibold whitespace-nowrap text-gray-900">Arbetsperiod</div>
+          <div class="flex flex-col">
+            <div class="text-xs text-gray-500">Arbetsperiod</div>
+            <div class="font-semibold whitespace-nowrap text-gray-900">{{ dateRange }}</div>
+          </div>
         </div>
-        <div class="flex flex-1 items-center gap-10"></div>
-        <button
-          type="button"
-          aria-label="Filter"
-          class="inline-flex h-14 w-14 items-center justify-center rounded-2xl border border-gray-200 bg-white shadow-sm transition hover:bg-gray-50"
-        >
-          <FontAwesomeIcon
-            icon="filter"
-            class="text-gray-700"
-          />
-        </button>
       </section>
 
       <!-- Table -->
