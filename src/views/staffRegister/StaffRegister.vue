@@ -221,7 +221,7 @@ const handleBreak = async () => {
 }
 
 // Debug functions
-const runDebugFunction = async (functionName: string, args?: any) => {
+const runDebugFunction = async (functionName: string) => {
   debugLoading.value = true
   debugError.value = ''
   debugStatus.value = `Kör ${functionName}...`

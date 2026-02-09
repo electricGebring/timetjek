@@ -47,7 +47,7 @@ export async function getEntriesForDate(date: string) {
  * @returns { isClockedIn, currentEntry, hoursToday }
  */
 export async function getCurrentStatus() {
-  const today = new Date().toISOString().split('T')[0]
+  const today = new Date().toISOString().split('T')[0] || ''
   const todayEntries = await getEntriesForDate(today)
 
   const lastEntry = todayEntries[0] || null
