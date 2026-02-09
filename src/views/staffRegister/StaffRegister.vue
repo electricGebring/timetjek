@@ -9,6 +9,13 @@ import type { TimeRegistrationStatus } from '@/enums/TimeRegistrationStatus'
 const store = useStaffRegisterStore()
 import { computed } from 'vue'
 
+// Debug panel state (dev mode only)
+const debugStatus = ref<string>('')
+const debugResult = ref<any>(null)
+const debugLoading = ref(false)
+const debugError = ref<string>('')
+const isDevelopment = process.env.NODE_ENV === 'development'
+
 const sortedEntriesByDay = computed(() => {
   const sorted = [...store.workEntries].sort((a, b) => {
     // Sort by date (newest first)
@@ -186,6 +193,63 @@ const handleBreak = async () => {
     isProcessing.value = false
   }
 }
+
+// Debug functions
+const runDebugFunction = async (functionName: string, args?: any) => {
+  debugLoading.value = true
+  debugError.value = ''
+  debugStatus.value = `Kör ${functionName}...`
+  
+  try {
+    const service = (window as any).staffRegisterService
+    if (!service) {
+      throw new Error('Service inte tillgänglig på window.staffRegisterService')
+    }
+    
+    let result
+    switch (functionName) {
+      case 'getCurrentStatus':
+        result = await service.getCurrentStatus()
+        debugStatus.value = `✓ Status hämtad`
+        debugResult.value = result
+        break
+      case 'getWorkHistory':
+        result = await service.getWorkHistory(7)
+        debugStatus.value = `✓ Historik hämtad (${result.length} poster)`
+        debugResult.value = result
+        break
+      case 'getEntriesForDate':
+        const today = new Date().toISOString().split('T')[0]
+        result = await service.getEntriesForDate(today)
+        debugStatus.value = `✓ Dagens poster (${result.length} stycken)`
+        debugResult.value = result
+        break
+      case 'getPendingSyncOperations':
+        result = await service.getPendingSyncOperations()
+        debugStatus.value = `✓ Väntande sync (${result.length} operationer)`
+        debugResult.value = result
+        break
+      case 'clearAllData':
+        if (confirm('VARNING: Detta kommer att ta bort all lokal data. Är du säker?')) {
+          await service.clearAllData()
+          debugStatus.value = `✓ All data raderad`
+          debugResult.value = null
+          await store.loadWorkEntries()
+        } else {
+          debugStatus.value = `Avbruten`
+        }
+        break
+    }
+    
+    console.log(`[DEBUG] ${functionName}:`, result)
+  } catch (e: any) {
+    debugError.value = e.message || 'Okänt fel'
+    debugStatus.value = `✗ Fel`
+    console.error(`[DEBUG ERROR] ${functionName}:`, e)
+  } finally {
+    debugLoading.value = false
+  }
+}
 </script>
 
 <template>
@@ -287,6 +351,65 @@ const handleBreak = async () => {
         <div class="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
           <div class="text-sm font-semibold text-gray-600">TOTALT ARBETAT</div>
           <div class="text-2xl font-bold text-purple-600">{{ formatWorkTime(store.totalWorkingSeconds) }}</div>
+        </div>
+      </section>
+
+      <!-- Debug panel (dev mode only) -->
+      <section v-if="isDevelopment" class="mb-6 rounded-lg border-2 border-yellow-400 bg-yellow-50 p-6">
+        <div class="mb-4 flex items-center gap-2">
+          <FontAwesomeIcon icon="bug" class="text-2xl text-yellow-600" />
+          <h2 class="text-xl font-bold text-yellow-700">Debug Panel</h2>
+        </div>
+        
+        <div class="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-5">
+          <button
+            @click="runDebugFunction('getCurrentStatus')"
+            :disabled="debugLoading"
+            class="rounded-lg bg-blue-500 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-600 disabled:opacity-50"
+          >
+            Status
+          </button>
+          <button
+            @click="runDebugFunction('getWorkHistory')"
+            :disabled="debugLoading"
+            class="rounded-lg bg-green-500 px-3 py-2 text-sm font-semibold text-white hover:bg-green-600 disabled:opacity-50"
+          >
+            Historik (7d)
+          </button>
+          <button
+            @click="runDebugFunction('getEntriesForDate')"
+            :disabled="debugLoading"
+            class="rounded-lg bg-purple-500 px-3 py-2 text-sm font-semibold text-white hover:bg-purple-600 disabled:opacity-50"
+          >
+            Idag
+          </button>
+          <button
+            @click="runDebugFunction('getPendingSyncOperations')"
+            :disabled="debugLoading"
+            class="rounded-lg bg-orange-500 px-3 py-2 text-sm font-semibold text-white hover:bg-orange-600 disabled:opacity-50"
+          >
+            Väntande Sync
+          </button>
+          <button
+            @click="runDebugFunction('clearAllData')"
+            :disabled="debugLoading"
+            class="rounded-lg bg-red-500 px-3 py-2 text-sm font-semibold text-white hover:bg-red-600 disabled:opacity-50"
+          >
+            Rensa Data
+          </button>
+        </div>
+        
+        <div v-if="debugStatus" class="text-sm font-semibold text-yellow-700">
+          {{ debugStatus }}
+        </div>
+        <div v-if="debugError" class="mt-2 rounded-lg bg-red-100 p-2 text-sm font-semibold text-red-700">
+          Fel: {{ debugError }}
+        </div>
+        <div v-if="debugResult" class="mt-4">
+          <details class="rounded-lg bg-white p-3">
+            <summary class="cursor-pointer font-semibold text-gray-700">Resultat (klicka för att expandera)</summary>
+            <pre class="mt-2 max-h-48 overflow-auto rounded-lg bg-gray-100 p-2 text-xs text-gray-800">{{ JSON.stringify(debugResult, null, 2) }}</pre>
+          </details>
         </div>
       </section>
 

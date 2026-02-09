@@ -125,6 +125,18 @@ export function calculateTotalWorkingSeconds(
   return Math.max(0, totalSeconds)
 }
 
+// Mark a work entry as synced (used by sync engine only)
+export async function markWorkEntryAsSynced(id: number) {
+  if (Capacitor.isNativePlatform()) {
+    const db = getDB()
+    await db.run('UPDATE work_entries SET synced = 1 WHERE id = ?', [id])
+  } else {
+    const { sqlJsDb, saveDatabase } = getDB() as any
+    sqlJsDb.run('UPDATE work_entries SET synced = 1 WHERE id = ?', [id])
+    saveDatabase()
+  }
+}
+
 // Upsert (insert/update) for work_entries
 export async function upsertWorkEntry(entry: any) {
   const safeEntry = {

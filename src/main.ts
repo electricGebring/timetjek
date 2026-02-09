@@ -21,6 +21,9 @@ import { FontAwesomeIcon } from './fontawesome/icons'
 import { registerTableAdapter } from '@/sync/table-sync-adapter'
 import { createStaffRegisterAdapter } from '@/sync/staff-register/adapter'
 
+// Import service layer (exposes on window for debugging)
+import '@/domain/staff-register/service'
+
 // Main bootstrap function for app startup
 async function bootstrap() {
   // Initialize database (tables, migrations, etc)

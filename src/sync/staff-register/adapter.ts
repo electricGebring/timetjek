@@ -26,11 +26,7 @@ export function createStaffRegisterAdapter(): TableSyncAdapter {
     getDeleted: async (): Promise<Entry[]> =>
       (await repo.getDeletedWorkEntries()).filter((e) => e.id !== null).map(repo.workEntryToEntry),
     markAsSynced: async (id: number): Promise<void> => {
-      const entries = await repo.getWorkEntries()
-      const entry = entries.find((e) => e.id === id)
-      if (!entry) return
-      entry.synced = 1
-      await repo.upsertWorkEntry(entry)
+      await repo.markWorkEntryAsSynced(id)
     },
     permanentDelete: async (id: number): Promise<void> => {
       await repo.permanentDeleteWorkEntry(id)
