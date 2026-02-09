@@ -1,23 +1,4 @@
 <script setup lang="ts">
-function formatUpdatedAt(updatedAt: string | number | null | undefined): string {
-  if (!updatedAt) return ''
-  let date: Date
-  if (typeof updatedAt === 'string') {
-    // If string is a number (possibly with decimal), treat as timestamp
-    if (/^\d+(\.\d+)?$/.test(updatedAt)) {
-      date = new Date(parseFloat(updatedAt))
-    } else {
-      date = new Date(updatedAt)
-    }
-  } else if (typeof updatedAt === 'number') {
-    date = new Date(updatedAt)
-  } else {
-    return ''
-  }
-  // Format as YYYY-MM-DD HH:mm:ss
-  const pad = (n: number) => n.toString().padStart(2, '0')
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
-}
 import { ref, onMounted } from 'vue'
 import HeaderBar from '@/components/HeaderBar.vue'
 // import { fetchWorkSchemeData } from '@/api/workscheme'
@@ -73,23 +54,6 @@ onMounted(async () => {
   })
 })
 
-const getStatusColor = (statusType: string) => {
-  switch (statusType) {
-    case 'working':
-      return 'text-green-600'
-    case 'break':
-      return 'text-orange-600'
-    case 'updated':
-      return 'text-blue-700'
-    case 'deleted':
-      return 'text-red-600'
-    case 'error':
-      return 'text-red-600'
-    default:
-      return 'text-gray-900'
-  }
-}
-
 const getTypeColor = (type: string) => {
   const colors: Record<string, string> = {
     A: 'bg-blue-50 text-blue-700',
@@ -122,7 +86,7 @@ const formatWorkTime = (seconds: number | null): string => {
 }
 
 // Format break time: calculate duration in minutes/hours
-const formatBreak = (breakValue: string | null, isOpen: boolean): string => {
+const formatBreak = (breakValue: string | null): string => {
   if (!breakValue) return '—'
   
   const parts = breakValue.split('-')
@@ -133,17 +97,23 @@ const formatBreak = (breakValue: string | null, isOpen: boolean): string => {
   const start = parts[0]
   const end = parts[1]
   
+  if (!start || !end) return '—'
+  
   // If end is 00:00:00, break is ongoing - show nothing
-  if (!end || end === '00:00:00') {
+  if (end === '00:00:00') {
     return '—'
   }
   
-  // If we have an actual end time, calculate duration regardless of isOpen
-  // (old entries might not have check_out_at set but still have complete break times)
-  
   // Parse times and calculate duration
-  const [startH, startM, startS] = start.split(':').map(Number)
-  const [endH, endM, endS] = end.split(':').map(Number)
+  const startParts = start.split(':').map(Number)
+  const endParts = end.split(':').map(Number)
+  
+  const startH = startParts[0] ?? 0
+  const startM = startParts[1] ?? 0
+  const startS = startParts[2] ?? 0
+  const endH = endParts[0] ?? 0
+  const endM = endParts[1] ?? 0
+  const endS = endParts[2] ?? 0
   
   const startMinutes = startH * 60 + startM + startS / 60
   const endMinutes = endH * 60 + endM + endS / 60
@@ -166,17 +136,10 @@ const formatBreak = (breakValue: string | null, isOpen: boolean): string => {
 
 const isProcessing = ref(false)
 
-const formatSeconds = (seconds: number | null): string => {
-  return formatWorkTime(seconds)
-}
-
-// ...existing code...
-const formatMinutes = (totalMinutes: number) => {
-  const hours = Math.floor(totalMinutes / 60)
-  const minutes = totalMinutes % 60
-  if (hours > 0 && minutes > 0) return `${hours} tim ${minutes} min`
-  if (hours > 0) return `${hours} tim`
-  return `${minutes} min`
+const getWorkEntryStatus = (status: any): { text: string; icon: string; class: string } | null => {
+  if (!status || typeof status !== 'string') return null
+  const statusKey = status as TimeRegistrationStatus
+  return workEntryStatus[statusKey] || null
 }
 
 const handleCheckIn = async () => {
@@ -421,7 +384,7 @@ const handleBreak = async () => {
                     <span
                       v-if="entry.break"
                       class="text-gray-900"
-                      >{{ formatBreak(entry.break, !entry.check_out_at) }}</span
+                      >{{ formatBreak(entry.break) }}</span
                     >
                     <span
                       v-else
@@ -446,15 +409,15 @@ const handleBreak = async () => {
                       {{ entry.check_out_at ? 'Rast' : 'På rast' }}
                     </div>
                     <div
-                      v-else-if="entry.status && workEntryStatus[entry.status]"
+                      v-else-if="getWorkEntryStatus(entry.status)"
                       class="flex items-center gap-2"
                     >
                       <FontAwesomeIcon 
-                        :icon="workEntryStatus[entry.status].icon" 
-                        :class="workEntryStatus[entry.status].class" 
+                        :icon="getWorkEntryStatus(entry.status)!.icon" 
+                        :class="getWorkEntryStatus(entry.status)!.class" 
                       />
-                      <span :class="workEntryStatus[entry.status].class" class="font-semibold">
-                        {{ workEntryStatus[entry.status].text }}
+                      <span :class="getWorkEntryStatus(entry.status)!.class" class="font-semibold">
+                        {{ getWorkEntryStatus(entry.status)!.text }}
                       </span>
                     </div>
                   </td>
