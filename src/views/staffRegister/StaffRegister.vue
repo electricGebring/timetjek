@@ -244,12 +244,6 @@ const runDebugFunction = async (functionName: string, args?: any) => {
         debugStatus.value = `✓ Historik hämtad (${result.length} poster)`
         debugResult.value = result
         break
-      case 'getEntriesForDate':
-        const today = new Date().toISOString().split('T')[0]
-        result = await service.getEntriesForDate(today)
-        debugStatus.value = `✓ Dagens poster (${result.length} stycken)`
-        debugResult.value = result
-        break
       case 'getPendingSyncOperations':
         result = await service.getPendingSyncOperations()
         debugStatus.value = `✓ Väntande sync (${result.length} operationer)`
@@ -397,7 +391,7 @@ const runDebugFunction = async (functionName: string, args?: any) => {
           <h2 class="text-xl font-bold text-yellow-700">Debug Panel</h2>
         </div>
         
-        <div class="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
+        <div class="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
           <button
             @click="runDebugFunction('getCurrentStatus')"
             :disabled="debugLoading"
@@ -411,13 +405,6 @@ const runDebugFunction = async (functionName: string, args?: any) => {
             class="rounded-lg bg-green-500 px-3 py-2 text-sm font-semibold text-white hover:bg-green-600 disabled:opacity-50"
           >
             Historik (7d)
-          </button>
-          <button
-            @click="runDebugFunction('getEntriesForDate')"
-            :disabled="debugLoading"
-            class="rounded-lg bg-purple-500 px-3 py-2 text-sm font-semibold text-white hover:bg-purple-600 disabled:opacity-50"
-          >
-            Idag
           </button>
           <button
             @click="runDebugFunction('getPendingSyncOperations')"
