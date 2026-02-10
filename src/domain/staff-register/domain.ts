@@ -60,8 +60,9 @@ export async function createWorkEntry(entry: any) {
     synced: 0,
     deleted: 0
   }
-  
+  console.log('[3. DOMAIN] 🧠 Creating work entry...', safeEntry)
   await staffRepo.upsertWorkEntry(safeEntry)
+  console.log('[5. DOMAIN] 🔄 Triggering sync...')
   await triggerSyncIfOnline('mutation')
 }
 

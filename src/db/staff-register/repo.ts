@@ -179,6 +179,7 @@ export async function upsertWorkEntry(entry: any) {
     synced: entry.synced ?? 0,
     deleted: entry.deleted ?? 0
   }
+  console.log('[4a. REPO] 💾 Upserting to SQLite, id:', safeEntry.id, 'synced:', safeEntry.synced ?? 0)
   
   if (Capacitor.isNativePlatform()) {
     const db = getDB()

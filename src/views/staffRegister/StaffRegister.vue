@@ -180,6 +180,8 @@ const handleCheckIn = async () => {
 
   try {
     const work_day_id = Number(new Date().setHours(0, 0, 0, 0))
+    const traceId = Math.random().toString(36).slice(2, 8)
+    console.log(`[1. UI] 🎬 CheckIn started - ${traceId}`, { work_day_id })
     await store.checkIn(work_day_id)
   } catch (e: any) {
     alert(e.message || 'Instämpling misslyckades')
