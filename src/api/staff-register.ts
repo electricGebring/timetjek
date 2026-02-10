@@ -63,6 +63,7 @@ export async function createEntry(item: Entry): Promise<Entry> {
     deleted: item.deleted ?? 0
   }
 
+  console.log('[8. API] 🌐 POST to API, creating entry:', entryToCreate.id)
   const response = await fetchWithRetry(API_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -70,7 +71,9 @@ export async function createEntry(item: Entry): Promise<Entry> {
   })
 
   if (!response.ok) throw new Error(`Failed to create entry: ${response.statusText}`)
-  return response.json()
+  const result = await response.json()
+  console.log('[9. API] ✅ Entry created in API, id:', result.id)
+  return result
 }
 
 export async function updateEntry(item: Entry): Promise<Entry> {

@@ -79,6 +79,7 @@ export const useStaffRegisterStore = defineStore('staffRegister', {
     },
 
     async checkIn(work_day_id: number) {
+      console.log('[2. STORE] 📦 Calling domain.createWorkEntry...', { work_day_id })
       const all = await domain.getAllWorkEntries()
       const todays = all.filter((e) => e.work_day_id === work_day_id)
 

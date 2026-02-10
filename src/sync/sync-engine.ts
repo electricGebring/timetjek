@@ -91,11 +91,10 @@ export class SyncEngine implements SyncPort {
     const unsyncedItems = await this.adapter.getUnsynced()
 
     if (unsyncedItems.length === 0) {
-      // this.logger.log(`[SyncEngine] No unsynced items to push for ${this.tableName}`)
       return
     }
 
-    // this.logger.log(`[SyncEngine] Draining ${unsyncedItems.length} unsynced items from ${this.tableName}`)
+    console.log(`[6. SYNC] 📤 Draining outbox for ${this.tableName}, found ${unsyncedItems.length} unsynced items`)
 
     // Try batch operation first (if API supports it)
     if (unsyncedItems.length > 1) {
@@ -105,9 +104,9 @@ export class SyncEngine implements SyncPort {
           ...item,
           updatedAt: item.updatedAt ?? now,
         }))
-        
+        console.log('[7a. ADAPTER] 🔌 Calling API for batch upsert...', itemsToBatch.length, 'items')
         const batchResult = await this.adapter.batchUpsert(itemsToBatch)
-        this.logger.log(`[SyncEngine] Batch pushed ${batchResult.length} items from ${this.tableName}`)
+        console.log(`[7. SYNC] ✅ Batch pushed ${batchResult.length} items, ids:`, batchResult.map(r => r.id))
         // this.logger.log(`[SyncEngine] Batch pushed ${batchResult.length} items from ${this.tableName}`)
 
         // Mark all as synced
