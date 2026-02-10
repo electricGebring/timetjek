@@ -40,8 +40,7 @@ CREATE TABLE IF NOT EXISTS work_entries (
   updatedAt TEXT,
   deleted_at TEXT,
   synced INTEGER DEFAULT 0,
-  deleted INTEGER DEFAULT 0,
-  FOREIGN KEY (work_day_id) REFERENCES work_days(id)
+  deleted INTEGER DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS work_scheme_meta (

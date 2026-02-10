@@ -14,7 +14,6 @@ const debugStatus = ref<string>('')
 const debugResult = ref<any>(null)
 const debugLoading = ref(false)
 const debugError = ref<string>('')
-const isDevelopment = process.env.NODE_ENV === 'development'
 
 const sortedEntriesByDay = computed(() => {
   const sorted = [...store.workEntries].sort((a, b) => {
@@ -286,7 +285,7 @@ const runDebugFunction = async (functionName: string) => {
   <div class="min-h-screen bg-gray-100">
     <HeaderBar/>
 
-    <main class="mx-auto max-w-6xl px-8 py-6">
+    <main class="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
       <!-- Breadcrumbs -->
       <nav
         aria-label="Brödsmulor"
@@ -308,7 +307,7 @@ const runDebugFunction = async (functionName: string) => {
       </nav>
 
       <!-- Title + actions -->
-      <section class="mb-6 flex items-start justify-between gap-6">
+      <section class="mb-6 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between lg:gap-6">
         <div class="flex items-center gap-4">
           <span
             class="inline-flex h-11 w-11 items-center justify-center rounded-lg bg-blue-600 text-white shadow-sm"
@@ -325,7 +324,7 @@ const runDebugFunction = async (functionName: string) => {
         <div
           role="group"
           aria-label="Åtgärder"
-          class="flex gap-4"
+          class="flex flex-wrap gap-3 lg:justify-end"
         >
           <button
             type="button"
@@ -384,8 +383,8 @@ const runDebugFunction = async (functionName: string) => {
         </div>
       </section>
 
-      <!-- Debug panel (dev mode only) -->
-      <section v-if="isDevelopment" class="mb-6 rounded-lg border-2 border-yellow-400 bg-yellow-50 p-6">
+      <!-- Debug panel -->
+      <section class="mb-6 rounded-lg border-2 border-yellow-400 bg-yellow-50 p-6">
         <div class="mb-4 flex items-center gap-2">
           <FontAwesomeIcon icon="bug" class="text-2xl text-yellow-600" />
           <h2 class="text-xl font-bold text-yellow-700">Debug Panel</h2>
@@ -470,14 +469,14 @@ const runDebugFunction = async (functionName: string) => {
           <table class="min-w-full text-sm">
             <thead>
               <tr class="bg-gray-100 text-gray-700">
-                <th class="px-5 py-4 text-left font-semibold">NAMN</th>
-                <th class="px-5 py-4 text-left font-semibold">TYP</th>
-                <th class="px-5 py-4 text-left font-semibold">P.NR</th>
-                <th class="px-5 py-4 text-left font-semibold">TID IN</th>
-                <th class="px-5 py-4 text-left font-semibold">TID UT</th>
-                <th class="px-5 py-4 text-left font-semibold">RAST</th>
-                <th class="px-5 py-4 text-left font-semibold">ARBETSTID</th>
-                <th class="px-5 py-4 text-left font-semibold">INFO</th>
+                <th class="px-3 py-3 text-left text-xs font-semibold sm:px-5 sm:py-4 sm:text-sm">NAMN</th>
+                <th class="px-3 py-3 text-left text-xs font-semibold sm:px-5 sm:py-4 sm:text-sm">TYP</th>
+                <th class="hidden px-3 py-3 text-left text-xs font-semibold sm:px-5 sm:py-4 sm:text-sm lg:table-cell">P.NR</th>
+                <th class="px-3 py-3 text-left text-xs font-semibold sm:px-5 sm:py-4 sm:text-sm">TID IN</th>
+                <th class="px-3 py-3 text-left text-xs font-semibold sm:px-5 sm:py-4 sm:text-sm">TID UT</th>
+                <th class="hidden px-3 py-3 text-left text-xs font-semibold sm:px-5 sm:py-4 sm:text-sm md:table-cell">RAST</th>
+                <th class="px-3 py-3 text-left text-xs font-semibold sm:px-5 sm:py-4 sm:text-sm">ARBETSTID</th>
+                <th class="hidden px-3 py-3 text-left text-xs font-semibold sm:px-5 sm:py-4 sm:text-sm md:table-cell">INFO</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-200">
@@ -488,7 +487,7 @@ const runDebugFunction = async (functionName: string) => {
                 <tr>
                   <td
                     colspan="8"
-                    class="border-b border-gray-200 bg-gray-50 px-5 py-3 text-lg font-bold text-gray-800"
+                    class="border-b border-gray-200 bg-gray-50 px-3 py-3 text-base font-bold text-gray-800 sm:px-5 sm:text-lg"
                   >
                     <span>{{ day.dateLabel }}</span>
                     <span
@@ -503,23 +502,23 @@ const runDebugFunction = async (functionName: string) => {
                   :key="entry.id"
                   class="bg-white"
                 >
-                  <td class="px-5 py-4">
+                  <td class="px-3 py-3 sm:px-5 sm:py-4">
                     <a
                       href="#"
                       class="font-semibold text-blue-600 hover:underline"
                       >{{ entry.name }}</a
                     >
                   </td>
-                  <td class="px-5 py-4">
+                  <td class="px-3 py-3 sm:px-5 sm:py-4">
                     <span
                       class="inline-flex h-7 w-7 items-center justify-center rounded-full font-bold"
                       :class="getTypeColor(entry.type)"
                       >{{ entry.type }}</span
                     >
                   </td>
-                  <td class="px-5 py-4 text-gray-900">{{ entry.personalNumber }}</td>
-                  <td class="px-5 py-4 text-gray-900">{{ formatTime(entry.check_in_at) }}</td>
-                  <td class="px-5 py-4">
+                  <td class="hidden px-3 py-3 text-gray-900 sm:px-5 sm:py-4 lg:table-cell">{{ entry.personalNumber }}</td>
+                  <td class="px-3 py-3 text-gray-900 sm:px-5 sm:py-4">{{ formatTime(entry.check_in_at) }}</td>
+                  <td class="px-3 py-3 sm:px-5 sm:py-4">
                     <span
                       v-if="entry.check_out_at"
                       class="text-gray-900"
@@ -531,7 +530,7 @@ const runDebugFunction = async (functionName: string) => {
                       >&mdash;</span
                     >
                   </td>
-                  <td class="px-5 py-4">
+                  <td class="hidden px-3 py-3 sm:px-5 sm:py-4 md:table-cell">
                     <span
                       v-if="entry.break"
                       class="text-gray-900"
@@ -543,7 +542,7 @@ const runDebugFunction = async (functionName: string) => {
                       >&mdash;</span
                     >
                   </td>
-                  <td class="px-5 py-4">
+                  <td class="px-3 py-3 sm:px-5 sm:py-4">
                     <span
                       v-if="entry.total_working_seconds"
                       class="text-gray-900"
@@ -555,7 +554,7 @@ const runDebugFunction = async (functionName: string) => {
                       >&mdash;</span
                     >
                   </td>
-                  <td class="px-5 py-4">
+                  <td class="hidden px-3 py-3 sm:px-5 sm:py-4 md:table-cell">
                     <div v-if="entry.break" class="flex items-center gap-2 font-semibold text-orange-600">
                       {{ entry.check_out_at ? 'Rast' : 'På rast' }}
                     </div>

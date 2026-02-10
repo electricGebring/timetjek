@@ -15,9 +15,15 @@ function rowToRecord(row: unknown[]): Record<string, unknown> {
   return record
 }
 
-/** Maps a raw row array to a WorkEntry using Zod schema (validation + coercion) */
-function mapRowToWorkEntry(row: unknown[]): WorkEntry {
-  return parseWorkEntryRow(rowToRecord(row))
+/** Maps a raw row (array or object) to a WorkEntry using Zod schema (validation + coercion) */
+function mapRowToWorkEntry(row: unknown): WorkEntry {
+  if (Array.isArray(row)) {
+    return parseWorkEntryRow(rowToRecord(row))
+  }
+  if (row && typeof row === 'object') {
+    return parseWorkEntryRow(row as Record<string, unknown>)
+  }
+  return parseWorkEntryRow({})
 }
 
 // Central query function for work_entries

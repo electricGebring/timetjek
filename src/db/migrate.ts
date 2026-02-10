@@ -47,7 +47,15 @@ async function ensureMigrationsTable() {
 async function getAppliedMigrationIds(): Promise<Set<string>> {
   const sql = 'SELECT id FROM schema_migrations'
   const rows = await queryRows(sql, [])
-  return new Set(rows.map(r => String(r[0])))
+  // Handle both array format [["id"]] and object format [{"id":"value"}]
+  return new Set(rows.map(r => {
+    if (Array.isArray(r)) {
+      return String(r[0])
+    } else if (typeof r === 'object' && r !== null) {
+      return String((r as any).id)
+    }
+    return String(r)
+  }))
 }
 
 async function runSql(sql: string, params: any[] = []) {
@@ -64,7 +72,9 @@ async function queryRows(sql: string, params: any[] = []): Promise<any[][]> {
   if (Capacitor.isNativePlatform()) {
     const db = getDB()
     const res = await db.query(sql, params)
-    return (res.values ?? []) as any[][]
+    // Filter out metadata rows that have 'ios_columns' or similar keys
+    const values = (res.values ?? []).filter((row: any) => !('ios_columns' in row && Object.keys(row).length === 1))
+    return values as any[][]
   } else {
     const { sqlJsDb } = getDB() as any
     const results = sqlJsDb.exec(sql, params)
@@ -87,16 +97,23 @@ export async function runMigrations() {
 
   for (const m of pending) {
     console.log('[MIGRATIONS] Applying migration:', m.id)
-    await runSql('BEGIN')
     try {
-      await runSql(m.sql)
+      // Split multiple statements and execute each individually
+      const statements = m.sql
+        .split(';')
+        .map(stmt => stmt.trim())
+        .filter(stmt => stmt.length > 0)
+      
+      for (const stmt of statements) {
+        await runSql(stmt)
+      }
+      
       await runSql(
         'INSERT INTO schema_migrations (id, applied_at) VALUES (?, ?)',
         [m.id, new Date().toISOString()]
       )
-      await runSql('COMMIT')
+      console.log('[MIGRATIONS] Migration applied:', m.id)
     } catch (e) {
-      await runSql('ROLLBACK')
       throw new Error(`Migration failed: ${m.id} -> ${(e as Error).message}`)
     }
   }

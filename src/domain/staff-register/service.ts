@@ -205,18 +205,16 @@ export async function clearAllData() {
 }
 
 // ─────────────────────────────────────────────────────────
-// Export for debugging (dev mode only)
+// Export for debugging
 // ─────────────────────────────────────────────────────────
 
-if (process.env.NODE_ENV === 'development') {
-  ;(window as any).staffRegisterService = {
-    getWorkHistory,
-    getEntriesForDate,
-    getCurrentStatus,
-    getPendingSyncOperations,
-    getAllEntries,
-    getDatabaseInfo,
-    clearAllData,
-  }
-  console.log('📋 Staff Register Service exposed on window.staffRegisterService')
+;(window as any).staffRegisterService = {
+  getWorkHistory,
+  getEntriesForDate,
+  getCurrentStatus,
+  getPendingSyncOperations,
+  getAllEntries,
+  getDatabaseInfo,
+  clearAllData,
 }
+console.log('📋 Staff Register Service exposed on window.staffRegisterService')

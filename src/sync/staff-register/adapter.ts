@@ -130,28 +130,23 @@ export function createStaffRegisterAdapter(): TableSyncAdapter {
       if (!remoteItem.id) {
         return { resolved: remoteItem, conflictDetected: true }
       }
-      const local = (await repo.getWorkEntries()).find((e) => e.id === remoteItem.id)
+      const allLocalEntries = await repo.getWorkEntries()
+      let local = allLocalEntries.find((e) => e.id === remoteItem.id)
+
 
       if (!local) {
         await repo.upsertWorkEntry({ ...remoteItem, synced: 1 })
         return { resolved: remoteItem, conflictDetected: false }
       }
-
-      // IMPORTANT: If local entry is unsynced, skip merge and keep local changes
-      // Let drainOutbox push these changes in next sync cycle
       if (local.synced === 0) {
         return { resolved: local as Entry, conflictDetected: false }
       }
-
       const { defaultConflictResolver } = await import('@/sync/conflict-resolver')
-
       const toResolverFormat = (entry: any) => ({
         ...entry,
         updatedAt: entry.updatedAt ? Date.parse(entry.updatedAt) : undefined
       })
-
       const result = defaultConflictResolver.resolve(toResolverFormat(local), toResolverFormat(remoteItem), strategy)
-
       await repo.upsertWorkEntry({ ...result.resolved, synced: 1 })
       return { resolved: result.resolved, conflictDetected: result.conflictDetected }
     },

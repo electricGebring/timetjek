@@ -1,6 +1,16 @@
 import type { Entry } from '@/views/staffRegister/types'
 
-const API_URL = 'http://localhost:3002/entries'
+
+// Dynamically select API URL for browser vs iOS simulator
+function getApiUrl() {
+  // If running in browser (localhost or 127.0.0.1), use localhost
+  if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+    return 'http://localhost:3002/entries';
+  }
+  // Otherwise, use your Mac's LAN IP (for iOS simulator)
+  return 'http://172.16.175.87:3002/entries';
+}
+const API_URL = getApiUrl();
 
 /**
  * Fetch with exponential backoff retry for connection errors

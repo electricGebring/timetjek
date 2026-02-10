@@ -78,6 +78,15 @@ async function bootstrap() {
   // Start coordinator after app is mounted
   await coordinator.start()
 
+  // Run initial sync to populate database with API data
+  try {
+    console.log('[Bootstrap] Running initial sync...')
+    await syncAdapter.start('manual')
+    console.log('[Bootstrap] Initial sync completed')
+  } catch (error) {
+    console.error('[Bootstrap] Initial sync failed:', error)
+  }
+
   // Run initial cleanup of expired data based on configured policies
   try {
     const results = await cleanupAllTables()
