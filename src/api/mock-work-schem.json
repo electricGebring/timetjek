@@ -27,7 +27,7 @@
       "administrator_comment": null,
       "total_working_seconds": 3600,
       "createdAt": "2025-02-11T09:03:03Z",
-      "updatedAt": "2026-02-09T20:40:30.481Z",
+      "updatedAt": "2026-02-10T17:48:51.517Z",
       "deleted_at": null,
       "synced": 0,
       "deleted": 0
@@ -58,7 +58,7 @@
       "administrator_comment": null,
       "total_working_seconds": 1740,
       "createdAt": "2025-02-11T10:00:00Z",
-      "updatedAt": "2026-02-09T20:40:30.517Z",
+      "updatedAt": "2026-02-10T17:48:51.534Z",
       "deleted_at": null,
       "synced": 0,
       "deleted": 0
@@ -89,7 +89,7 @@
       "administrator_comment": null,
       "total_working_seconds": null,
       "createdAt": "2025-02-11T11:31:24Z",
-      "updatedAt": "2026-02-09T20:40:30.547Z",
+      "updatedAt": "2026-02-10T17:48:51.554Z",
       "deleted_at": null,
       "synced": 0,
       "deleted": 0
@@ -120,7 +120,7 @@
       "administrator_comment": null,
       "total_working_seconds": 4020,
       "createdAt": "2025-02-11T12:00:00Z",
-      "updatedAt": "2026-02-09T20:40:30.581Z",
+      "updatedAt": "2026-02-10T17:48:51.572Z",
       "deleted_at": null,
       "synced": 0,
       "deleted": 0
@@ -151,7 +151,7 @@
       "administrator_comment": null,
       "total_working_seconds": 3537,
       "createdAt": "2025-02-11T12:09:23Z",
-      "updatedAt": "2026-02-09T20:40:30.616Z",
+      "updatedAt": "2026-02-10T17:48:51.591Z",
       "deleted_at": null,
       "synced": 0,
       "deleted": 0
@@ -182,7 +182,7 @@
       "administrator_comment": null,
       "total_working_seconds": null,
       "createdAt": "2025-02-10T09:03:03Z",
-      "updatedAt": "2026-02-09T20:40:30.648Z",
+      "updatedAt": "2026-02-10T17:48:51.617Z",
       "deleted_at": null,
       "synced": 0,
       "deleted": 0
@@ -213,7 +213,7 @@
       "administrator_comment": null,
       "total_working_seconds": 1740,
       "createdAt": "2025-02-10T10:00:00Z",
-      "updatedAt": "2026-02-09T20:40:30.687Z",
+      "updatedAt": "2026-02-10T17:48:51.648Z",
       "deleted_at": null,
       "synced": 0,
       "deleted": 0

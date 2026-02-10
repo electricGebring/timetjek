@@ -8,6 +8,7 @@ import type { TimeRegistrationStatus } from '@/enums/TimeRegistrationStatus'
 
 const store = useStaffRegisterStore()
 import { computed } from 'vue'
+import { debugSyncNow } from './debug-sync'
 
 // Debug panel state (dev mode only)
 const debugStatus = ref<string>('')
@@ -429,11 +430,11 @@ const runDebugFunction = async (functionName: string) => {
             DB Info
           </button>
           <button
-            @click="runDebugFunction('clearAllData')"
+            @click="debugSyncNow"
             :disabled="debugLoading"
-            class="rounded-lg bg-red-500 px-3 py-2 text-sm font-semibold text-white hover:bg-red-600 disabled:opacity-50"
+            class="rounded-lg bg-blue-500 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-600 disabled:opacity-50"
           >
-            Rensa Data
+            Synk
           </button>
         </div>
         
