@@ -120,7 +120,9 @@ function bindInsertAutoId(s: ReturnType<typeof buildSafeWorkEntry>): unknown[] {
 }
 
 export async function upsertWorkEntry(entry: Record<string, unknown>) {
+
   const safeEntry = buildSafeWorkEntry(entry)
+  console.log('[4a. REPO] 💾 upsertWorkEntry', safeEntry)
 
   if (Capacitor.isNativePlatform()) {
     const db = getDB()
