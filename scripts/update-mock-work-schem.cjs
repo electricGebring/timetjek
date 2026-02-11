@@ -66,13 +66,15 @@ function updateData() {
   // Find max id
   let nextId = data.entries.reduce((max, e) => Math.max(max, e.id || 0), 0) + 1;
 
-  // Find latest timeOut for 2025-02-11, fallback to 13:00:00 if not found
-  const dayEntries = data.entries.filter((e) => (e.createdAt || '').startsWith(baseDate));
+  // Find latest CLOSED check_out_time_at for 2025-02-11, fallback till 09:00:00 om ingen finns
+  const dayEntries = data.entries.filter(
+    (e) => (e.createdAt || '').startsWith(baseDate) && e.status === 'CLOSED'
+  );
   const lastTimeOut = dayEntries
-    .map((e) => e.timeOut)
+    .map((e) => e.check_out_time_at)
     .filter(Boolean)
     .sort()
-    .pop() || '13:00:00';
+    .pop() || '09:00:00';
 
   // Helper: add minutes to HH:mm:ss
   const addMinutes = (time, minutesToAdd) => {
@@ -83,48 +85,109 @@ function updateData() {
     return `${newH}:${newM}:${String(s).padStart(2, '0')}`;
   };
 
-  // New timeline: start with a break right after lastTimeOut
-  const schedule = [
-    { type: 'break', durationMin: 15 },   // Rast 15 min
-    { type: 'work', durationMin: 90 },    // Arbete 1h30
-    { type: 'break', durationMin: 10 },   // Rast 10 min
-    { type: 'work', durationMin: 120 },   // Arbete 2h
-    { type: 'break', durationMin: 30 },   // Rast 30 min
-    { type: 'work', durationMin: 60 }     // Arbete 1h
-  ];
-
+  // Generate closed entries for 2025-02-11 with 1h work and 15min break, alternating, until ~17:00
   let cursor = lastTimeOut;
   const newEntries = [];
-
-  schedule.forEach((slot) => {
+  const endTime = '17:00:00';
+  let work = true;
+  // Helper: convert HH:mm:ss to minutes
+  const timeToMinutes = (t) => {
+    const [h, m, s] = t.split(':').map(Number);
+    return h * 60 + m;
+  };
+  let firstBreakDone = false;
+  while (timeToMinutes(cursor) < timeToMinutes(endTime)) {
+    let durationMin;
+    if (!work) {
+      // Första rast efter 13:00 ska vara 45 min
+      if (!firstBreakDone && timeToMinutes(cursor) >= 14 * 60) {
+        durationMin = 45;
+        firstBreakDone = true;
+      } else {
+        durationMin = 15;
+      }
+    } else {
+      durationMin = 60;
+    }
     const timeIn = cursor;
-    const timeOut = addMinutes(cursor, slot.durationMin);
+    let timeOut = addMinutes(cursor, durationMin);
+    // Om sista entry skulle bli rast, byt till work och avsluta 17:00
+    if (timeToMinutes(timeOut) >= timeToMinutes(endTime)) {
+      // Sista entry: alltid work, slutar exakt 17:00
+      timeOut = endTime;
+      newEntries.push({
+        id: nextId++,
+        name: 'Anna Svensson',
+        type: 'A',
+        personalNumber: '19870312-1234',
+        work_day_id,
+        date: baseDate,
+        dateLabel: baseDate,
+        status: 'CLOSED',
+        check_in_at: `${baseDate}T${timeIn}Z`,
+        check_in_time_at: timeIn,
+        check_out_at: `${baseDate}T${timeOut}Z`,
+        check_out_time_at: timeOut,
+        break: null,
+        total_working_seconds: timeToMinutes(timeOut) - timeToMinutes(timeIn) > 0 ? (timeToMinutes(timeOut) - timeToMinutes(timeIn)) * 60 : 0,
+        createdAt: `${baseDate}T${timeIn}Z`,
+        updatedAt: new Date().toISOString(),
+        synced: 0,
+        deleted: 0,
+        // ...lägg till övriga fält om du vill
+      });
+      break;
+    }
+    if (work) {
+      // Work entry
+      newEntries.push({
+        id: nextId++,
+        name: 'Anna Svensson',
+        type: 'A',
+        personalNumber: '19870312-1234',
+        work_day_id,
+        date: baseDate,
+        dateLabel: baseDate,
+        status: 'CLOSED',
+        check_in_at: `${baseDate}T${timeIn}Z`,
+        check_in_time_at: timeIn,
+        check_out_at: `${baseDate}T${timeOut}Z`,
+        check_out_time_at: timeOut,
+        break: null,
+        total_working_seconds: durationMin * 60,
+        createdAt: `${baseDate}T${timeIn}Z`,
+        updatedAt: new Date().toISOString(),
+        synced: 0,
+        deleted: 0,
+        // ...lägg till övriga fält om du vill
+      });
+    } else {
+      // Break entry
+      newEntries.push({
+        id: nextId++,
+        name: 'Anna Svensson',
+        type: 'A',
+        personalNumber: '19870312-1234',
+        work_day_id,
+        date: baseDate,
+        dateLabel: baseDate,
+        status: 'OPEN',
+        check_in_at: `${baseDate}T${timeIn}Z`,
+        check_in_time_at: timeIn,
+        check_out_at: null,
+        check_out_time_at: null,
+        break: `${timeIn}-${timeOut}`,
+        total_working_seconds: null,
+        createdAt: `${baseDate}T${timeIn}Z`,
+        updatedAt: new Date().toISOString(),
+        synced: 0,
+        deleted: 0,
+        // ...lägg till övriga fält om du vill
+      });
+    }
     cursor = timeOut;
-
-    const isBreak = slot.type === 'break';
-
-    newEntries.push({
-      id: nextId++,
-      name: 'Anna Svensson',
-      type: 'A',
-      personalNumber: '19870312-1234',
-      timeIn,
-      timeOut,
-      break: isBreak ? formatMinutes(slot.durationMin) : null,
-      workTime: isBreak ? null : formatMinutes(slot.durationMin),
-      status: isBreak ? 'Rast' : null,
-      statusType: isBreak ? 'break' : 'updated',
-      hasError: false,
-      updatedBy: 'Script',
-      createdAt: `${baseDate}T${timeIn}Z`,
-      updatedAt: new Date().toISOString(),
-      work_day_id,
-      date: baseDate,
-      dateLabel: baseDate,
-      synced: 0,
-      deleted: 0
-    });
-  });
+    work = !work;
+  }
 
   data.entries.push(...newEntries);
   console.log(`Appended ${newEntries.length} entries after ${lastTimeOut} for ${baseDate}`);
