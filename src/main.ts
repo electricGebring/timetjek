@@ -15,9 +15,11 @@ import { cleanupAllTables } from './domain/services/data-cleanup'
 import { SyncManager } from './sync/sync-manager'
 import type { SyncPort } from './domain/ports/sync.port'
 import { initSyncTrigger } from './domain/services/sync-trigger'
+import { createLogger } from '@/utils/logger'
 import { FontAwesomeIcon } from './fontawesome/icons'
 
 // Import generic sync adapter registration and table adapters
+import { TABLE_WORK_ENTRIES } from '@/constants/tables'
 import { registerTableAdapter } from '@/sync/table-sync-adapter'
 import { createStaffRegisterAdapter } from '@/sync/staff-register/adapter'
 
@@ -32,7 +34,7 @@ async function bootstrap() {
   await runMigrations()
 
   // Register sync adapters for each entity/table
-  registerTableAdapter('work_entries', createStaffRegisterAdapter)
+  registerTableAdapter(TABLE_WORK_ENTRIES, createStaffRegisterAdapter)
 
   // Create and mount Vue app
   const app = createApp(App)
@@ -45,8 +47,8 @@ async function bootstrap() {
   // Setup connectivity and sync dependencies
   const connectivity = new CapacitorConnectivityAdapter()
 
-  // Create SyncManager to handle all registered tables
-  const syncManager = new SyncManager({ logger: console })
+  // Create SyncManager to handle all registered tables (central logging)
+  const syncManager = new SyncManager({ logger: createLogger('SyncManager') })
 
   // Create a SyncPort adapter that wraps SyncManager
   const syncAdapter: SyncPort = {
@@ -65,7 +67,7 @@ async function bootstrap() {
   const coordinator = new OnlineOfflineCoordinator({
     connectivity,
     sync: syncAdapter,
-    logger: console,
+    logger: createLogger('Coordinator'),
     // Optional: Enable periodic sync for always-online apps
     // syncIntervalMs: 30 * 1000, // Uncomment to enable
   })

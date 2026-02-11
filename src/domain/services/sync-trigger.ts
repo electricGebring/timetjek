@@ -1,62 +1,58 @@
 /**
  * Sync Trigger Service
- * 
- * Provides a way for domain layer to trigger immediate sync when online.
- * This is optional - coordinator still handles connectivity-based sync.
- * 
- * For always-online apps, this enables immediate sync on mutations.
+ *
+ * Lets the domain layer request an immediate sync when online (e.g. after a mutation).
+ * Debounces rapid calls so multiple mutations in a short window result in one sync.
+ * "Already running" is handled by SyncManager – this layer only debounces and checks connectivity.
  */
 
 import type { SyncPort, SyncReason } from '../ports/sync.port'
 import type { ConnectivityPort } from '../ports/connectivity.port'
+import { createLogger } from '@/utils/logger'
+
+const logger = createLogger('SyncTrigger')
+
+const DEBOUNCE_MS = 100
 
 let globalSyncPort: SyncPort | null = null
 let globalConnectivity: ConnectivityPort | null = null
 let pendingSyncTimeout: ReturnType<typeof setTimeout> | null = null
 
-/**
- * Initialize sync trigger service
- * Called during app bootstrap
- */
 export function initSyncTrigger(sync: SyncPort, connectivity: ConnectivityPort): void {
   globalSyncPort = sync
   globalConnectivity = connectivity
 }
 
 /**
- * Trigger immediate sync if online (fire and forget)
- * Safe to call from domain layer - won't block
- * 
- * Debounced to allow batch operations to complete before syncing
- * 
- * @param reason - Reason for sync (default: 'manual')
- * @returns Promise that resolves when sync check completes
+ * Request a sync if online. Non-blocking and debounced.
+ * Safe to call from domain after mutations; coordinator still handles connectivity-driven sync.
  */
-export async function triggerSyncIfOnline(reason: 'manual' | 'mutation' = 'manual'): Promise<void> {
-  if (!globalSyncPort || !globalConnectivity) {
-    // Not initialized - skip
-    return
-  }
+export function triggerSyncIfOnline(reason: 'manual' | 'mutation' = 'manual'): void {
+  if (!globalSyncPort || !globalConnectivity) return
 
-  // Clear any pending sync timeout
   if (pendingSyncTimeout) {
     clearTimeout(pendingSyncTimeout)
+    pendingSyncTimeout = null
   }
 
-  // Debounce sync by 100ms to allow batch operations to complete
-  pendingSyncTimeout = setTimeout(async () => {
-    try {
-      const state = await globalConnectivity!.getCurrent()
-      if (state.online && !globalSyncPort!.isRunning()) {
-        // Fire and forget - don't await (non-blocking)
-        globalSyncPort!.start(reason as unknown as SyncReason).catch((err) => {
-          console.warn('[SyncTrigger] Immediate sync failed:', err)
-          // Sync will still happen via coordinator/periodic sync
-        })
-      }
-    } catch (error) {
-      // Silently fail - coordinator will handle sync
-      console.warn('[SyncTrigger] Failed to check connectivity:', error)
-    }
-  }, 100) // Wait 100ms for batch operations to complete
+  pendingSyncTimeout = setTimeout(() => {
+    pendingSyncTimeout = null
+    runSyncIfOnline(reason)
+  }, DEBOUNCE_MS)
+}
+
+async function runSyncIfOnline(reason: 'manual' | 'mutation'): Promise<void> {
+  const sync = globalSyncPort
+  const connectivity = globalConnectivity
+  if (!sync || !connectivity) return
+
+  try {
+    const state = await connectivity.getCurrent()
+    if (!state.online || sync.isRunning()) return
+    sync.start(reason as unknown as SyncReason).catch((err) => {
+      logger.warn('Immediate sync failed', err)
+    })
+  } catch (error) {
+    logger.warn('Failed to check connectivity', error)
+  }
 }

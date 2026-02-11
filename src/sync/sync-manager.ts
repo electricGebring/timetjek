@@ -3,6 +3,7 @@
  */
 
 import type { SyncReason } from '../domain/ports/sync.port'
+import { createLogger } from '@/utils/logger'
 import { getPoliciesForSync, shouldSyncTable } from '../domain/config/data-policies'
 import { SyncEngine } from './sync-engine'
 import { getTableAdapter } from './table-sync-adapter'
@@ -45,7 +46,7 @@ export class SyncManager {
       this.syncEngines.set(
         tableName,
         new SyncEngine({
-          logger: this.logger,
+          logger: createLogger('SyncEngine'),
           tableName,
           adapter,
         })

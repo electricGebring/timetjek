@@ -3,6 +3,7 @@
  * Define per-table policies for offline support, retention, sync behavior, and conflict resolution
  */
 
+import { TABLE_WORK_ENTRIES } from '@/constants/tables'
 import { ConflictResolutionStrategy } from '@/enums/ConflictResolutionStrategy'
 import { SyncMode } from '@/enums/SyncMode'
 
@@ -32,8 +33,8 @@ export type DataRetentionPolicy = {
  * Register your data types here with their retention policies
  */
 export const DATA_POLICIES: Record<string, DataRetentionPolicy> = {
-  work_entries: {
-    tableName: 'work_entries',
+  [TABLE_WORK_ENTRIES]: {
+    tableName: TABLE_WORK_ENTRIES,
     syncMode: SyncMode.OFFLINE_FIRST,
     retentionDays: 30,
     softDeleteOnly: true,
