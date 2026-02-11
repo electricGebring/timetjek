@@ -107,9 +107,9 @@ export class SyncEngine implements SyncPort {
           ...item,
           updatedAt: item.updatedAt ?? now
         }))
-        this.logger.log(`[7a. ADAPTER] 🔌 Calling API for batch upsert...`, itemsToBatch.length, 'items')
+        this.logger.log(`[7a. SYNC] 🔌 Calling API adapter.batchUpsert for ${itemsToBatch.length} items`)
         const batchResult = await this.adapter.batchUpsert(itemsToBatch)
-        this.logger.log(`[7. SYNC] ✅ Batch pushed ${batchResult.length} items, ids:`, batchResult.map((r) => r.id))
+        this.logger.log(`[7b. SYNC] ✅ Batch pushed ${batchResult.length} items, ids:`, batchResult.map((r) => r.id))
 
         // Mark all as synced
         for (const item of unsyncedItems) {
@@ -139,7 +139,7 @@ export class SyncEngine implements SyncPort {
           }
         )
         await this.adapter.markAsSynced(item.id)
-        this.logger.log(`[7b. SYNC] 📤 Pushed item from ${this.tableName}: id ${item.id}`)
+        this.logger.log(`[7c. SYNC] 📤 Pushed item from ${this.tableName}: id ${item.id}`)
       } catch (error) {
         // Only log error if it's not retryable (retryable errors are already logged by retryWithBackoff)
         if (!isRetryableError(error)) {
