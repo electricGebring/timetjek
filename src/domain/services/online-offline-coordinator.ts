@@ -47,7 +47,7 @@ export class OnlineOfflineCoordinator {
     this.lastState = state
 
     if (state.online) {
-      this.logger.log('[Coordinator] Online -> starting sync')
+      this.logger.log('[Coordinator] 🟢 Online -> starting sync')
       void this.deps.sync.start('connectivity-online')
       
       // Start periodic sync if configured (for always-online apps)
@@ -55,7 +55,7 @@ export class OnlineOfflineCoordinator {
         this.startPeriodicSync()
       }
     } else {
-      this.logger.log('[Coordinator] Offline -> stopping sync')
+      this.logger.log('[Coordinator] 🔴 Offline -> stopping sync')
       this.stopPeriodicSync()
       void this.deps.sync.stop()
     }
@@ -68,11 +68,11 @@ export class OnlineOfflineCoordinator {
     if (this.syncIntervalId) return // Already running
     
     const intervalMs = this.deps.syncIntervalMs!
-    this.logger.log(`[Coordinator] Starting periodic sync every ${intervalMs}ms`)
+    this.logger.log(`[Coordinator] ⏰ Starting periodic sync every ${intervalMs}ms`)
     
     this.syncIntervalId = setInterval(() => {
       if (this.lastState?.online && !this.deps.sync.isRunning()) {
-        this.logger.log('[Coordinator] Periodic sync triggered')
+        this.logger.log('[Coordinator] 🔁 Periodic sync triggered')
         void this.deps.sync.start('interval')
       }
     }, intervalMs)
@@ -85,7 +85,7 @@ export class OnlineOfflineCoordinator {
     if (this.syncIntervalId) {
       clearInterval(this.syncIntervalId)
       this.syncIntervalId = null
-      this.logger.log('[Coordinator] Stopped periodic sync')
+      this.logger.log('[Coordinator] ⏹️ Stopped periodic sync')
     }
   }
 }

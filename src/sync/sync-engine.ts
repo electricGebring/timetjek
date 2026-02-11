@@ -47,7 +47,7 @@ export class SyncEngine implements SyncPort {
 
   async start(reason: SyncReason): Promise<void> {
     if (this.running) {
-      this.logger.log('Already running, skipping start', reason)
+      this.logger.log('[SyncEngine] ⏩ Already running, skipping start', reason)
       return
     }
     this.running = true
@@ -97,7 +97,7 @@ export class SyncEngine implements SyncPort {
       return
     }
 
-    this.logger.log('Draining outbox for', this.tableName, 'found', unsyncedItems.length, 'unsynced items')
+    this.logger.log(`[6. SYNC] 📤 Draining outbox for ${this.tableName}, found ${unsyncedItems.length} unsynced items`)
 
     // Try batch operation first (if API supports it)
     if (unsyncedItems.length > 1) {
@@ -107,9 +107,9 @@ export class SyncEngine implements SyncPort {
           ...item,
           updatedAt: item.updatedAt ?? now
         }))
-        this.logger.log('Calling API for batch upsert, items:', itemsToBatch.length)
+        this.logger.log(`[7a. ADAPTER] 🔌 Calling API for batch upsert...`, itemsToBatch.length, 'items')
         const batchResult = await this.adapter.batchUpsert(itemsToBatch)
-        this.logger.log('Batch pushed', batchResult.length, 'items, ids:', batchResult.map((r) => r.id))
+        this.logger.log(`[7. SYNC] ✅ Batch pushed ${batchResult.length} items, ids:`, batchResult.map((r) => r.id))
 
         // Mark all as synced
         for (const item of unsyncedItems) {
@@ -139,7 +139,7 @@ export class SyncEngine implements SyncPort {
           }
         )
         await this.adapter.markAsSynced(item.id)
-        this.logger.log('Pushed item from', this.tableName, 'id', item.id)
+        this.logger.log(`[7b. SYNC] 📤 Pushed item from ${this.tableName}: id ${item.id}`)
       } catch (error) {
         // Only log error if it's not retryable (retryable errors are already logged by retryWithBackoff)
         if (!isRetryableError(error)) {

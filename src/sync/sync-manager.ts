@@ -62,7 +62,7 @@ export class SyncManager {
    */
   async syncAll(reason: SyncReason): Promise<void> {
     if (this.syncInProgress) {
-      this.logger.log('[SyncManager] Sync already in progress, skipping')
+      this.logger.log('[SyncManager] ⏳ Sync already in progress, skipping')
       return
     }
     // Extra safety: never run sync when offline (web)

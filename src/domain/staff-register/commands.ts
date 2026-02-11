@@ -26,9 +26,9 @@ export async function createWorkEntry(entry: Record<string, unknown>) {
     synced: 0,
     deleted: 0
   }
-  logger.log('Creating work entry', safeEntry)
+  logger.log('[3. DOMAIN] 🧠 Creating work entry...', safeEntry)
   await staffRepo.upsertWorkEntry(safeEntry)
-  logger.log('Triggering sync after mutation')
+  logger.log('[5. DOMAIN] 🔄 Triggering sync...')
   await triggerSyncIfOnline('mutation')
 }
 
