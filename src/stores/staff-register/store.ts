@@ -1,11 +1,11 @@
 import { defineStore } from 'pinia'
 import * as domain from '@/domain/staff-register/domain'
-import type { GroupedWorkEntries } from '@/views/staffRegister/types'
+import type { Entry, GroupedWorkEntries } from '@/views/staffRegister/types'
 import { TimeRegistrationStatus } from '@/enums/TimeRegistrationStatus'
 
 export const useStaffRegisterStore = defineStore('staffRegister', {
   state: () => ({
-    workEntries: [] as any[],
+    workEntries: [] as Entry[],
     groupedWorkEntries: null as GroupedWorkEntries | null,
     loading: false,
     error: null as string | null
@@ -68,7 +68,7 @@ export const useStaffRegisterStore = defineStore('staffRegister', {
       try {
         const entries = await domain.getAllWorkEntries()
         // Convert WorkEntry to Entry format
-        const convertedEntries = entries.map((e) => domain.workEntryToEntry(e))
+        const convertedEntries = entries.map(domain.workEntryToEntry)
         this.setWorkEntries(convertedEntries)
         this.setError(null)
       } catch (e: any) {
@@ -94,6 +94,9 @@ export const useStaffRegisterStore = defineStore('staffRegister', {
 
         await domain.updateWorkEntry({
           ...breakEntry,
+          work_day_id: breakEntry.work_day_id ?? 0,
+          createdAt: breakEntry.createdAt ?? '',
+          updatedAt: breakEntry.updatedAt ?? '',
           check_out_at: now,
           break: `${breakStart}-${breakEnd}`
         })
@@ -109,10 +112,31 @@ export const useStaffRegisterStore = defineStore('staffRegister', {
       }
 
       await domain.createWorkEntry({
-        work_day_id,
-        name: 'Anna Svensson',
-        type: 'A',
-        personalNumber: '19870312-1234'
+        work_day_id: work_day_id ?? 0,
+        employee_id: 1,
+        workplace_id: 1,
+        cost_center_id: null,
+        status: '',
+        check_in_at: '',
+        check_in_time_at: '',
+        check_in_latitude: 0,
+        check_in_longitude: 0,
+        check_in_application: '',
+        check_out_at: null,
+        check_out_time_at: null,
+        check_out_latitude: null,
+        check_out_longitude: null,
+        check_out_application: null,
+        break: null,
+        meal_benefit_has_breakfast: false,
+        meal_benefit_has_lunch: false,
+        administrator_comment: null,
+        total_working_seconds: null,
+        createdAt: '',
+        updatedAt: '',
+        deleted_at: null,
+        synced: 0,
+        deleted: 0
       })
 
       await this.loadWorkEntries()
@@ -131,6 +155,9 @@ export const useStaffRegisterStore = defineStore('staffRegister', {
 
       await domain.updateWorkEntry({
         ...openEntry,
+        work_day_id: openEntry.work_day_id ?? 0,
+        createdAt: openEntry.createdAt ?? '',
+        updatedAt: openEntry.updatedAt ?? '',
         check_out_at: new Date().toISOString()
       })
 
@@ -152,6 +179,9 @@ export const useStaffRegisterStore = defineStore('staffRegister', {
       if (openEntry) {
         await domain.updateWorkEntry({
           ...openEntry,
+          work_day_id: openEntry.work_day_id ?? 0,
+          createdAt: openEntry.createdAt ?? '',
+          updatedAt: openEntry.updatedAt ?? '',
           check_out_at: new Date().toISOString()
         })
       }
@@ -163,13 +193,31 @@ export const useStaffRegisterStore = defineStore('staffRegister', {
       const breakValue = `${breakStart}-00:00:00`
 
       await domain.createWorkEntry({
-        work_day_id,
+        work_day_id: work_day_id ?? 0,
         check_in_at: now,
         check_out_at: null,
-        name: openEntry?.name || '',
-        type: openEntry?.type || '',
-        personalNumber: openEntry?.personalNumber || '',
-        break: breakValue // Placeholder end time
+        break: breakValue, // Placeholder end time
+        employee_id: 1,
+        workplace_id: 1,
+        cost_center_id: null,
+        status: '',
+        check_in_time_at: '',
+        check_in_latitude: 0,
+        check_in_longitude: 0,
+        check_in_application: '',
+        check_out_time_at: null,
+        check_out_latitude: null,
+        check_out_longitude: null,
+        check_out_application: null,
+        meal_benefit_has_breakfast: false,
+        meal_benefit_has_lunch: false,
+        administrator_comment: null,
+        total_working_seconds: null,
+        createdAt: openEntry?.createdAt ?? '',
+        updatedAt: openEntry?.updatedAt ?? '',
+        deleted_at: null,
+        synced: 0,
+        deleted: 0
       })
 
       await this.loadWorkEntries()

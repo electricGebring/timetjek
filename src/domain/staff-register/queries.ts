@@ -52,7 +52,8 @@ export async function getDeletedWorkEntries(): Promise<WorkEntry[]> {
 
 import * as staffRepo from '@/db/staff-register/repo'
 import { hasOpenCheckIn } from './rules'
-import type { DayGroup, WorkEntry } from './types'
+import type { DayGroup } from './types'
+import type { WorkEntry } from '@/models/work-entry.schema'
 
 
 export async function getAllWorkEntries(): Promise<WorkEntry[]> {

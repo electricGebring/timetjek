@@ -5,7 +5,7 @@
 import { createLogger } from '@/utils/logger'
 import { triggerSyncIfOnline } from '../services/sync-trigger'
 import { WorkEntryValidationError } from './errors'
-import type { WorkEntry } from './types'
+import type { WorkEntry } from '@/models/work-entry.schema'
 
 const logger = createLogger('StaffRegisterDomain')
 

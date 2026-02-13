@@ -6,8 +6,8 @@
 import type { Entry } from '@/views/staffRegister/types'
 import type { TimeRegistrationApplication } from '@/enums/TimeRegistrationApplication'
 import { TimeRegistrationStatus } from '@/enums/TimeRegistrationStatus'
-import type { WorkEntry, WorkEntryColumn } from './work-entry.schema'
-import { WORK_ENTRY_COLUMNS, parseWorkEntryRow } from './work-entry.schema'
+import type { WorkEntry, WorkEntryColumn } from '@/models/work-entry.schema'
+import { WORK_ENTRY_COLUMNS, parseWorkEntryRow } from '@/models/work-entry.schema'
 
 /** Build a record from a row array using column order (same as WORK_ENTRY_COLUMNS). */
 export function rowToRecord(

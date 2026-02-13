@@ -6,8 +6,8 @@
 import { TABLE_WORK_ENTRIES } from '@/constants/tables'
 import { getDB } from '../index'
 import { Capacitor } from '@capacitor/core'
-import type { WorkEntry } from './work-entry.schema'
-import { WORK_ENTRY_COLUMNS } from './work-entry.schema'
+import type { WorkEntry } from '@/models/work-entry.schema'
+import { WORK_ENTRY_COLUMNS } from '@/models/work-entry.schema'
 import { mapRowToWorkEntry } from './work-entry.mapper'
 import { buildSafeWorkEntry } from './work-entry.helpers'
 
