@@ -1,16 +1,20 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, toRef } from 'vue'
 import HeaderBar from '@/components/HeaderBar.vue'
+import DebugPanel from '@/components/DebugPanel.vue'
 // import { fetchWorkSchemeData } from '@/api/workscheme'
 import { useStaffRegisterStore } from '@/stores/staff-register/store'
 import { workEntryStatus } from '@/stores/staff-register/constants'
 import type { TimeRegistrationStatus } from '@/enums/TimeRegistrationStatus'
+// import StatusSummary from '@/components/StatusSummary.vue'
+import WorkEntryTable from '@/components/WorkEntryTable.vue'
+import StaffRegisterActions from '@/components/StaffRegisterActions.vue'
 
 const store = useStaffRegisterStore()
-import { debugSyncNow } from './debug-sync'
+// import { debugSyncNow } from './debug-sync'
 import { formatTime, formatWorkTime, formatBreak } from '@/utils/timeFormatters'
 import { useWorkEntryList } from '@/composables/useWorkEntryList'
-const { sortedEntriesByDay, dateRange } = useWorkEntryList(store.workEntries)
+const { sortedEntriesByDay, dateRange } = useWorkEntryList(toRef(store, 'workEntries'))
 
 // Debug panel state (dev mode only)
 const debugStatus = ref<string>('')
@@ -185,61 +189,12 @@ const runDebugFunction = async (functionName: string) => {
       </nav>
 
       <!-- Title + actions -->
-      <section class="mb-6 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between lg:gap-6">
-        <div class="flex items-center gap-4">
-          <span
-            class="inline-flex h-11 w-11 items-center justify-center rounded-lg bg-blue-600 text-white shadow-sm"
-            aria-hidden="true"
-          >
-            <FontAwesomeIcon
-              icon="clipboard-list"
-              class="text-xl"
-            />
-          </span>
-          <h1 class="text-4xl font-extrabold tracking-tight text-gray-900">Personalliggare</h1>
-        </div>
-
-        <div
-          role="group"
-          aria-label="Åtgärder"
-          class="flex flex-wrap gap-3 lg:justify-end"
-        >
-          <button
-            type="button"
-            @click="handleCheckIn"
-            :disabled="isProcessing"
-            class="flex h-16 items-center gap-3 rounded-2xl border border-blue-100 bg-blue-50 px-8 text-blue-700 shadow-sm transition hover:bg-blue-100"
-          >
-            <FontAwesomeIcon
-              icon="clock"
-              class="text-xl"
-            />
-            <span class="text-lg font-semibold">Stämpla in</span>
-          </button>
-          <button
-            type="button"
-            @click="handleCheckOut"
-            class="flex h-16 items-center gap-3 rounded-2xl border border-blue-100 bg-blue-50 px-8 text-blue-700 shadow-sm transition hover:bg-blue-100"
-          >
-            <FontAwesomeIcon
-              icon="arrow-right-from-bracket"
-              class="text-xl"
-            />
-            <span class="text-lg font-semibold">Stämpla ut</span>
-          </button>
-          <button
-            type="button"
-            @click="handleBreak"
-            class="flex h-16 items-center gap-3 rounded-2xl border border-blue-100 bg-blue-50 px-8 text-blue-700 shadow-sm transition hover:bg-blue-100"
-          >
-            <FontAwesomeIcon
-              icon="mug-saucer"
-              class="text-xl"
-            />
-            <span class="text-lg font-semibold">Gå på rast</span>
-          </button>
-        </div>
-      </section>
+      <StaffRegisterActions
+        :is-processing="isProcessing"
+        :on-check-in="handleCheckIn"
+        :on-check-out="handleCheckOut"
+        :on-break="handleBreak"
+      />
 
       <!-- Status summary -->
       <section class="mb-6 grid grid-cols-4 gap-4">
@@ -262,69 +217,14 @@ const runDebugFunction = async (functionName: string) => {
       </section>
 
       <!-- Debug panel -->
-      <section class="mb-6 rounded-lg border-2 border-yellow-400 bg-yellow-50 p-6">
-        <div class="mb-4 flex items-center gap-2">
-          <FontAwesomeIcon icon="bug" class="text-2xl text-yellow-600" />
-          <h2 class="text-xl font-bold text-yellow-700">Debug Panel</h2>
-        </div>
-        
-        <div class="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-          <button
-            @click="runDebugFunction('getCurrentStatus')"
-            :disabled="debugLoading"
-            class="rounded-lg bg-blue-500 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-600 disabled:opacity-50"
-          >
-            Status
-          </button>
-          <button
-            @click="runDebugFunction('getWorkHistory')"
-            :disabled="debugLoading"
-            class="rounded-lg bg-green-500 px-3 py-2 text-sm font-semibold text-white hover:bg-green-600 disabled:opacity-50"
-          >
-            Historik (7d)
-          </button>
-          <button
-            @click="runDebugFunction('getPendingSyncOperations')"
-            :disabled="debugLoading"
-            class="rounded-lg bg-orange-500 px-3 py-2 text-sm font-semibold text-white hover:bg-orange-600 disabled:opacity-50"
-          >
-            Väntande Sync
-          </button>
-          <button
-            @click="runDebugFunction('getAllEntries')"
-            :disabled="debugLoading"
-            class="rounded-lg bg-cyan-500 px-3 py-2 text-sm font-semibold text-white hover:bg-cyan-600 disabled:opacity-50"
-          >
-            Alla Entries
-          </button>
-          <button
-            @click="runDebugFunction('getDatabaseInfo')"
-            :disabled="debugLoading"
-            class="rounded-lg bg-indigo-500 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-600 disabled:opacity-50"
-          >
-            DB Info
-          </button>
-          <button
-            @click="debugSyncNow"
-            :disabled="debugLoading"
-            class="rounded-lg bg-blue-500 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-600 disabled:opacity-50"
-          >
-            Synk
-          </button>
-        </div>
-        
-        <div v-if="debugStatus" class="text-sm font-semibold text-yellow-700">
-          {{ debugStatus }}
-        </div>
-        <div v-if="debugError" class="mt-2 rounded-lg bg-red-100 p-2 text-sm font-semibold text-red-700">
-          Fel: {{ debugError }}
-        </div>
-        <div v-if="debugResult" class="mt-4">
-          <details class="rounded-lg bg-white p-3">
-            <summary class="cursor-pointer font-semibold text-gray-700">Resultat (klicka för att expandera)</summary>
-            <pre class="mt-2 max-h-48 overflow-auto rounded-lg bg-gray-100 p-2 text-xs text-gray-800">{{ JSON.stringify(debugResult, null, 2) }}</pre>
-          </details>
-        </div>
+      <section class="mb-6">
+        <DebugPanel
+          :debugStatus="debugStatus"
+          :debugResult="debugResult"
+          :debugLoading="debugLoading"
+          :debugError="debugError"
+          :runDebugFunction="runDebugFunction"
+        />
       </section>
 
       <!-- Filters row -->
@@ -341,125 +241,16 @@ const runDebugFunction = async (functionName: string) => {
         </div>
       </section>
 
-      <!-- Table -->
-      <section class="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
-        <div class="overflow-x-auto">
-          <table class="min-w-full text-sm">
-            <thead>
-              <tr class="bg-gray-100 text-gray-700">
-                <th class="px-3 py-3 text-left text-xs font-semibold sm:px-5 sm:py-4 sm:text-sm">NAMN</th>
-                <th class="px-3 py-3 text-left text-xs font-semibold sm:px-5 sm:py-4 sm:text-sm">TYP</th>
-                <th class="hidden px-3 py-3 text-left text-xs font-semibold sm:px-5 sm:py-4 sm:text-sm lg:table-cell">P.NR</th>
-                <th class="px-3 py-3 text-left text-xs font-semibold sm:px-5 sm:py-4 sm:text-sm">TID IN</th>
-                <th class="px-3 py-3 text-left text-xs font-semibold sm:px-5 sm:py-4 sm:text-sm">TID UT</th>
-                <th class="hidden px-3 py-3 text-left text-xs font-semibold sm:px-5 sm:py-4 sm:text-sm md:table-cell">RAST</th>
-                <th class="px-3 py-3 text-left text-xs font-semibold sm:px-5 sm:py-4 sm:text-sm">ARBETSTID</th>
-                <th class="hidden px-3 py-3 text-left text-xs font-semibold sm:px-5 sm:py-4 sm:text-sm md:table-cell">INFO</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-200">
-              <template
-                v-for="day in sortedEntriesByDay"
-                :key="day.date"
-              >
-                <tr>
-                  <td
-                    colspan="8"
-                    class="border-b border-gray-200 bg-gray-50 px-3 py-3 text-base font-bold text-gray-800 sm:px-5 sm:text-lg"
-                  >
-                    <span>{{ day.dateLabel }}</span>
-                    <span
-                      v-if="day.date"
-                      class="ml-2 text-base font-normal text-gray-500"
-                      >{{ day.date }}</span
-                    >
-                  </td>
-                </tr>
-                <tr
-                  v-for="entry in day.entries"
-                  :key="entry.id"
-                  class="bg-white"
-                >
-                  <td class="px-3 py-3 sm:px-5 sm:py-4">
-                    <a
-                      href="#"
-                      class="font-semibold text-blue-600 hover:underline"
-                      >{{ entry.name }}</a
-                    >
-                  </td>
-                  <td class="px-3 py-3 sm:px-5 sm:py-4">
-                    <span
-                      class="inline-flex h-7 w-7 items-center justify-center rounded-full font-bold"
-                      :class="getTypeColor(entry.type)"
-                      >{{ entry.type }}</span
-                    >
-                  </td>
-                  <td class="hidden px-3 py-3 text-gray-900 sm:px-5 sm:py-4 lg:table-cell">{{ entry.personalNumber }}</td>
-                  <td class="px-3 py-3 text-gray-900 sm:px-5 sm:py-4">{{ formatTime(entry.check_in_at) }}</td>
-                  <td class="px-3 py-3 sm:px-5 sm:py-4">
-                    <span
-                      v-if="entry.check_out_at"
-                      class="text-gray-900"
-                      >{{ formatTime(entry.check_out_at) }}</span
-                    >
-                    <span
-                      v-else
-                      class="text-gray-400"
-                      >&mdash;</span
-                    >
-                  </td>
-                  <td class="hidden px-3 py-3 sm:px-5 sm:py-4 md:table-cell">
-                    <span
-                      v-if="entry.break"
-                      class="text-gray-900"
-                      >{{ formatBreak(entry.break) }}</span
-                    >
-                    <span
-                      v-else
-                      class="text-gray-400"
-                      >&mdash;</span
-                    >
-                  </td>
-                  <td class="px-3 py-3 sm:px-5 sm:py-4">
-                    <span
-                      v-if="entry.total_working_seconds"
-                      class="text-gray-900"
-                      >{{ formatWorkTime(entry.total_working_seconds) }}</span
-                    >
-                    <span
-                      v-else
-                      class="text-gray-400"
-                      >&mdash;</span
-                    >
-                  </td>
-                  <td class="hidden px-3 py-3 sm:px-5 sm:py-4 md:table-cell">
-                    <div v-if="entry.break" class="flex items-center gap-2 font-semibold text-orange-600">
-                      {{ entry.check_out_at ? 'Rast' : 'På rast' }}
-                    </div>
-                    <div
-                      v-else-if="getWorkEntryStatus(entry.status)"
-                      class="flex items-center gap-2"
-                    >
-                      <FontAwesomeIcon 
-                        :icon="getWorkEntryStatus(entry.status)!.icon" 
-                        :class="getWorkEntryStatus(entry.status)!.class" 
-                      />
-                      <span :class="getWorkEntryStatus(entry.status)!.class" class="font-semibold">
-                        {{ getWorkEntryStatus(entry.status)!.text }}
-                      </span>
-                    </div>
-                  </td>
-                </tr>
-              </template>
-            </tbody>
-          </table>
-        </div>
-
-        <!-- Pagination (optional, not functional here) -->
-        <div class="flex items-center justify-between border-t border-gray-200 bg-white px-6 py-4">
-          <span class="text-sm text-gray-700">Totalt: {{ store.workEntries.length }} tider</span>
-        </div>
-      </section>
+      <WorkEntryTable
+        :entries-by-day="sortedEntriesByDay"
+        :total-entries="store.workEntries.length"
+        :format-time="formatTime"
+        :format-work-time="formatWorkTime"
+        :format-break="formatBreak"
+        :get-work-entry-status="getWorkEntryStatus"
+        :get-type-color="getTypeColor"
+      />
+      <StaffRegisterActions />
     </main>
   </div>
 </template>

@@ -1,0 +1,37 @@
+<script setup lang="ts">
+import { ref } from 'vue'
+import { debugSyncNow } from '@/views/staffRegister/debug-sync'
+
+const props = defineProps<{
+  debugStatus: string
+  debugResult: any
+  debugLoading: boolean
+  debugError: string
+  runDebugFunction: (fn: string) => void
+}>()
+</script>
+
+<template>
+  <section class="mb-6 rounded-lg border-2 border-yellow-400 bg-yellow-50 p-6">
+    <div class="mb-4 flex items-center gap-2">
+      <FontAwesomeIcon icon="bug" class="text-2xl text-yellow-600" />
+      <h2 class="text-xl font-bold text-yellow-700">Debug Panel</h2>
+    </div>
+    <div class="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+      <button @click="props.runDebugFunction('getCurrentStatus')" :disabled="props.debugLoading" class="rounded-lg bg-blue-500 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-600 disabled:opacity-50">Status</button>
+      <button @click="props.runDebugFunction('getWorkHistory')" :disabled="props.debugLoading" class="rounded-lg bg-green-500 px-3 py-2 text-sm font-semibold text-white hover:bg-green-600 disabled:opacity-50">Historik (7d)</button>
+      <button @click="props.runDebugFunction('getPendingSyncOperations')" :disabled="props.debugLoading" class="rounded-lg bg-orange-500 px-3 py-2 text-sm font-semibold text-white hover:bg-orange-600 disabled:opacity-50">Väntande Sync</button>
+      <button @click="props.runDebugFunction('getAllEntries')" :disabled="props.debugLoading" class="rounded-lg bg-cyan-500 px-3 py-2 text-sm font-semibold text-white hover:bg-cyan-600 disabled:opacity-50">Alla Entries</button>
+      <button @click="props.runDebugFunction('getDatabaseInfo')" :disabled="props.debugLoading" class="rounded-lg bg-indigo-500 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-600 disabled:opacity-50">DB Info</button>
+      <button @click="debugSyncNow" :disabled="props.debugLoading" class="rounded-lg bg-blue-500 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-600 disabled:opacity-50">Synk</button>
+    </div>
+    <div v-if="props.debugStatus" class="text-sm font-semibold text-yellow-700">{{ props.debugStatus }}</div>
+    <div v-if="props.debugError" class="mt-2 rounded-lg bg-red-100 p-2 text-sm font-semibold text-red-700">Fel: {{ props.debugError }}</div>
+    <div v-if="props.debugResult" class="mt-4">
+      <details class="rounded-lg bg-white p-3">
+        <summary class="cursor-pointer font-semibold text-gray-700">Resultat (klicka för att expandera)</summary>
+        <pre class="mt-2 max-h-48 overflow-auto rounded-lg bg-gray-100 p-2 text-xs text-gray-800">{{ JSON.stringify(props.debugResult, null, 2) }}</pre>
+      </details>
+    </div>
+  </section>
+</template>

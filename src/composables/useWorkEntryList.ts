@@ -1,8 +1,12 @@
-import { computed } from 'vue'
+import { computed, type Ref } from 'vue'
 
-export function useWorkEntryList(workEntries: any[]) {
+export function useWorkEntryList(workEntries: Ref<any[]>) {
+  // Defensive: always treat as array
+  const getArr = () => Array.isArray(workEntries.value) ? workEntries.value : []
+
   const sortedEntriesByDay = computed(() => {
-    const sorted = [...workEntries].sort((a, b) => {
+    const arr = getArr()
+    const sorted = [...arr].sort((a, b) => {
       const dateA = (a.date || a.createdAt?.slice(0, 10)) ?? ''
       const dateB = (b.date || b.createdAt?.slice(0, 10)) ?? ''
       return dateB.localeCompare(dateA)
@@ -33,8 +37,9 @@ export function useWorkEntryList(workEntries: any[]) {
   })
 
   const dateRange = computed(() => {
-    if (workEntries.length === 0) return 'Inga poster'
-    const dates = workEntries
+    const arr = getArr()
+    if (arr.length === 0) return 'Inga poster'
+    const dates = arr
       .map(e => e.check_in_at || e.createdAt)
       .filter(d => d)
       .map(d => new Date(d))
