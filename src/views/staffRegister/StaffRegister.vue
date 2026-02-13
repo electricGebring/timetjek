@@ -7,74 +7,16 @@ import { workEntryStatus } from '@/stores/staff-register/constants'
 import type { TimeRegistrationStatus } from '@/enums/TimeRegistrationStatus'
 
 const store = useStaffRegisterStore()
-import { computed } from 'vue'
 import { debugSyncNow } from './debug-sync'
+import { formatTime, formatWorkTime, formatBreak } from '@/utils/timeFormatters'
+import { useWorkEntryList } from '@/composables/useWorkEntryList'
+const { sortedEntriesByDay, dateRange } = useWorkEntryList(store.workEntries)
 
 // Debug panel state (dev mode only)
 const debugStatus = ref<string>('')
 const debugResult = ref<any>(null)
 const debugLoading = ref(false)
 const debugError = ref<string>('')
-
-const sortedEntriesByDay = computed(() => {
-  const sorted = [...store.workEntries].sort((a, b) => {
-    // Sort by date (newest first)
-    const dateA = (a.date || a.createdAt?.slice(0, 10)) ?? ''
-    const dateB = (b.date || b.createdAt?.slice(0, 10)) ?? ''
-    return dateB.localeCompare(dateA) // descending
-  })
-
-  const result: { date: string; dateLabel: string; entries: any[] }[] = []
-  let currentDay: { date: string; dateLabel: string; entries: any[] } | null = null
-
-  for (const entry of sorted) {
-    const date = entry.date || entry.createdAt?.slice(0, 10)
-    const dateLabel = entry.dateLabel || date
-    if (!currentDay || currentDay.date !== date) {
-      currentDay = { date, dateLabel, entries: [] }
-      result.push(currentDay)
-    }
-    currentDay.entries.push(entry)
-  }
-
-  // Sort entries within each day (newest first based on check_in_at)
-  result.forEach((day) => {
-    day.entries.sort((a, b) => {
-      const timeA = a.check_in_at || a.createdAt || ''
-      const timeB = b.check_in_at || b.createdAt || ''
-      return timeB.localeCompare(timeA) // newest first
-    })
-  })
-
-  return result
-})
-
-const dateRange = computed(() => {
-  if (store.workEntries.length === 0) return 'Inga poster'
-  
-  const dates = store.workEntries
-    .map(e => e.check_in_at || e.createdAt)
-    .filter(d => d)
-    .map(d => new Date(d))
-  
-  if (dates.length === 0) return 'Inga poster'
-  
-  const minDate = new Date(Math.min(...dates.map(d => d.getTime())))
-  const maxDate = new Date(Math.max(...dates.map(d => d.getTime())))
-  
-  const formatDate = (date: Date) => {
-    const day = date.getDate()
-    const month = date.getMonth() + 1
-    const year = date.getFullYear()
-    return `${day}/${month}/${year}`
-  }
-  
-  if (minDate.toDateString() === maxDate.toDateString()) {
-    return `${formatDate(minDate)}`
-  }
-  
-  return `${formatDate(minDate)} - ${formatDate(maxDate)}`
-})
 
 onMounted(async () => {
   await store.loadWorkEntries()
@@ -98,74 +40,7 @@ const getTypeColor = (type: string) => {
 }
 
 // Format ISO datetime to HH:MM
-const formatTime = (isoDateTime: string | null): string => {
-  if (!isoDateTime) return '—'
-  const date = new Date(isoDateTime)
-  const parts = date.toISOString().split('T')
-  const timePart = parts[1]
-  if (!timePart) return '—'
-  const fullTime = timePart.split('.')[0] || '—'
-  return fullTime.substring(0, 5) // HH:MM only
-}
-
-// Format seconds to "X h Y min" format
-const formatWorkTime = (seconds: number | null): string => {
-  if (!seconds) return '—'
-  const hours = Math.floor(seconds / 3600)
-  const minutes = Math.floor((seconds % 3600) / 60)
-  if (hours > 0 && minutes > 0) return `${hours}h ${minutes}min`
-  if (hours > 0) return `${hours}h`
-  return `${minutes}min`
-}
-
-// Format break time: calculate duration in minutes/hours
-const formatBreak = (breakValue: string | null): string => {
-  if (!breakValue) return '—'
-  
-  const parts = breakValue.split('-')
-  if (parts.length !== 2) {
-    return '—'
-  }
-  
-  const start = parts[0]
-  const end = parts[1]
-  
-  if (!start || !end) return '—'
-  
-  // If end is 00:00:00, break is ongoing - show nothing
-  if (end === '00:00:00') {
-    return '—'
-  }
-  
-  // Parse times and calculate duration
-  const startParts = start.split(':').map(Number)
-  const endParts = end.split(':').map(Number)
-  
-  const startH = startParts[0] ?? 0
-  const startM = startParts[1] ?? 0
-  const startS = startParts[2] ?? 0
-  const endH = endParts[0] ?? 0
-  const endM = endParts[1] ?? 0
-  const endS = endParts[2] ?? 0
-  
-  const startMinutes = startH * 60 + startM + startS / 60
-  const endMinutes = endH * 60 + endM + endS / 60
-  const durationMinutes = Math.round(endMinutes - startMinutes)
-  
-  // Always show duration, even if 0
-  if (durationMinutes < 60) {
-    return `${durationMinutes}min`
-  }
-  
-  const hours = Math.floor(durationMinutes / 60)
-  const minutes = durationMinutes % 60
-  
-  if (minutes === 0) {
-    return `${hours}h`
-  }
-  
-  return `${hours}h ${minutes}min`
-}
+// ...existing code...
 
 const isProcessing = ref(false)
 
