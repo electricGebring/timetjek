@@ -5,6 +5,7 @@
 
 import * as staffRepo from '@/db/staff-register/repo'
 import { hasOpenCheckIn } from './rules'
+import type { DayGroup } from './types'
 
 export async function getAllWorkEntries() {
   return staffRepo.getWorkEntries()
@@ -33,8 +34,6 @@ export async function getDeletedWorkEntries() {
 export async function upsertWorkEntryFromApi(entry: Record<string, unknown>) {
   await staffRepo.upsertWorkEntry(entry)
 }
-
-export type DayGroup = { date: string; dateLabel: string; entries: unknown[] }
 
 export async function getWorkSchemeGrouped(): Promise<{ days: DayGroup[] }> {
   const entries = await getAllWorkEntries()

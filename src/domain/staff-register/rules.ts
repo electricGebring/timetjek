@@ -3,8 +3,7 @@
  * No I/O; receives data and returns decisions.
  */
 
-/** Entry-like shape with check-in/check-out used by open-check rule */
-type EntryWithTimes = { check_in_at?: string | null; check_out_at?: string | null }
+import type { EntryWithTimes } from './types'
 
 /**
  * True if the last entry (by order) has check-in but no check-out (open shift).

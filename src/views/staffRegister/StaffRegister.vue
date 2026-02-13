@@ -250,7 +250,6 @@ const runDebugFunction = async (functionName: string) => {
         :get-work-entry-status="getWorkEntryStatus"
         :get-type-color="getTypeColor"
       />
-      <StaffRegisterActions />
     </main>
   </div>
 </template>

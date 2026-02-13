@@ -2,30 +2,9 @@
  * Conflict resolution strategies for syncing data
  */
 
-import {
-  ConflictResolutionStrategy as Strategy,
-  type ConflictResolutionStrategy
-} from '@/enums/ConflictResolutionStrategy'
+import { ConflictResolutionStrategy as Strategy } from '@/enums/ConflictResolutionStrategy'
+import type { ConflictResolutionStrategy, ConflictResolutionResult, ConflictResolver } from './conflict-resolver.types'
 
-export type { ConflictResolutionStrategy } from '@/enums/ConflictResolutionStrategy'
-
-export type ConflictResolutionResult<T> = {
-  resolved: T
-  strategy: ConflictResolutionStrategy
-  conflictDetected: boolean
-}
-
-export interface ConflictResolver {
-  resolve<T extends { updatedAt?: number }>(
-    local: T,
-    remote: T,
-    strategy?: ConflictResolutionStrategy
-  ): ConflictResolutionResult<T>
-}
-
-/**
- * Default conflict resolver implementing last-write-wins strategy
- */
 export class DefaultConflictResolver implements ConflictResolver {
   resolve<T extends { updatedAt?: number }>(
     local: T,
