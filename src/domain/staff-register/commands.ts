@@ -2,15 +2,14 @@
  * Write use cases: create, update, delete work entries.
  * Orchestrates repo, business rules, and sync trigger.
  */
-
-import * as staffRepo from '@/db/staff-register/repo'
-import { TimeRegistrationStatus } from '@/enums/TimeRegistrationStatus'
 import { createLogger } from '@/utils/logger'
 import { triggerSyncIfOnline } from '../services/sync-trigger'
+import { WorkEntryValidationError } from './errors'
+import type { WorkEntry } from './types'
 
 const logger = createLogger('StaffRegisterDomain')
 
-export async function createWorkEntry(entry: Record<string, unknown>) {
+export async function createWorkEntry(entry: Partial<WorkEntry>) {
   const now = new Date().toISOString()
   const safeEntry = {
     ...entry,
@@ -32,9 +31,9 @@ export async function createWorkEntry(entry: Record<string, unknown>) {
   await triggerSyncIfOnline('mutation')
 }
 
-export async function updateWorkEntry(entry: Record<string, unknown> & { id?: unknown }) {
+export async function updateWorkEntry(entry: Partial<WorkEntry>) {
   if (entry.id == null) {
-    throw new Error('Cannot update entry without id')
+    throw new WorkEntryValidationError('Cannot update entry without id')
   }
 
   if (entry.check_out_at) {

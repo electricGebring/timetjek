@@ -119,7 +119,7 @@ function bindInsertAutoId(s: ReturnType<typeof buildSafeWorkEntry>): unknown[] {
   ]
 }
 
-export async function upsertWorkEntry(entry: Record<string, unknown>) {
+export async function upsertWorkEntry(entry: Partial<WorkEntry>) {
 
   const safeEntry = buildSafeWorkEntry(entry)
   console.log('[4a. REPO] 💾 upsertWorkEntry', safeEntry)

@@ -1,3 +1,50 @@
+
+
+function isWorkEntry(e: any): e is WorkEntry {
+  return (
+    typeof e === 'object' &&
+    e !== null &&
+    typeof e.id === 'number' &&
+    typeof e.work_day_id === 'number' &&
+    (typeof e.check_in_at === 'string' || e.check_in_at === null) &&
+    (typeof e.check_out_at === 'string' || e.check_out_at === null) &&
+    (typeof e.break === 'string' || e.break === null) &&
+    (typeof e.total_working_seconds === 'number' || e.total_working_seconds === null) &&
+    (typeof e.total_break_seconds === 'number' || e.total_break_seconds === null) &&
+    typeof e.status === 'string' &&
+    typeof e.createdAt === 'string' &&
+    typeof e.updatedAt === 'string' &&
+    (typeof e.deleted_at === 'string' || e.deleted_at === null) &&
+    typeof e.synced === 'number' &&
+    typeof e.deleted === 'number'
+  );
+}
+
+export async function getUnsyncedWorkEntries(): Promise<WorkEntry[]> {
+  const entries = await staffRepo.getUnsyncedWorkEntries();
+  return entries
+    .filter((e) => e.work_day_id !== null && e.createdAt !== null)
+    .map((e) => ({
+      ...e,
+      work_day_id: e.work_day_id as number,
+      createdAt: e.createdAt ?? '',
+      updatedAt: e.updatedAt ?? '',
+    }))
+    .filter(isWorkEntry);
+}
+
+export async function getDeletedWorkEntries(): Promise<WorkEntry[]> {
+  const entries = await staffRepo.getDeletedWorkEntries();
+  return entries
+    .filter((e) => e.work_day_id !== null && e.createdAt !== null)
+    .map((e) => ({
+      ...e,
+      work_day_id: e.work_day_id as number,
+      createdAt: e.createdAt ?? '',
+      updatedAt: e.updatedAt ?? '',
+    }))
+    .filter(isWorkEntry);
+}
 /**
  * Read-side: fetch and aggregate work entries.
  * Delegates to repo; no write or sync trigger.
@@ -5,10 +52,20 @@
 
 import * as staffRepo from '@/db/staff-register/repo'
 import { hasOpenCheckIn } from './rules'
-import type { DayGroup } from './types'
+import type { DayGroup, WorkEntry } from './types'
 
-export async function getAllWorkEntries() {
-  return staffRepo.getWorkEntries()
+
+export async function getAllWorkEntries(): Promise<WorkEntry[]> {
+  const entries = await staffRepo.getWorkEntries();
+  return entries
+    .filter((e) => e.work_day_id !== null && e.createdAt !== null)
+    .map((e) => ({
+      ...e,
+      work_day_id: e.work_day_id as number,
+      createdAt: e.createdAt ?? '',
+      updatedAt: e.updatedAt ?? '',
+    }))
+    .filter(isWorkEntry);
 }
 
 export async function canCheckIn(work_day_id: number): Promise<boolean> {
@@ -23,15 +80,9 @@ export async function canCheckOut(work_day_id: number): Promise<boolean> {
   return hasOpenCheckIn(todays)
 }
 
-export async function getUnsyncedWorkEntries() {
-  return staffRepo.getUnsyncedWorkEntries()
-}
 
-export async function getDeletedWorkEntries() {
-  return staffRepo.getDeletedWorkEntries()
-}
 
-export async function upsertWorkEntryFromApi(entry: Record<string, unknown>) {
+export async function upsertWorkEntryFromApi(entry: Partial<WorkEntry>) {
   await staffRepo.upsertWorkEntry(entry)
 }
 

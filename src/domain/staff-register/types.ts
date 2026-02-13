@@ -1,9 +1,8 @@
 /**
  * Types for staff-register domain
  */
-
 export type WorkEntry = {
-  id: number
+  id: number | null
   work_day_id: number
   check_in_at: string | null
   check_out_at: string | null
