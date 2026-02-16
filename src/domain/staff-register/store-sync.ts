@@ -1,7 +1,3 @@
-/**
- * UI/store boundary: push current DB state into Pinia for reactivity.
- */
-
 import { getAllWorkEntries } from './queries'
 
 export async function updateStoreFromDb() {
