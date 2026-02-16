@@ -201,9 +201,9 @@ export class SyncEngine implements SyncPort {
   }
 
   /**
-   * Pull remote changes: Fetch from API and merge with local database
-   * Uses incremental sync when possible - only fetches changes since last sync
-   * Uses conflict resolution to handle concurrent edits
+   * Pull remote changes: Fetch from API, resolve in memory (no DB write).
+   * Combine resolved API items with unsynced local entries and update store only.
+   * DB is written only when pushing (drainOutbox: unsynced → API → save result).
    */
   private async pullRemoteChanges(signal?: AbortSignal): Promise<void> {
     if (signal?.aborted) return
@@ -212,14 +212,23 @@ export class SyncEngine implements SyncPort {
       const { apiItems, isIncremental } = await this.fetchRemoteItems()
       if (signal?.aborted) return
 
-      const { conflictCount, mergeErrors } = await this.mergeItemsIntoDb(apiItems, signal)
+      const { conflictCount, mergeErrors, resolvedItems } = await this.mergeItemsInMemory(apiItems, signal)
       if (signal?.aborted) return
 
       if (mergeErrors > 0) {
         this.logger.warn(mergeErrors, 'item(s) failed to merge for', this.tableName)
       }
 
-      await this.adapter.updateStore()
+      const unsyncedItems = await this.adapter.getUnsynced()
+      const byId = new Map<any, any>()
+      for (const item of resolvedItems) {
+        if (item?.id != null) byId.set(item.id, item)
+      }
+      for (const item of unsyncedItems) {
+        if (item?.id != null) byId.set(item.id, item)
+      }
+      const combined = Array.from(byId.values())
+      await this.adapter.updateStore(combined)
       this.logPullResult(apiItems.length, isIncremental, conflictCount, mergeErrors)
     } catch (error) {
       this.logger.error('Failed to pull remote changes for', this.tableName, error)
@@ -256,27 +265,29 @@ export class SyncEngine implements SyncPort {
     }
   }
 
-  /** Merge each API item into local DB with conflict strategy; continues on per-item errors. */
-  private async mergeItemsIntoDb(
+  /** Resolve each API item with local in memory (no DB write); returns resolved list for store update. */
+  private async mergeItemsInMemory(
     apiItems: any[],
     signal?: AbortSignal
-  ): Promise<{ conflictCount: number; mergeErrors: number }> {
+  ): Promise<{ conflictCount: number; mergeErrors: number; resolvedItems: any[] }> {
     const strategy = getConflictStrategy(this.tableName)
     let conflictCount = 0
     let mergeErrors = 0
+    const resolvedItems: any[] = []
 
     for (const item of apiItems) {
       if (signal?.aborted) break
       try {
         const result = await this.adapter.mergeRemote(item, strategy)
         if (result.conflictDetected) conflictCount++
+        if (result.resolved != null) resolvedItems.push(result.resolved)
       } catch (err: any) {
         mergeErrors++
         this.logger.error('mergeRemote failed for', this.tableName, 'item', item?.id, err)
       }
     }
 
-    return { conflictCount, mergeErrors }
+    return { conflictCount, mergeErrors, resolvedItems }
   }
 
   private logPullResult(itemCount: number, isIncremental: boolean, conflictCount: number, mergeErrors: number): void {
