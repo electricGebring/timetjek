@@ -1,8 +1,3 @@
-/**
- * Pure helpers for work entries: calculations and normalizing input for DB.
- * No SQL or DB access.
- */
-
 import { TimeRegistrationStatus } from '@/enums/TimeRegistrationStatus'
 
 /** Normalized shape for DB bindings (numbers for booleans, required defaults). */
