@@ -79,6 +79,7 @@ export const useStaffRegisterStore = defineStore('staffRegister', {
     },
 
     async checkIn(work_day_id: number) {
+      console.log('hello')
       console.log('[2. STORE] 📦 Calling domain.createWorkEntry...', { work_day_id })
       const all = await domain.getAllWorkEntries()
       const todays = all.filter((e) => e.work_day_id === work_day_id)
@@ -111,17 +112,18 @@ export const useStaffRegisterStore = defineStore('staffRegister', {
         }
       }
 
+      const now = new Date().toISOString()
       await domain.createWorkEntry({
         work_day_id: work_day_id ?? 0,
         employee_id: 1,
         workplace_id: 1,
         cost_center_id: null,
-        status: '',
-        check_in_at: '',
-        check_in_time_at: '',
+        status: 'OPEN',
+        check_in_at: now,
+        check_in_time_at: now.split('T')[1]?.split('.')[0] || '',
         check_in_latitude: 0,
         check_in_longitude: 0,
-        check_in_application: '',
+        check_in_application: 'APP',
         check_out_at: null,
         check_out_time_at: null,
         check_out_latitude: null,
@@ -130,10 +132,13 @@ export const useStaffRegisterStore = defineStore('staffRegister', {
         break: null,
         meal_benefit_has_breakfast: false,
         meal_benefit_has_lunch: false,
+        name: 'Anna Svensson',
+        type: 'A',
+        personalNumber: '19800101-1234',
         administrator_comment: null,
         total_working_seconds: null,
-        createdAt: '',
-        updatedAt: '',
+        createdAt: now,
+        updatedAt: now,
         deleted_at: null,
         synced: 0,
         deleted: 0
@@ -200,21 +205,24 @@ export const useStaffRegisterStore = defineStore('staffRegister', {
         employee_id: 1,
         workplace_id: 1,
         cost_center_id: null,
-        status: '',
-        check_in_time_at: '',
+        status: 'OPEN',
+        check_in_time_at: now.split('T')[1]?.split('.')[0] || '',
         check_in_latitude: 0,
         check_in_longitude: 0,
-        check_in_application: '',
+        check_in_application: 'APP',
         check_out_time_at: null,
         check_out_latitude: null,
         check_out_longitude: null,
         check_out_application: null,
         meal_benefit_has_breakfast: false,
         meal_benefit_has_lunch: false,
+        name: 'Anna Svensson',
+        type: 'A',
+        personalNumber: '19800101-1234',
         administrator_comment: null,
         total_working_seconds: null,
-        createdAt: openEntry?.createdAt ?? '',
-        updatedAt: openEntry?.updatedAt ?? '',
+        createdAt: now,
+        updatedAt: now,
         deleted_at: null,
         synced: 0,
         deleted: 0

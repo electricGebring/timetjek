@@ -6,25 +6,15 @@ import { createLogger } from '@/utils/logger'
 import { triggerSyncIfOnline } from '../services/sync-trigger'
 import { WorkEntryValidationError } from './errors'
 import type { WorkEntry } from '@/models/work-entry.schema'
+import * as staffRepo from '@/db/staff-register/repo'
+import { TimeRegistrationStatus } from '@/enums/TimeRegistrationStatus'
 
 const logger = createLogger('StaffRegisterDomain')
 
 export async function createWorkEntry(entry: Partial<WorkEntry>) {
-  const now = new Date().toISOString()
-  const safeEntry = {
-    ...entry,
-    status: entry.status ?? TimeRegistrationStatus.OPEN,
-    check_in_at: entry.check_in_at ?? now,
-    check_out_at: entry.check_out_at ?? null,
-    break: entry.break ?? null,
-    total_working_seconds: entry.total_working_seconds ?? null,
-    total_break_seconds: entry.total_break_seconds ?? null,
-    createdAt: now,
-    updatedAt: now,
-    deleted_at: null,
-    synced: 0,
-    deleted: 0
-  }
+  // Use buildSafeWorkEntry for normalization and type safety
+  const { buildSafeWorkEntry } = await import('@/db/staff-register/work-entry.helpers')
+  const safeEntry = buildSafeWorkEntry(entry)
   logger.log('[3. DOMAIN] 🧠 Creating work entry...', safeEntry)
   await staffRepo.upsertWorkEntry(safeEntry)
   logger.log('[5. DOMAIN] 🔄 Triggering sync...')

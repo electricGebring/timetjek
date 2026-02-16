@@ -119,9 +119,9 @@ function bindInsertAutoId(s: ReturnType<typeof buildSafeWorkEntry>): unknown[] {
   ]
 }
 
-export async function upsertWorkEntry(entry: Partial<WorkEntry>) {
-
-  const safeEntry = buildSafeWorkEntry(entry)
+export async function upsertWorkEntry(entry: Partial<WorkEntry> | SafeWorkEntry) {
+  // Accept SafeWorkEntry directly or normalize Partial<WorkEntry>
+  const safeEntry = (typeof entry.meal_benefit_has_breakfast === 'number') ? entry as SafeWorkEntry : buildSafeWorkEntry(entry)
   console.log('[4a. REPO] 💾 upsertWorkEntry', safeEntry)
 
   if (Capacitor.isNativePlatform()) {
