@@ -1,7 +1,3 @@
-/**
- * Write use cases: create, update, delete work entries.
- * Orchestrates repo, business rules, and sync trigger.
- */
 import { createLogger } from '@/utils/logger'
 import { triggerSyncIfOnline } from '../services/sync-trigger'
 import { WorkEntryValidationError } from './errors'
@@ -12,7 +8,6 @@ import { TimeRegistrationStatus } from '@/enums/TimeRegistrationStatus'
 const logger = createLogger('StaffRegisterDomain')
 
 export async function createWorkEntry(entry: Partial<WorkEntry>) {
-  // Use buildSafeWorkEntry for normalization and type safety
   const { buildSafeWorkEntry } = await import('@/db/staff-register/work-entry.helpers')
   const safeEntry = buildSafeWorkEntry(entry)
   logger.log('[3. DOMAIN] 🧠 Creating work entry...', safeEntry)
@@ -53,5 +48,6 @@ export async function updateWorkEntry(entry: Partial<WorkEntry>) {
 }
 
 export async function deleteWorkEntry(_id: number) {
-  // Optional: await staffRepo.softDeleteWorkEntry(id); await triggerSyncIfOnline('mutation')
+  await staffRepo.softDeleteWorkEntry(_id)
+  await triggerSyncIfOnline('mutation')
 }

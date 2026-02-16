@@ -1,6 +1,6 @@
 /**
- * Merge a remote work entry into local storage with conflict resolution.
- * Keeps merge logic and strategy in one place, separate from the sync adapter.
+ * Merge a remote work entry with local in memory (conflict resolution).
+ * Does not persist to DB — pull path only updates the store. DB is written only when pushing (unsynced → API → save result).
  */
 
 import * as repo from '@/db/staff-register/repo'
@@ -32,10 +32,11 @@ function fromResolverFormat(resolved: ResolverEntry): Entry {
 }
 
 /**
+ * Resolve remote vs local in memory only (no DB write).
  * 1. Invalid remote (no id) → treat as conflict, return as-is.
- * 2. No local row → insert remote as synced.
+ * 2. No local row → use remote.
  * 3. Local has unsynced changes → keep local (no overwrite).
- * 4. Else → resolve with strategy, persist resolved, return.
+ * 4. Else → resolve with strategy, return resolved.
  */
 export async function mergeRemoteWorkEntry(
   remote: Entry,
@@ -49,7 +50,6 @@ export async function mergeRemoteWorkEntry(
   const local = locals.find((e) => e.id === remote.id)
 
   if (!local) {
-    await repo.upsertWorkEntry({ ...remote, synced: 1 })
     return { resolved: remote, conflictDetected: false }
   }
 
@@ -58,7 +58,6 @@ export async function mergeRemoteWorkEntry(
   }
 
   const result = defaultConflictResolver.resolve(toResolverFormat(local), toResolverFormat(remote), strategy)
-  const toPersist = fromResolverFormat(result.resolved as ResolverEntry)
-  await repo.upsertWorkEntry({ ...toPersist, synced: 1 })
-  return { resolved: toPersist, conflictDetected: result.conflictDetected }
+  const resolved = fromResolverFormat(result.resolved as ResolverEntry)
+  return { resolved, conflictDetected: result.conflictDetected }
 }
