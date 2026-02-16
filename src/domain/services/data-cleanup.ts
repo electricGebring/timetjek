@@ -1,7 +1,3 @@
-/**
- * Data cleanup service for enforcing TTL and data retention policies
- */
-
 import { getDB } from '@/db/index'
 import { Capacitor } from '@capacitor/core'
 import { getPoliciesNeedingCleanup } from '../config/data-policies'
@@ -119,7 +115,7 @@ export async function cleanupAllTables(): Promise<Record<string, number>> {
         results[policy.tableName] = await cleanupExpiredData({
           retentionDays: policy.retentionDays,
           tableName: policy.tableName,
-          softDeleteOnly: policy.softDeleteOnly ?? false,
+          softDeleteOnly: policy.softDeleteOnly ?? false
         })
       }
     } catch (error) {
@@ -147,19 +143,15 @@ export async function getStorageStats(tableName: string): Promise<{
     const totalRes = await db.query(`SELECT COUNT(*) as count FROM ${tableName}`)
     const deletedRes = await db.query(`SELECT COUNT(*) as count FROM ${tableName} WHERE deleted = 1`)
     const unsyncedRes = await db.query(`SELECT COUNT(*) as count FROM ${tableName} WHERE synced = 0`)
-    const oldestRes = await db.query(
-      `SELECT MIN(updatedAt) as oldest FROM ${tableName} WHERE updatedAt IS NOT NULL`
-    )
-    const newestRes = await db.query(
-      `SELECT MAX(updatedAt) as newest FROM ${tableName} WHERE updatedAt IS NOT NULL`
-    )
+    const oldestRes = await db.query(`SELECT MIN(updatedAt) as oldest FROM ${tableName} WHERE updatedAt IS NOT NULL`)
+    const newestRes = await db.query(`SELECT MAX(updatedAt) as newest FROM ${tableName} WHERE updatedAt IS NOT NULL`)
 
     return {
       totalRecords: (totalRes.values?.[0]?.[0] ?? 0) as number,
       softDeleted: (deletedRes.values?.[0]?.[0] ?? 0) as number,
       unsynced: (unsyncedRes.values?.[0]?.[0] ?? 0) as number,
       oldestRecord: (oldestRes.values?.[0]?.[0] ?? null) as number | null,
-      newestRecord: (newestRes.values?.[0]?.[0] ?? null) as number | null,
+      newestRecord: (newestRes.values?.[0]?.[0] ?? null) as number | null
     }
   } else {
     const { sqlJsDb } = getDB() as any
@@ -167,19 +159,15 @@ export async function getStorageStats(tableName: string): Promise<{
     const totalRes = sqlJsDb.exec(`SELECT COUNT(*) as count FROM ${tableName}`)
     const deletedRes = sqlJsDb.exec(`SELECT COUNT(*) as count FROM ${tableName} WHERE deleted = 1`)
     const unsyncedRes = sqlJsDb.exec(`SELECT COUNT(*) as count FROM ${tableName} WHERE synced = 0`)
-    const oldestRes = sqlJsDb.exec(
-      `SELECT MIN(updatedAt) as oldest FROM ${tableName} WHERE updatedAt IS NOT NULL`
-    )
-    const newestRes = sqlJsDb.exec(
-      `SELECT MAX(updatedAt) as newest FROM ${tableName} WHERE updatedAt IS NOT NULL`
-    )
+    const oldestRes = sqlJsDb.exec(`SELECT MIN(updatedAt) as oldest FROM ${tableName} WHERE updatedAt IS NOT NULL`)
+    const newestRes = sqlJsDb.exec(`SELECT MAX(updatedAt) as newest FROM ${tableName} WHERE updatedAt IS NOT NULL`)
 
     return {
       totalRecords: totalRes.length > 0 && totalRes[0].values.length > 0 ? totalRes[0].values[0][0] : 0,
       softDeleted: deletedRes.length > 0 && deletedRes[0].values.length > 0 ? deletedRes[0].values[0][0] : 0,
       unsynced: unsyncedRes.length > 0 && unsyncedRes[0].values.length > 0 ? unsyncedRes[0].values[0][0] : 0,
       oldestRecord: oldestRes.length > 0 && oldestRes[0].values.length > 0 ? oldestRes[0].values[0][0] : null,
-      newestRecord: newestRes.length > 0 && newestRes[0].values.length > 0 ? newestRes[0].values[0][0] : null,
+      newestRecord: newestRes.length > 0 && newestRes[0].values.length > 0 ? newestRes[0].values[0][0] : null
     }
   }
 }

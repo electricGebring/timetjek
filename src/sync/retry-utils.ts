@@ -1,7 +1,3 @@
-/**
- * Retry utilities for sync operations
- */
-
 export type RetryOptions = {
   maxRetries?: number
   initialDelay?: number
@@ -15,16 +11,13 @@ const DEFAULT_OPTIONS: Required<RetryOptions> = {
   initialDelay: 1000, // 1 second
   maxDelay: 30000, // 30 seconds
   backoffMultiplier: 2,
-  retryableErrors: ['NetworkError', 'TimeoutError', 'ECONNRESET', 'ETIMEDOUT'],
+  retryableErrors: ['NetworkError', 'TimeoutError', 'ECONNRESET', 'ETIMEDOUT']
 }
 
 /**
  * Retry a function with exponential backoff
  */
-export async function retryWithBackoff<T>(
-  fn: () => Promise<T>,
-  options: RetryOptions = {}
-): Promise<T> {
+export async function retryWithBackoff<T>(fn: () => Promise<T>, options: RetryOptions = {}): Promise<T> {
   const opts = { ...DEFAULT_OPTIONS, ...options }
   let lastError: Error | unknown
 
@@ -41,9 +34,7 @@ export async function retryWithBackoff<T>(
 
       // Check if error is retryable
       const errorMessage = error?.message || ''
-      const isRetryable = opts.retryableErrors.some((retryableError) =>
-        errorMessage.includes(retryableError)
-      )
+      const isRetryable = opts.retryableErrors.some((retryableError) => errorMessage.includes(retryableError))
 
       if (!isRetryable) {
         // Not a retryable error, throw immediately
@@ -51,10 +42,7 @@ export async function retryWithBackoff<T>(
       }
 
       // Calculate delay with exponential backoff
-      const delay = Math.min(
-        opts.initialDelay * Math.pow(opts.backoffMultiplier, attempt),
-        opts.maxDelay
-      )
+      const delay = Math.min(opts.initialDelay * Math.pow(opts.backoffMultiplier, attempt), opts.maxDelay)
 
       // Wait before retrying
       await new Promise((resolve) => setTimeout(resolve, delay))

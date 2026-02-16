@@ -24,7 +24,6 @@ export class SyncEngine implements SyncPort {
   private logger: Pick<Console, 'log' | 'warn' | 'error'>
   private tableName: string
   private adapter: TableSyncAdapter
-  /** Used by stop() to abort in-flight sync at next step boundary */
   private abortController: AbortController | null = null
 
   constructor(deps: SyncEngineDeps) {
@@ -67,8 +66,6 @@ export class SyncEngine implements SyncPort {
       await this.pullRemoteChanges(signal)
 
       if (signal.aborted) return
-
-      if (signal.aborted) return
       await syncMetadata.markSyncSuccess(this.tableName)
     } catch (err: any) {
       this.logger.error('Sync failed for', this.tableName, err)
@@ -109,7 +106,10 @@ export class SyncEngine implements SyncPort {
         }))
         this.logger.log(`[7a. SYNC] 🔌 Calling API adapter.batchUpsert for ${itemsToBatch.length} items`)
         const batchResult = await this.adapter.batchUpsert(itemsToBatch)
-        this.logger.log(`[7b. SYNC] ✅ Batch pushed ${batchResult.length} items, ids:`, batchResult.map((r) => r.id))
+        this.logger.log(
+          `[7b. SYNC] ✅ Batch pushed ${batchResult.length} items, ids:`,
+          batchResult.map((r) => r.id)
+        )
 
         // Mark all as synced
         for (const item of unsyncedItems) {
@@ -145,7 +145,6 @@ export class SyncEngine implements SyncPort {
         if (!isRetryableError(error)) {
           this.logger.error('Failed to push item from', this.tableName, 'id', item.id, error)
         }
-        // Continue with other items even if one fails
       }
     }
   }
@@ -159,11 +158,8 @@ export class SyncEngine implements SyncPort {
     const deletedItems = await this.adapter.getDeleted()
 
     if (deletedItems.length === 0) {
-      // this.logger.log(`[SyncEngine] No deleted items to sync for ${this.tableName}`)
       return
     }
-
-    // this.logger.log(`[SyncEngine] Draining ${deletedItems.length} deleted items from ${this.tableName}`)
 
     // Try batch operation first (if API supports it)
     if (deletedItems.length > 1) {
@@ -213,74 +209,86 @@ export class SyncEngine implements SyncPort {
     if (signal?.aborted) return
 
     try {
-      // Get last sync timestamp for incremental sync
-      const metadata = await syncMetadata.getSyncMetadata(this.tableName)
-      const since = metadata?.lastSyncTimestamp ?? 0
+      const { apiItems, isIncremental } = await this.fetchRemoteItems()
+      if (signal?.aborted) return
 
-      let apiItems: any[]
-      let isIncremental = false
-
-      if (since > 0) {
-        // Try incremental sync with retry
-        try {
-          // this.logger.log(`[SyncEngine] Attempting incremental sync for ${this.tableName} since ${new Date(since * 1000).toISOString()}`)
-          apiItems = await retryWithBackoff(async () => this.adapter.fetchSince(since), {
-            maxRetries: 2,
-            initialDelay: 1000
-          })
-          isIncremental = true
-          // this.logger.log(`[SyncEngine] Incremental sync successful for ${this.tableName}, fetched ${apiItems.length} changes`)
-        } catch (error: any) {
-          // If incremental sync fails (API might not support it), fall back to full sync
-          this.logger.warn('Incremental sync failed for', this.tableName, 'falling back to full sync', error)
-          apiItems = await retryWithBackoff(async () => this.adapter.fetchAll(), {
-            maxRetries: 3,
-            initialDelay: 1000
-          })
-          isIncremental = false
-        }
-      } else {
-        // First sync - do full sync
-        // this.logger.log(`[SyncEngine] First sync for ${this.tableName} - performing full sync`)
-        apiItems = await this.adapter.fetchAll()
-        isIncremental = false
-      }
-
-      const strategy = getConflictStrategy(this.tableName)
-      let conflictCount = 0
-      let mergeErrors = 0
-
-      // Merge API items into local database with per-table conflict strategy (per-item try/catch for resilience)
-      for (const item of apiItems) {
-        if (signal?.aborted) return
-        try {
-          const result = await this.adapter.mergeRemote(item, strategy)
-          if (result.conflictDetected) conflictCount++
-        } catch (err: any) {
-          mergeErrors++
-          this.logger.error('mergeRemote failed for', this.tableName, 'item', item?.id, err)
-        }
-      }
+      const { conflictCount, mergeErrors } = await this.mergeItemsIntoDb(apiItems, signal)
+      if (signal?.aborted) return
 
       if (mergeErrors > 0) {
         this.logger.warn(mergeErrors, 'item(s) failed to merge for', this.tableName)
       }
 
-      // Update store with merged data from DB
       await this.adapter.updateStore()
-
-      this.logger.log(
-        'Pulled',
-        apiItems.length,
-        'items from API for',
-        this.tableName,
-        isIncremental ? '(incremental)' : '(full)',
-        conflictCount > 0 ? `resolved ${conflictCount} conflicts` : '',
-        mergeErrors > 0 ? `${mergeErrors} merge error(s)` : ''
-      )
+      this.logPullResult(apiItems.length, isIncremental, conflictCount, mergeErrors)
     } catch (error) {
       this.logger.error('Failed to pull remote changes for', this.tableName, error)
-      throw error // Re-throw to let start() handle it
+      throw error
     }
+  }
+
+  /** Fetch items from API: incremental when we have a lastSyncTimestamp, otherwise full; falls back to full on incremental failure. */
+  private async fetchRemoteItems(): Promise<{
+    apiItems: any[]
+    isIncremental: boolean
+  }> {
+    const metadata = await syncMetadata.getSyncMetadata(this.tableName)
+    const since = metadata?.lastSyncTimestamp ?? 0
+
+    if (since === 0) {
+      const apiItems = await this.adapter.fetchAll()
+      return { apiItems, isIncremental: false }
+    }
+
+    try {
+      const apiItems = await retryWithBackoff(async () => this.adapter.fetchSince(since), {
+        maxRetries: 2,
+        initialDelay: 1000
+      })
+      return { apiItems, isIncremental: true }
+    } catch (error: any) {
+      this.logger.warn('Incremental sync failed for', this.tableName, 'falling back to full sync', error)
+      const apiItems = await retryWithBackoff(async () => this.adapter.fetchAll(), {
+        maxRetries: 3,
+        initialDelay: 1000
+      })
+      return { apiItems, isIncremental: false }
+    }
+  }
+
+  /** Merge each API item into local DB with conflict strategy; continues on per-item errors. */
+  private async mergeItemsIntoDb(
+    apiItems: any[],
+    signal?: AbortSignal
+  ): Promise<{ conflictCount: number; mergeErrors: number }> {
+    const strategy = getConflictStrategy(this.tableName)
+    let conflictCount = 0
+    let mergeErrors = 0
+
+    for (const item of apiItems) {
+      if (signal?.aborted) break
+      try {
+        const result = await this.adapter.mergeRemote(item, strategy)
+        if (result.conflictDetected) conflictCount++
+      } catch (err: any) {
+        mergeErrors++
+        this.logger.error('mergeRemote failed for', this.tableName, 'item', item?.id, err)
+      }
+    }
+
+    return { conflictCount, mergeErrors }
+  }
+
+  private logPullResult(itemCount: number, isIncremental: boolean, conflictCount: number, mergeErrors: number): void {
+    const parts = [
+      'Pulled',
+      itemCount,
+      'items from API for',
+      this.tableName,
+      isIncremental ? '(incremental)' : '(full)'
+    ]
+    if (conflictCount > 0) parts.push(`resolved ${conflictCount} conflicts`)
+    if (mergeErrors > 0) parts.push(`${mergeErrors} merge error(s)`)
+    this.logger.log(...parts)
   }
 }

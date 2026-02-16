@@ -20,7 +20,6 @@ type SyncManagerDeps = {
 export class SyncManager {
   private syncEngines: Map<string, SyncEngine> = new Map()
   private logger: Pick<Console, 'log' | 'warn' | 'error'>
-  /** Prevents overlapping syncAll() runs; overlapping triggers become no-ops */
   private syncInProgress = false
 
   constructor(deps: SyncManagerDeps = {}) {
@@ -39,7 +38,6 @@ export class SyncManager {
       const adapter = getTableAdapter(tableName)
       if (!adapter) {
         // NOTE: Missing adapter means this table is intentionally not synced.
-        // this.logger.error(`[SyncManager] No adapter found for table: ${tableName}`)
         return null
       }
 
@@ -48,7 +46,7 @@ export class SyncManager {
         new SyncEngine({
           logger: createLogger('SyncEngine'),
           tableName,
-          adapter,
+          adapter
         })
       )
     }
@@ -119,9 +117,7 @@ export class SyncManager {
    * Stop all sync engines
    */
   async stopAll(): Promise<void> {
-    await Promise.all(
-      Array.from(this.syncEngines.values()).map((engine) => engine.stop())
-    )
+    await Promise.all(Array.from(this.syncEngines.values()).map((engine) => engine.stop()))
   }
 
   /**
