@@ -1,7 +1,3 @@
-/**
- * Custom error classes for staff-register domain
- */
-
 export class WorkEntryValidationError extends Error {
   constructor(message: string) {
     super(message)
