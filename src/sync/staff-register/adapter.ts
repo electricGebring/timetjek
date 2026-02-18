@@ -97,13 +97,9 @@ export function createStaffRegisterAdapter(): TableSyncAdapter {
       }
     },
     mergeRemote: (remoteItem: Entry, strategy?: ConflictStrategyType) => mergeRemoteWorkEntry(remoteItem, strategy),
-    updateStore: async (entries?: Entry[]): Promise<void> => {
+    updateStore: async (): Promise<void> => {
       const domain = await import('@/domain/staff-register/domain')
-      if (entries != null) {
-        await domain.updateStoreFromEntries(entries)
-      } else {
-        await domain.updateStoreFromDb()
-      }
+      await domain.updateStoreFromDb()
     }
   }
 }

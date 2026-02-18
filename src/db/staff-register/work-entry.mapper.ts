@@ -1,3 +1,8 @@
+/**
+ * Mapping layer: raw DB rows ↔ WorkEntry ↔ Entry (view type).
+ * No SQL or DB access; uses schema for validation.
+ */
+
 import type { Entry } from '@/views/staffRegister/types'
 import type { TimeRegistrationApplication } from '@/enums/TimeRegistrationApplication'
 import { TimeRegistrationStatus } from '@/enums/TimeRegistrationStatus'
@@ -47,12 +52,8 @@ export function workEntryToEntry(w: WorkEntry): Entry {
     check_out_longitude: w.check_out_longitude ?? null,
     check_out_application: w.check_out_application as TimeRegistrationApplication | null,
     break: w.break ?? null,
-    meal_benefit_has_breakfast:
-      typeof w.meal_benefit_has_breakfast === 'number'
-        ? !!w.meal_benefit_has_breakfast
-        : !!w.meal_benefit_has_breakfast,
-    meal_benefit_has_lunch:
-      typeof w.meal_benefit_has_lunch === 'number' ? !!w.meal_benefit_has_lunch : !!w.meal_benefit_has_lunch,
+    meal_benefit_has_breakfast: typeof w.meal_benefit_has_breakfast === 'number' ? !!w.meal_benefit_has_breakfast : !!w.meal_benefit_has_breakfast,
+    meal_benefit_has_lunch: typeof w.meal_benefit_has_lunch === 'number' ? !!w.meal_benefit_has_lunch : !!w.meal_benefit_has_lunch,
     name: w.name ?? '',
     type: w.type ?? '',
     personalNumber: w.personalNumber ?? '',

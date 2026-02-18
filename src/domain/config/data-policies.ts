@@ -1,3 +1,8 @@
+/**
+ * Data retention and sync policies configuration
+ * Define per-table policies for offline support, retention, sync behavior, and conflict resolution
+ */
+
 import { TABLE_WORK_ENTRIES } from '@/constants/tables'
 import { ConflictResolutionStrategy } from '@/enums/ConflictResolutionStrategy'
 import { SyncMode } from '@/enums/SyncMode'
@@ -7,12 +12,19 @@ export { ConflictResolutionStrategy } from '@/enums/ConflictResolutionStrategy'
 export { SyncMode } from '@/enums/SyncMode'
 
 export type DataRetentionPolicy = {
+  /** Table/entity name */
   tableName: string
+  /** Sync mode: offline-first (syncs), online-only (no local storage), cache-only (local but no sync) */
   syncMode: SyncMode
+  /** Retention period in days (only applies to offline-first and cache-only) */
   retentionDays?: number
+  /** Only clean up soft-deleted items (for offline-first) */
   softDeleteOnly?: boolean
+  /** Whether to sync this table automatically */
   autoSync?: boolean
+  /** Conflict resolution when local and remote differ */
   conflictStrategy?: ConflictResolutionStrategy
+  /** Custom cleanup function (optional) */
   customCleanup?: (tableName: string) => Promise<number>
 }
 
