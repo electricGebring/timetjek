@@ -105,6 +105,8 @@ export class SyncEngine implements SyncPort {
           updatedAt: item.updatedAt ?? now
         }))
         this.logger.log(`[7a. SYNC] 🔌 Calling API adapter.batchUpsert for ${itemsToBatch.length} items`)
+        console.log('[DEBUG] sync-engine: anropar adapter.batchUpsert', itemsToBatch)
+		
         const batchResult = await this.adapter.batchUpsert(itemsToBatch)
         this.logger.log(
           `[7b. SYNC] ✅ Batch pushed ${batchResult.length} items, ids:`,
@@ -206,6 +208,7 @@ export class SyncEngine implements SyncPort {
    * DB is written only when pushing (drainOutbox: unsynced → API → save result).
    */
   private async pullRemoteChanges(signal?: AbortSignal): Promise<void> {
+	this.logger.log('[6. SYNC] 📥 Pulling remote changes for', this.tableName)
     if (signal?.aborted) return
 
     try {

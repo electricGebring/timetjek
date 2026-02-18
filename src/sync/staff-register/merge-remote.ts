@@ -60,9 +60,19 @@ export async function mergeRemoteWorkEntry(
     return { resolved: local as Entry, conflictDetected: false }
   }
 
-  // Conflict resolution, persist result to DB
+  // Conflict resolution, persist result to DB only if changed (avoid unnecessary writes)
   const result = defaultConflictResolver.resolve(toResolverFormat(local), toResolverFormat(remote), strategy)
   const toPersist = fromResolverFormat(result.resolved as ResolverEntry)
-  await repo.upsertWorkEntry({ ...toPersist, synced: 1 })
+  // Jämför local och toPersist, upserta bara om ändrad
+  function entriesAreEqual(a: Entry, b: Entry): boolean {
+    return (
+      a.id === b.id &&
+      a.updatedAt === b.updatedAt &&
+      a.status === b.status
+    );
+  }
+  if (!entriesAreEqual(local, toPersist)) {
+    await repo.upsertWorkEntry({ ...toPersist, synced: 1 })
+  }
   return { resolved: toPersist, conflictDetected: result.conflictDetected }
 }
