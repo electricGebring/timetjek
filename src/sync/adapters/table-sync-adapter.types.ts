@@ -1,4 +1,4 @@
-import type { ConflictResolutionStrategy } from '@/enums/ConflictResolutionStrategy'
+import type { ConflictResolutionStrategy } from '@/sync/conflict-resolver'
 
 /**
  * Table sync adapter – table-specific implementation for SyncEngine.
@@ -22,10 +22,6 @@ export type TableSyncAdapter = {
   deleteItem: (id: number) => Promise<void>
   fetchAll: () => Promise<any[]>
   fetchSince: (timestamp: number) => Promise<any[]>
-  mergeRemote: (
-    remoteItem: any,
-    strategy?: ConflictResolutionStrategy
-  ) => Promise<{ resolved: any; conflictDetected: boolean }>
-  /** Refresh UI store: from DB (no args) or from given entries (e.g. after pull, in-memory resolved + unsynced). */
-  updateStore: (entries?: any[]) => Promise<void>
+  mergeRemote: (remoteItem: any, strategy?: ConflictResolutionStrategy) => Promise<{ resolved: any; conflictDetected: boolean }>
+  updateStore: () => Promise<void>
 }

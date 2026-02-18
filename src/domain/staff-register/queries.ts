@@ -1,7 +1,4 @@
-import * as staffRepo from '@/db/staff-register/repo'
-import { hasOpenCheckIn } from './rules'
-import type { DayGroup } from './types'
-import type { WorkEntry } from '@/models/work-entry.schema'
+
 
 function isWorkEntry(e: any): e is WorkEntry {
   return (
@@ -20,46 +17,56 @@ function isWorkEntry(e: any): e is WorkEntry {
     (typeof e.deleted_at === 'string' || e.deleted_at === null) &&
     typeof e.synced === 'number' &&
     typeof e.deleted === 'number'
-  )
+  );
 }
 
 export async function getUnsyncedWorkEntries(): Promise<WorkEntry[]> {
-  const entries = await staffRepo.getUnsyncedWorkEntries()
+  const entries = await staffRepo.getUnsyncedWorkEntries();
   return entries
     .filter((e) => e.work_day_id !== null && e.createdAt !== null)
     .map((e) => ({
       ...e,
       work_day_id: e.work_day_id as number,
       createdAt: e.createdAt ?? '',
-      updatedAt: e.updatedAt ?? ''
+      updatedAt: e.updatedAt ?? '',
     }))
-    .filter(isWorkEntry)
+    .filter(isWorkEntry);
 }
 
 export async function getDeletedWorkEntries(): Promise<WorkEntry[]> {
-  const entries = await staffRepo.getDeletedWorkEntries()
+  const entries = await staffRepo.getDeletedWorkEntries();
   return entries
     .filter((e) => e.work_day_id !== null && e.createdAt !== null)
     .map((e) => ({
       ...e,
       work_day_id: e.work_day_id as number,
       createdAt: e.createdAt ?? '',
-      updatedAt: e.updatedAt ?? ''
+      updatedAt: e.updatedAt ?? '',
     }))
-    .filter(isWorkEntry)
+    .filter(isWorkEntry);
 }
+/**
+ * Read-side: fetch and aggregate work entries.
+ * Delegates to repo; no write or sync trigger.
+ */
+
+import * as staffRepo from '@/db/staff-register/repo'
+import { hasOpenCheckIn } from './rules'
+import type { DayGroup } from './types'
+import type { WorkEntry } from '@/models/work-entry.schema'
+
 
 export async function getAllWorkEntries(): Promise<WorkEntry[]> {
-  const entries = await staffRepo.getWorkEntries()
+  const entries = await staffRepo.getWorkEntries();
   return entries
     .filter((e) => e.work_day_id !== null && e.createdAt !== null)
     .map((e) => ({
       ...e,
       work_day_id: e.work_day_id as number,
       createdAt: e.createdAt ?? '',
-      updatedAt: e.updatedAt ?? ''
+      updatedAt: e.updatedAt ?? '',
     }))
-    .filter(isWorkEntry)
+    .filter(isWorkEntry);
 }
 
 export async function canCheckIn(work_day_id: number): Promise<boolean> {
@@ -73,6 +80,8 @@ export async function canCheckOut(work_day_id: number): Promise<boolean> {
   const todays = all.filter((e) => e.work_day_id === work_day_id)
   return hasOpenCheckIn(todays)
 }
+
+
 
 export async function upsertWorkEntryFromApi(entry: Partial<WorkEntry>) {
   await staffRepo.upsertWorkEntry(entry)

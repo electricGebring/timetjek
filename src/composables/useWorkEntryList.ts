@@ -1,7 +1,8 @@
 import { computed, type Ref } from 'vue'
 
 export function useWorkEntryList(workEntries: Ref<any[]>) {
-  const getArr = () => (Array.isArray(workEntries.value) ? workEntries.value : [])
+  // Defensive: always treat as array
+  const getArr = () => Array.isArray(workEntries.value) ? workEntries.value : []
 
   const sortedEntriesByDay = computed(() => {
     const arr = getArr()
@@ -39,12 +40,12 @@ export function useWorkEntryList(workEntries: Ref<any[]>) {
     const arr = getArr()
     if (arr.length === 0) return 'Inga poster'
     const dates = arr
-      .map((e) => e.check_in_at || e.createdAt)
-      .filter((d) => d)
-      .map((d) => new Date(d))
+      .map(e => e.check_in_at || e.createdAt)
+      .filter(d => d)
+      .map(d => new Date(d))
     if (dates.length === 0) return 'Inga poster'
-    const minDate = new Date(Math.min(...dates.map((d) => d.getTime())))
-    const maxDate = new Date(Math.max(...dates.map((d) => d.getTime())))
+    const minDate = new Date(Math.min(...dates.map(d => d.getTime())))
+    const maxDate = new Date(Math.max(...dates.map(d => d.getTime())))
     const formatDate = (date: Date) => {
       const day = date.getDate()
       const month = date.getMonth() + 1
