@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { defineProps } from 'vue'
 import { formatWorkTime } from '@/utils/timeFormatters'
 
 const props = defineProps<{
