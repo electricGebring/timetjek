@@ -30,7 +30,8 @@ function initSyncMetadataTableWeb(): void {
 export async function initSyncMetadataTable(): Promise<void> {
   if (Capacitor.isNativePlatform()) {
     await initSyncMetadataTableNative()
-  } else {
+  }
+ else {
     initSyncMetadataTableWeb()
   }
 }

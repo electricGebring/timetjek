@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 
 import * as domain from '@/domain/staff-register/domain'
 
-import type { Entry, GroupedWorkEntries } from '@/views/staffRegister/types'
+import type { Entry, GroupedWorkEntries, DayGroup } from '@/views/staffRegister/types'
 
 import { TimeRegistrationStatus } from '@/enums/TimeRegistrationStatus'
 
@@ -11,7 +11,8 @@ export const useStaffRegisterStore = defineStore('staffRegister', {
     workEntries: [] as Entry[],
     groupedWorkEntries: null as GroupedWorkEntries | null,
     loading: false,
-    error: null as string | null
+    error: null as string | null,
+    logger: console // You can replace 'console' with a custom logger if needed
   }),
   getters: {
     /** Total number of seconds worked across all entries */
@@ -37,16 +38,16 @@ export const useStaffRegisterStore = defineStore('staffRegister', {
     }
   },
   actions: {
-    setWorkEntries(entries: any[]) {
+    setWorkEntries(entries: Entry[]) {
       this.workEntries = entries
     },
     setGroupedWorkEntries(grouped: GroupedWorkEntries) {
       this.groupedWorkEntries = grouped
     },
-    async addWorkEntryWithDefaults(entry: any) {
+    async addWorkEntryWithDefaults(entry: Entry) {
       await domain.createWorkEntry(entry)
     },
-    async updateWorkEntry(entry: any) {
+    async updateWorkEntry(entry: Entry) {
       await domain.updateWorkEntry(entry)
     },
     removeWorkEntry(id: number) {
@@ -61,7 +62,21 @@ export const useStaffRegisterStore = defineStore('staffRegister', {
     async loadGroupedWorkEntries() {
       const grouped = await domain.getWorkSchemeGrouped()
 
-      this.setGroupedWorkEntries(grouped)
+      // Convert all entries to the correct Entry type (ensure id is number, not null)
+      const convertedGrouped = {
+        days: grouped.days.map((day: DayGroup) => ({
+          ...day,
+          entries: day.entries
+            .filter((entry: Entry) => entry.id !== null)
+            .map((entry: Entry) => ({
+              ...entry,
+              id: Number(entry.id),
+              work_day_id: entry.work_day_id !== null ? Number(entry.work_day_id) : 0
+            }))
+        }))
+      }
+
+      this.setGroupedWorkEntries(convertedGrouped)
     },
 
     /**
@@ -80,8 +95,13 @@ export const useStaffRegisterStore = defineStore('staffRegister', {
 
         this.setError(null)
       }
- catch (e: any) {
-        this.setError(e?.message || 'Failed to load work entries')
+ catch (e: unknown) {
+        if (e && typeof e === 'object' && 'message' in e && typeof (e as { message?: string }).message === 'string') {
+          this.setError((e as { message: string }).message)
+        }
+ else {
+          this.setError('Failed to load work entries')
+        }
       }
  finally {
         this.setLoading(false)
@@ -89,9 +109,7 @@ export const useStaffRegisterStore = defineStore('staffRegister', {
     },
 
     async checkIn(work_day_id: number) {
-      console.log('hello')
-
-      console.log('[2. STORE] 📦 Calling domain.createWorkEntry...', { work_day_id })
+      this.logger.log('[2. STORE] 📦 Calling domain.createWorkEntry...', { work_day_id })
 
       const all = await domain.getAllWorkEntries()
 

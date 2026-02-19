@@ -68,7 +68,8 @@ const fetchTemperature = async () => {
     const temp = data?.current?.temperature_2m
 
     if (typeof temp === 'number') temperature.value = Math.round(temp)
-  } catch {
+  }
+ catch {
     // ignore
   }
 }

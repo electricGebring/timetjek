@@ -10,7 +10,8 @@ export type CleanupConfig = {
   softDeleteOnly?: boolean
 }
 
-/** WHERE clause and params for cleanup: either soft-deleted only or all rows older than cutoff (createdAt or updatedAt). */
+/** WHERE clause and params for cleanup: either soft-deleted only or all rows older than cutoff 
+ * (createdAt or updatedAt). */
 function buildCleanupQueries(
   tableName: string,
   softDeleteOnly: boolean,
@@ -51,11 +52,28 @@ function getCleanupDb(): CleanupDb {
 
     return {
       async runCount(sql: string, params: number[]) {
-        if (!('query' in db) || typeof (db as any).query !== 'function') {
+        if (
+          !('query' in db) ||
+          typeof (
+            db as {
+              query: (
+                sql: string,
+                params?: unknown[]
+              ) => Promise<{ values?: unknown[][] }>
+            }
+          ).query !== 'function'
+        ) {
           return 0
         }
 
-        const result = await (db as any).query(sql, params)
+        const result = await (
+          db as {
+            query: (
+              sql: string,
+              params?: unknown[]
+            ) => Promise<{ values?: unknown[][] }>
+          }
+        ).query(sql, params)
 
         if (!result || !result.values || !Array.isArray(result.values) || result.values.length === 0) {
           return 0
@@ -67,7 +85,7 @@ function getCleanupDb(): CleanupDb {
       },
       async runDelete(sql: string, params: number[]) {
         if ('run' in db && typeof db.run === 'function') {
-          await (db as any).run(sql, params)
+          await (db as { run: (sql: string, params?: unknown[]) => Promise<void> }).run(sql, params)
         }
       }
     }
@@ -148,7 +166,8 @@ export async function cleanupAllTables(): Promise<Record<string, number>> {
       if (policy.customCleanup) {
         // Use custom cleanup function if provided
         results[policy.tableName] = await policy.customCleanup(policy.tableName)
-      } else {
+      }
+ else {
         // Use standard cleanup
         results[policy.tableName] = await cleanupExpiredData({
           retentionDays: policy.retentionDays,
@@ -156,8 +175,8 @@ export async function cleanupAllTables(): Promise<Record<string, number>> {
           softDeleteOnly: policy.softDeleteOnly ?? false
         })
       }
-    } catch (error) {
-      // eslint-disable-next-line no-console
+    }
+ catch (error) {
       console.error(`[Cleanup] Failed to clean up ${policy.tableName}:`, error)
 
       results[policy.tableName] = 0
@@ -184,7 +203,17 @@ export async function getStorageStats(tableName: string): Promise<{
         }
       | Record<string, unknown>
 
-    if (!('query' in db) || typeof (db as any).query !== 'function') {
+    if (
+      !('query' in db) ||
+      typeof (
+        db as {
+          query: (
+            sql: string,
+            params?: unknown[]
+          ) => Promise<{ values?: unknown[][] }>
+        }
+      ).query !== 'function'
+    ) {
       return {
         totalRecords: 0,
         softDeleted: 0,
@@ -194,17 +223,43 @@ export async function getStorageStats(tableName: string): Promise<{
       }
     }
 
-    const totalRes = await (db as any).query(`SELECT COUNT(*) as count FROM ${tableName}`)
+    const totalRes = await (
+      db as {
+        query: (sql: string, params?: unknown[]) => Promise<{ values?: unknown[][] }>
+      }
+    ).query(`SELECT COUNT(*) as count FROM ${tableName}`)
 
-    const deletedRes = await (db as any).query(`SELECT COUNT(*) as count FROM ${tableName} WHERE deleted = 1`)
+    const deletedRes = await (
+      db as {
+        query: (sql: string, params?: unknown[]) => Promise<{ values?: unknown[][] }>
+      }
+    ).query(`SELECT COUNT(*) as count FROM ${tableName} WHERE deleted = 1`)
 
-    const unsyncedRes = await (db as any).query(`SELECT COUNT(*) as count FROM ${tableName} WHERE synced = 0`)
+    const unsyncedRes = await (
+      db as {
+        query: (sql: string, params?: unknown[]) => Promise<{ values?: unknown[][] }>
+      }
+    ).query(`SELECT COUNT(*) as count FROM ${tableName} WHERE synced = 0`)
 
-    const oldestRes = await (db as any).query(
+    const oldestRes = await (
+      db as {
+        query: (
+          sql: string,
+          params?: unknown[]
+        ) => Promise<{ values?: unknown[][] }>
+      }
+    ).query(
       `SELECT MIN(updatedAt) as oldest FROM ${tableName} WHERE updatedAt IS NOT NULL`
     )
 
-    const newestRes = await (db as any).query(
+    const newestRes = await (
+      db as {
+        query: (
+          sql: string,
+          params?: unknown[]
+        ) => Promise<{ values?: unknown[][] }>
+      }
+    ).query(
       `SELECT MAX(updatedAt) as newest FROM ${tableName} WHERE updatedAt IS NOT NULL`
     )
 
@@ -225,7 +280,8 @@ export async function getStorageStats(tableName: string): Promise<{
       oldestRecord: extractValue(oldestRes, true),
       newestRecord: extractValue(newestRes, true)
     }
-  } else {
+  }
+ else {
     const dbObj = getDB() as Record<string, unknown>
 
     const sqlJsDb = dbObj['sqlJsDb'] as {

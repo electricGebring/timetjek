@@ -47,8 +47,8 @@ export async function initDB() {
           return `https://sql.js.org/dist/${file}`
         }
       })
-    }
- catch (error: any) {
+     }
+   catch (error: unknown) {
       if (error.message?.includes('fetch') || error.message?.includes('WASM') || error.message?.includes('404')) {
         console.warn('[DB] Public WASM not found, trying CDN...')
 
@@ -57,7 +57,7 @@ export async function initDB() {
             locateFile: (file) => `https://sql.js.org/dist/${file}`
           })
         }
- catch (cdnError) {
+ catch {
           throw new Error(
             'Failed to load sql.js WASM file. ' +
               'For offline support, copy node_modules/sql.js/dist/sql-wasm.wasm to public/sqljs/sql-wasm.wasm'
@@ -145,7 +145,9 @@ export function getDB() {
  *   window.dbQuery('SELECT * FROM sync_metadata')
  */
 if (typeof window !== 'undefined' && !Capacitor.isNativePlatform()) {
-  ;(window as unknown as { dbQuery: (sql: string) => unknown }).dbQuery = (sql: string) => {
+  ;
+
+(window as unknown as { dbQuery: (sql: string) => unknown }).dbQuery = (sql: string) => {
     if (!sqlJsDb) {
       console.error('Database not initialized. Make sure the app has loaded.')
 
@@ -167,7 +169,7 @@ if (typeof window !== 'undefined' && !Capacitor.isNativePlatform()) {
 
       const columns = queryResult.columns
 
-      const rows = queryResult.values.map((row: any[]) => {
+      const rows = queryResult.values.map((row: unknown[]) => {
         const obj: Record<string, unknown> = {}
 
         columns.forEach((col: string, i: number) => {
@@ -183,7 +185,6 @@ if (typeof window !== 'undefined' && !Capacitor.isNativePlatform()) {
       return rows
     }
  catch (error) {
-      // eslint-disable-next-line no-console
       console.error('Database query error:', error)
 
       throw error

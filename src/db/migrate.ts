@@ -33,7 +33,8 @@ if (typeof window === 'undefined') {
       sql: fs.readFileSync('migrations/20260205_001_add_total_break_seconds.sql', 'utf-8')
     }
   ]
-} else {
+}
+ else {
   // Web/Vite: use imported SQL strings
   migrations = [
     { id: '20260128_001_create_work_entries', sql: migration_001 },
@@ -61,7 +62,8 @@ async function getAppliedMigrationIds(): Promise<Set<string>> {
     rows.map((r) => {
       if (Array.isArray(r)) {
         return String(r[0])
-      } else if (typeof r === 'object' && r !== null) {
+      }
+ else if (typeof r === 'object' && r !== null) {
         return String((r as unknown as { id: string }).id)
       }
 
@@ -72,11 +74,12 @@ async function getAppliedMigrationIds(): Promise<Set<string>> {
 
 async function runSql(sql: string, params: unknown[] = []) {
   if (Capacitor.isNativePlatform()) {
-    const db = getDB()
+    const db = getDB() as { run: (sql: string, params?: unknown[]) => Promise<void> }
 
     await db.run(sql, params)
-  } else {
-    const { sqlJsDb } = getDB() as any
+  }
+ else {
+    const { sqlJsDb } = getDB() as { sqlJsDb: { run: (sql: string, params?: unknown[]) => void } }
 
     sqlJsDb.run(sql, params)
   }
@@ -84,7 +87,7 @@ async function runSql(sql: string, params: unknown[] = []) {
 
 async function queryRows(sql: string, params: unknown[] = []): Promise<unknown[][]> {
   if (Capacitor.isNativePlatform()) {
-    const db = getDB()
+    const db = getDB() as { query: (sql: string, params?: unknown[]) => Promise<{ values?: unknown[][] }> }
 
     const res = await db.query(sql, params)
 
@@ -92,14 +95,15 @@ async function queryRows(sql: string, params: unknown[] = []): Promise<unknown[]
     const values = (res.values ?? []).filter((row: unknown) => !('ios_columns' in row && Object.keys(row).length === 1))
 
     return values as unknown[][]
-  } else {
-    const { sqlJsDb } = getDB() as any
+  }
+ else {
+    const { sqlJsDb } = getDB() as { sqlJsDb: { exec: (sql: string, params?: unknown[]) => { values: unknown[][] }[] } }
 
     const results = sqlJsDb.exec(sql, params)
 
-    if (results.length === 0) return []
+    if (results.length === 0 || !results[0] || !('values' in results[0])) return []
 
-    return results[0].values as unknown[][]
+    return (results[0].values ?? []) as unknown[][]
   }
 }
 
@@ -135,11 +139,10 @@ export async function runMigrations() {
 
       await runSql('INSERT INTO schema_migrations (id, applied_at) VALUES (?, ?)', [m.id, new Date().toISOString()])
 
-      console.log('[MIGRATIONS] Migration applied:', m.id)
-
       // eslint-disable-next-line no-console
       console.log('[MIGRATIONS] Migration applied:', m.id)
-    } catch (e) {
+    }
+ catch (e) {
       throw new Error(`Migration failed: ${m.id} -> ${(e as Error).message}`)
     }
   }
@@ -147,7 +150,8 @@ export async function runMigrations() {
   if (pending.length === 0) {
     // eslint-disable-next-line no-console
     console.log('[MIGRATIONS] No new migrations to apply')
-  } else {
+  }
+ else {
     // eslint-disable-next-line no-console
     console.log('[MIGRATIONS] All migrations applied')
   }

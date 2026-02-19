@@ -22,7 +22,8 @@ export async function getSyncMetadata(tableName: string): Promise<SyncMetadata |
       syncState: (row[4] ?? 'idle') as SyncMetadata['syncState'],
       errorMessage: row[5] ?? null
     }
-  } else {
+  }
+ else {
     const { sqlJsDb } = getDB() as {
       sqlJsDb: { exec: (sql: string, params: unknown[]) => { length: number; values: unknown[] }[] }
     }

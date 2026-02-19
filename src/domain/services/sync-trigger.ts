@@ -63,7 +63,8 @@ async function runSyncIfOnline(reason: 'manual' | 'mutation'): Promise<void> {
     sync.start(reason as unknown as SyncReason).catch((err) => {
       logger.warn('Immediate sync failed', err)
     })
-  } catch (error) {
+  }
+ catch (error) {
     logger.warn('Failed to check connectivity', error)
   }
 }

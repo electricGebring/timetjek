@@ -105,7 +105,11 @@ export async function getDatabaseInfo() {
     let deletedCount = 0
 
     if (Capacitor.isNativePlatform()) {
-      const nativeDb: any = db
+      interface NativeDb {
+        query: (sql: string) => Promise<{ values?: Array<{ count: number }> }>;
+      }
+
+      const nativeDb = db as NativeDb
 
       const total = await nativeDb.query('SELECT COUNT(*) as count FROM work_entries WHERE deleted_at IS NULL')
 
@@ -185,20 +189,24 @@ export async function clearAllData() {
 
     if (Capacitor.isNativePlatform()) {
       // Native: use db.run()
-      const nativeDb: any = db
+      interface NativeDb {
+        run: (sql: string) => Promise<void>;
+      }
+
+      const nativeDb = db as NativeDb
 
       await nativeDb.run('DELETE FROM work_entries')
     }
  else {
       // Web: use sqlJsDb.run()
-      const { sqlJsDb, saveDatabase } = db as any
+      const { sqlJsDb, saveDatabase } = db as { sqlJsDb: { run: (sql: string) => void }, saveDatabase: () => void }
 
       sqlJsDb.run('DELETE FROM work_entries')
 
       saveDatabase()
     }
 
-    console.log('✓ All local data cleared')
+    console.warn('✓ All local data cleared')
   }
  catch (e) {
     console.error('Failed to clear data:', e)
@@ -211,7 +219,22 @@ export async function clearAllData() {
 
 ;
 
-(window as any).staffRegisterService = {
+interface StaffRegisterService {
+  getWorkHistory: typeof getWorkHistory;
+  getEntriesForDate: typeof getEntriesForDate;
+  getCurrentStatus: typeof getCurrentStatus;
+  getAllEntries: typeof getAllEntries;
+  getDatabaseInfo: typeof getDatabaseInfo;
+  clearAllData: typeof clearAllData;
+}
+
+declare global {
+  interface Window {
+    staffRegisterService: StaffRegisterService;
+  }
+}
+
+window.staffRegisterService = {
   getWorkHistory,
   getEntriesForDate,
   getCurrentStatus,
@@ -220,4 +243,4 @@ export async function clearAllData() {
   clearAllData
 }
 
-console.log('📋 Staff Register Service exposed on window.staffRegisterService')
+console.warn('📋 Staff Register Service exposed on window.staffRegisterService')

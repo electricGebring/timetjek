@@ -101,13 +101,16 @@ async function bootstrap() {
   // Start coordinator after app is mounted
   await coordinator.start()
 
+  // Create a logger for bootstrap
+  const logger = createLogger('Bootstrap')
+
   // Run initial sync to populate database with API data
   try {
-    console.log('[Bootstrap] Running initial sync...')
+    logger.log('[Bootstrap] Running initial sync...')
 
     await syncAdapter.start('manual')
 
-    console.log('[Bootstrap] Initial sync completed')
+    logger.log('[Bootstrap] Initial sync completed')
   }
  catch (error) {
     console.error('[Bootstrap] Initial sync failed:', error)
@@ -120,22 +123,24 @@ async function bootstrap() {
     const totalCleaned = Object.values(results).reduce((sum, count) => sum + count, 0)
 
     if (totalCleaned > 0) {
-      console.log(`[Bootstrap] Cleaned up expired data:`, results)
+      logger.log(`[Bootstrap] Cleaned up expired data:`, results)
     }
   }
  catch (error) {
-    console.error('[Bootstrap] Initial cleanup failed:', error)
+    logger.error('[Bootstrap] Initial cleanup failed:', error)
   }
 
   // Schedule periodic cleanup (daily at midnight)
-  scheduleDailyCleanup()
+  scheduleDailyCleanup(logger)
 }
 
 /**
  * Schedule daily cleanup of expired data
  * Runs cleanup once per day based on configured retention policies
  */
-function scheduleDailyCleanup() {
+type LoggerLike = { log: (...args: unknown[]) => void; error: (...args: unknown[]) => void }
+
+function scheduleDailyCleanup(logger: LoggerLike = console) {
   const runCleanup = async () => {
     try {
       const results = await cleanupAllTables()
@@ -143,11 +148,11 @@ function scheduleDailyCleanup() {
       const totalCleaned = Object.values(results).reduce((sum, count) => sum + count, 0)
 
       if (totalCleaned > 0) {
-        console.log(`[Cleanup] Cleaned up expired data:`, results)
+        logger.log(`[Cleanup] Cleaned up expired data:`, results)
       }
     }
  catch (error) {
-      console.error('[Cleanup] Scheduled cleanup failed:', error)
+      logger.error('[Cleanup] Scheduled cleanup failed:', error)
     }
   }
 
@@ -169,10 +174,12 @@ function scheduleDailyCleanup() {
     setInterval(runCleanup, 24 * 60 * 60 * 1000) // Every 24 hours
   }, msUntilMidnight)
 
-  console.log(`[Bootstrap] Scheduled daily cleanup starting at ${tomorrow.toISOString()}`)
+  logger.log(`[Bootstrap] Scheduled daily cleanup starting at ${tomorrow.toISOString()}`)
 }
 
 // Start the app bootstrap process
 bootstrap().catch((err) => {
-  console.error('Bootstrap error:', err)
+  const logger = createLogger('Bootstrap')
+
+  logger.error('Bootstrap error:', err)
 })

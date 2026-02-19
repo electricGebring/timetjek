@@ -21,7 +21,8 @@
         type="button"
         @click="onCheckIn"
         :disabled="isProcessing"
-        class="flex h-16 items-center gap-3 rounded-2xl border border-blue-100 bg-blue-50 px-8 text-blue-700 shadow-sm transition hover:bg-blue-100"
+        class="flex h-16 items-center gap-3 rounded-2xl border border-blue-100 bg-blue-50 px-8 text-blue-700
+          shadow-sm transition hover:bg-blue-100"
       >
         <FontAwesomeIcon
           icon="clock"
@@ -32,7 +33,8 @@
       <button
         type="button"
         @click="onCheckOut"
-        class="flex h-16 items-center gap-3 rounded-2xl border border-blue-100 bg-blue-50 px-8 text-blue-700 shadow-sm transition hover:bg-blue-100"
+        class="flex h-16 items-center gap-3 rounded-2xl border border-blue-100 bg-blue-50 px-8 text-blue-700
+          shadow-sm transition hover:bg-blue-100"
       >
         <FontAwesomeIcon
           icon="arrow-right-from-bracket"
@@ -43,7 +45,8 @@
       <button
         type="button"
         @click="onBreak"
-        class="flex h-16 items-center gap-3 rounded-2xl border border-blue-100 bg-blue-50 px-8 text-blue-700 shadow-sm transition hover:bg-blue-100"
+        class="flex h-16 items-center gap-3 rounded-2xl border border-blue-100 bg-blue-50 px-8 text-blue-700
+          shadow-sm transition hover:bg-blue-100"
       >
         <FontAwesomeIcon
           icon="mug-saucer"

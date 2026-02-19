@@ -10,9 +10,11 @@ export function formatMinutes(totalMinutes: number): string {
 
   if (hours > 0 && minutes > 0) {
     return `${hours} tim ${minutes} min`
-  } else if (hours > 0) {
+  }
+ else if (hours > 0) {
     return `${hours} tim`
-  } else {
+  }
+ else {
     return `${minutes} min`
   }
 }

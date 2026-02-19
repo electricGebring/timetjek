@@ -28,7 +28,8 @@
             <tr>
               <td
                 colspan="8"
-                class="border-b border-gray-200 bg-gray-50 px-3 py-3 text-base font-bold text-gray-800 sm:px-5 sm:text-lg"
+                class="border-b border-gray-200 bg-gray-50 px-3 py-3 text-base font-bold text-gray-800
+                  sm:px-5 sm:text-lg"
               >
                 <span>{{ day.dateLabel }}</span>
                 <span
@@ -134,7 +135,7 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 
 import type { PropType } from 'vue'
 
-const props = defineProps({
+defineProps({
   entriesByDay: {
     type: Array as PropType<Array<{ date: string; dateLabel: string; entries: unknown[] }>>,
     required: true

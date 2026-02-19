@@ -27,7 +27,8 @@ async function fetchWithRetry(url: string, options?: RequestInit, maxRetries = 3
       const response = await fetch(url, options)
 
       return response
-    } catch (error) {
+    }
+ catch (error) {
       lastError = error as Error
 
       // Only retry on connection errors

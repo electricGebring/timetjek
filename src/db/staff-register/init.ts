@@ -8,7 +8,8 @@ import { runMigrations } from '../migrate'
  */
 export async function initStaffRegisterDb(db: unknown, isNative: boolean) {
   if (isNative) {
-    await db.execute(STAFF_REGISTER_SCHEMA)
+    // Type assertion for db to have execute method
+    await (db as { execute: (sql: string) => Promise<unknown> }).execute(STAFF_REGISTER_SCHEMA)
 
     await runMigrations()
   }
@@ -20,10 +21,9 @@ export async function initStaffRegisterDb(db: unknown, isNative: boolean) {
 
     for (const statement of statements) {
       try {
-        db.run(statement + ';')
+        (db as { run: (sql: string) => unknown }).run(statement + ';')
       }
- catch (error) {
-        // eslint-disable-next-line no-console
+ catch {
         console.warn('[DB] Statement already exists or minor error (safe):', statement.substring(0, 50))
       }
     }

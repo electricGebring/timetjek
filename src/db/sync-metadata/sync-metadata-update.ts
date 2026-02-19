@@ -33,7 +33,8 @@ export async function updateSyncMetadata(
           tableName
         ]
       )
-    } else {
+    }
+ else {
       await db.run(
         `INSERT INTO sync_metadata 
          (table_name, last_sync_timestamp, sync_token, last_successful_sync, sync_state, error_message)
@@ -48,7 +49,8 @@ export async function updateSyncMetadata(
         ]
       )
     }
-  } else {
+  }
+ else {
     const { sqlJsDb, saveDatabase } = getDB() as {
       sqlJsDb: { run: (sql: string, params?: unknown[]) => void }
       saveDatabase: () => void
@@ -74,7 +76,8 @@ export async function updateSyncMetadata(
           tableName
         ]
       )
-    } else {
+    }
+ else {
       sqlJsDb.run(
         `INSERT INTO sync_metadata 
          (table_name, last_sync_timestamp, sync_token, last_successful_sync, sync_state, error_message)

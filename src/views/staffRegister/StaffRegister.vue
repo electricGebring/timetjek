@@ -22,6 +22,10 @@ const store = useStaffRegisterStore()
 // import { debugSyncNow } from './debug-sync'
 import { formatTime, formatWorkTime, formatBreak } from '@/utils/timeFormatters'
 
+import { createLogger } from '@/utils/logger'
+
+const logger = createLogger('StaffRegister')
+
 import { useWorkEntryList } from '@/composables/useWorkEntryList'
 
 const { sortedEntriesByDay, dateRange } = useWorkEntryList(toRef(store, 'workEntries'))
@@ -83,7 +87,7 @@ const handleCheckIn = async () => {
 
     const traceId = Math.random().toString(36).slice(2, 8)
 
-    console.log(`[1. UI] 🎬 CheckIn started - ${traceId}`, { work_day_id })
+    logger.log(`[1. UI] 🎬 CheckIn started - ${traceId}`, { work_day_id })
 
     await store.checkIn(work_day_id)
   }
@@ -146,7 +150,7 @@ const runDebugFunction = async (functionName: string) => {
   debugStatus.value = `Kör ${functionName}...`
 
   try {
-    const service = (window as unknown as { staffRegisterService: any }).staffRegisterService
+    const service = (window as unknown as { staffRegisterService: unknown }).staffRegisterService
 
     if (!service) {
       throw new Error('Service inte tillgänglig på window.staffRegisterService')
@@ -156,7 +160,7 @@ const runDebugFunction = async (functionName: string) => {
 
     switch (functionName) {
       case 'getCurrentStatus':
-        result = await service.getCurrentStatus()
+        result = await (service as { getCurrentStatus: () => Promise<unknown> }).getCurrentStatus()
 
         debugStatus.value = `✓ Status hämtad`
 
@@ -217,7 +221,7 @@ const runDebugFunction = async (functionName: string) => {
         break
     }
 
-    console.log(`[DEBUG] ${functionName}:`, result)
+    logger.info(`[DEBUG] ${functionName}:`, result)
   }
  catch (e: unknown) {
     debugError.value = (e as Error).message || 'Okänt fel'

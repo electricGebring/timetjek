@@ -47,7 +47,7 @@ function upsertWorkEntryWeb(safeEntry: SafeWorkEntry) {
 
   let rowExists = false
 
-  if (safeEntry.id != null) {
+  if (safeEntry.id !== null) {
     if (safeEntry.id !== null && safeEntry.id !== undefined) {
       const results = sqlJsDb.exec(SQL.SELECT_ID, [safeEntry.id])
 
@@ -79,7 +79,8 @@ export async function upsertWorkEntry(entry: Partial<WorkEntry> | SafeWorkEntry)
 
   if (Capacitor.isNativePlatform()) {
     await upsertWorkEntryNative(safeEntry)
-  } else {
+  }
+ else {
     upsertWorkEntryWeb(safeEntry)
   }
 }

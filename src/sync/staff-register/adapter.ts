@@ -14,7 +14,7 @@ import type { ConflictResolutionStrategy as ConflictStrategyType } from '@/enums
 
 import { mergeRemoteWorkEntry } from './merge-remote'
 
-export function createStaffRegisterAdapter(): TableSyncAdapter {
+export function createStaffRegisterAdapter(): TableSyncAdapter<Entry> {
   const fetchEntriesOrThrow = async (api: typeof import('@/api/staff-register')) => {
     return await api.fetchStaffRegisterEntries()
   }
@@ -41,20 +41,26 @@ export function createStaffRegisterAdapter(): TableSyncAdapter {
 
       const allEntries = await fetchEntriesOrThrow(api)
 
-      const results = []
+      const results: Entry[] = []
 
       for (const item of items) {
-        if (!item.id) continue
+        // Type guard to ensure item is Entry
+        if (typeof item !== 'object' || item === null || !('id' in item)) continue
 
-        const existsInApi = allEntries.some((e) => e.id === item.id)
+        const entry = item as Entry
+
+        if (!entry.id) continue
+
+        const existsInApi = allEntries.some((e) => e.id === entry.id)
 
         let resultItem: Entry
 
         if (existsInApi) {
-          resultItem = await api.updateEntry(item)
+          resultItem = await api.updateEntry(entry)
         }
+
  else {
-          resultItem = await api.createEntry(item)
+          resultItem = await api.createEntry(entry)
         }
 
         await repo.upsertWorkEntry({ ...resultItem })
@@ -72,7 +78,15 @@ export function createStaffRegisterAdapter(): TableSyncAdapter {
           await deleteEntry(id)
         }
  catch (e) {
-          if ((e as any)?.message?.includes('404')) continue
+          if (
+            typeof e === 'object' &&
+            e !== null &&
+            'message' in e &&
+            typeof (e as { message: unknown }).message === 'string' &&
+            ((e as { message: string }).message.includes('404'))
+          ) {
+            continue
+          }
 
           throw e
         }
@@ -81,19 +95,26 @@ export function createStaffRegisterAdapter(): TableSyncAdapter {
     createItem: async (item: Entry): Promise<Entry> => {
       assertOnline('createItem')
 
+      // Type guard to ensure item is Entry
+      if (typeof item !== 'object' || item === null || !('id' in item)) {
+        throw new Error('Invalid item: not an Entry')
+      }
+
+      const entry = item as Entry
+
       const api = await import('@/api/staff-register')
 
       const allEntries = await fetchEntriesOrThrow(api)
 
-      const existsInApi = allEntries.some((e) => e.id === item.id)
+      const existsInApi = allEntries.some((e) => e.id === entry.id)
 
       let resultItem: Entry
 
       if (existsInApi) {
-        resultItem = await api.updateEntry(item)
+        resultItem = await api.updateEntry(entry)
       }
  else {
-        resultItem = await api.createEntry(item)
+        resultItem = await api.createEntry(entry)
       }
 
       await repo.upsertWorkEntry({ ...resultItem })
@@ -109,7 +130,7 @@ export function createStaffRegisterAdapter(): TableSyncAdapter {
       try {
         return await fetchStaffRegisterEntries()
       }
- catch (_error) {
+ catch {
         return []
       }
     },
@@ -117,7 +138,7 @@ export function createStaffRegisterAdapter(): TableSyncAdapter {
       try {
         return await fetchStaffRegisterEntries()
       }
- catch (_error) {
+ catch {
         return []
       }
     },
@@ -125,7 +146,7 @@ export function createStaffRegisterAdapter(): TableSyncAdapter {
     updateStore: async (entries?: Entry[]): Promise<void> => {
       const domain = await import('@/domain/staff-register/domain')
 
-      if (entries != null) {
+      if (entries !== null) {
         await domain.updateStoreFromEntries(entries)
       }
  else {
