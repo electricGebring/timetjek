@@ -1,12 +1,14 @@
 import { Network } from '@capacitor/network'
+
 import type { ConnectivityPort, ConnectivityState, Unsubscribe } from '../domain/ports/connectivity.port'
 
 export class CapacitorConnectivityAdapter implements ConnectivityPort {
   async getCurrent(): Promise<ConnectivityState> {
     const status = await Network.getStatus()
+
     return {
       online: status.connected,
-      connectionType: status.connectionType,
+      connectionType: status.connectionType
     }
   }
 
@@ -14,7 +16,7 @@ export class CapacitorConnectivityAdapter implements ConnectivityPort {
     const listener = Network.addListener('networkStatusChange', (status) => {
       handler({
         online: status.connected,
-        connectionType: status.connectionType,
+        connectionType: status.connectionType
       })
     })
 

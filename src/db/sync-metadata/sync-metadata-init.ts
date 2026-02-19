@@ -1,4 +1,5 @@
 import { getDB } from '../index'
+
 import { Capacitor } from '@capacitor/core'
 
 const SYNC_METADATA_DDL = `
@@ -14,19 +15,23 @@ const SYNC_METADATA_DDL = `
 
 async function initSyncMetadataTableNative(): Promise<void> {
   const db = getDB()
+
   await db.execute(SYNC_METADATA_DDL)
 }
 
 function initSyncMetadataTableWeb(): void {
   const { sqlJsDb, saveDatabase } = getDB() as { sqlJsDb: { run: (sql: string) => void }; saveDatabase: () => void }
+
   sqlJsDb.run(SYNC_METADATA_DDL)
+
   saveDatabase()
 }
 
 export async function initSyncMetadataTable(): Promise<void> {
   if (Capacitor.isNativePlatform()) {
     await initSyncMetadataTableNative()
-  } else {
+  }
+ else {
     initSyncMetadataTableWeb()
   }
 }

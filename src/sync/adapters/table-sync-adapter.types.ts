@@ -10,22 +10,22 @@ import type { ConflictResolutionStrategy } from '@/enums/ConflictResolutionStrat
  * - getUnsynced / getDeleted: Read from local DB. markAsSynced: Update local DB only.
  * - batchUpsert / createItem: Push to API; adapter may update local DB (e.g. mark synced) as needed.
  */
-export type TableSyncAdapter = {
+export type TableSyncAdapter<T = unknown> = {
   tableName: string
-  getUnsynced: () => Promise<any[]>
-  getDeleted: () => Promise<any[]>
+  getUnsynced: () => Promise<T[]>
+  getDeleted: () => Promise<T[]>
   markAsSynced: (id: number) => Promise<void>
   permanentDelete: (id: number) => Promise<void>
-  batchUpsert: (items: any[]) => Promise<any[]>
+  batchUpsert: (items: T[]) => Promise<T[]>
   batchDelete: (ids: number[]) => Promise<void>
-  createItem: (item: any) => Promise<any>
+  createItem: (item: T) => Promise<T>
   deleteItem: (id: number) => Promise<void>
-  fetchAll: () => Promise<any[]>
-  fetchSince: (timestamp: number) => Promise<any[]>
+  fetchAll: () => Promise<T[]>
+  fetchSince: (timestamp: number) => Promise<T[]>
   mergeRemote: (
-    remoteItem: any,
+    remoteItem: T,
     strategy?: ConflictResolutionStrategy
-  ) => Promise<{ resolved: any; conflictDetected: boolean }>
+  ) => Promise<{ resolved: T; conflictDetected: boolean }>
   /** Refresh UI store: from DB (no args) or from given entries (e.g. after pull, in-memory resolved + unsynced). */
-  updateStore: (entries?: any[]) => Promise<void>
+  updateStore: (entries?: T[]) => Promise<void>
 }

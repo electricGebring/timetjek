@@ -9,9 +9,13 @@ const defaultBackend: Logger = console
 
 function formatMessage(prefix: string, args: unknown[]): unknown[] {
   if (!prefix) return args
+
   const tag = `[${prefix}]`
+
   if (args.length === 0) return [tag]
+
   if (typeof args[0] === 'string') return [`${tag} ${args[0]}`, ...args.slice(1)]
+
   return [tag, ...args]
 }
 

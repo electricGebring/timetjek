@@ -1,21 +1,34 @@
 import { getDB } from '../index'
+
 import { Capacitor } from '@capacitor/core'
+
 import type { WorkEntry } from '@/models/work-entry.schema'
+
 import { mapRowToWorkEntry } from './work-entry.mapper'
+
 import { WORK_ENTRY_SQL } from './work-entry.sql'
 
 const SQL = WORK_ENTRY_SQL
 
 async function queryWorkEntries(where: string, params: unknown[] = []): Promise<WorkEntry[]> {
   const sql = `${SQL.SELECT_WHERE} ${where}`.trim()
+
   if (Capacitor.isNativePlatform()) {
-    const res = await getDB().query(sql, params as any[])
+    const res = await getDB().query(sql, params as unknown[])
+
     if (!res.values) return []
+
     return res.values.map(mapRowToWorkEntry)
   }
-  const { sqlJsDb } = getDB() as any
+
+  const { sqlJsDb } = getDB() as {
+    sqlJsDb: { exec: (sql: string, params: unknown[]) => { length: number; values: unknown[] }[] }
+  }
+
   const results = sqlJsDb.exec(sql, params)
+
   if (results.length === 0) return []
+
   return results[0].values.map(mapRowToWorkEntry)
 }
 

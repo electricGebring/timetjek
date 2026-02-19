@@ -13,5 +13,4 @@ export const ConflictResolutionStrategy = {
   FIELD_MERGE: 'field-merge'
 } as const
 
-export type ConflictResolutionStrategy =
-  (typeof ConflictResolutionStrategy)[keyof typeof ConflictResolutionStrategy]
+export type ConflictResolutionStrategy = (typeof ConflictResolutionStrategy)[keyof typeof ConflictResolutionStrategy]

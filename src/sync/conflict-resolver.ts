@@ -3,6 +3,7 @@
  */
 
 import { ConflictResolutionStrategy as Strategy } from '@/enums/ConflictResolutionStrategy'
+
 import type { ConflictResolutionStrategy, ConflictResolutionResult, ConflictResolver } from './conflict-resolver.types'
 
 export class DefaultConflictResolver implements ConflictResolver {

@@ -6,9 +6,11 @@ const props = defineProps({
   headerTime: { type: String, default: '' }
 })
 
-const now = ref(new Date());
-let timerId: number | undefined;
-let tempTimerId: number | undefined;
+const now = ref(new Date())
+
+let timerId: number | undefined
+
+let tempTimerId: number | undefined
 
 const formatHeaderDate = (date: Date) => {
   const formatted = new Intl.DateTimeFormat('sv-SE', {
@@ -16,6 +18,7 @@ const formatHeaderDate = (date: Date) => {
     day: 'numeric',
     month: 'short'
   }).format(date)
+
   return formatted.charAt(0).toUpperCase() + formatted.slice(1)
 }
 
@@ -28,7 +31,9 @@ const formatHeaderTime = (date: Date) =>
   }).format(date)
 
 const displayDate = computed(() => props.headerDate || formatHeaderDate(now.value))
+
 const displayTime = computed(() => props.headerTime || formatHeaderTime(now.value))
+
 const temperature = ref<number | null>(null)
 
 const displayTemperature = computed(() => (temperature.value === null ? '—°' : `${temperature.value}°`))
@@ -45,13 +50,26 @@ const fetchTemperature = async () => {
     })
 
     const { latitude, longitude } = position.coords
-    const url = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m&temperature_unit=celsius&timezone=auto`
+
+    const url =
+      `https://api.open-meteo.com/v1/forecast` +
+      `?latitude=${latitude}` +
+      `&longitude=${longitude}` +
+      `&current=temperature_2m` +
+      `&temperature_unit=celsius` +
+      `&timezone=auto`
+
     const response = await fetch(url)
+
     if (!response.ok) return
+
     const data = await response.json()
+
     const temp = data?.current?.temperature_2m
+
     if (typeof temp === 'number') temperature.value = Math.round(temp)
-  } catch (_error) {
+  }
+ catch {
     // ignore
   }
 }
@@ -60,12 +78,15 @@ onMounted(() => {
   timerId = window.setInterval(() => {
     now.value = new Date()
   }, 1000)
+
   fetchTemperature()
+
   tempTimerId = window.setInterval(fetchTemperature, 10 * 60 * 1000)
 })
 
 onUnmounted(() => {
   if (timerId) window.clearInterval(timerId)
+
   if (tempTimerId) window.clearInterval(tempTimerId)
 })
 </script>

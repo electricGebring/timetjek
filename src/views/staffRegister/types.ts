@@ -1,5 +1,10 @@
 import type { TimeRegistrationStatus } from '@/enums/TimeRegistrationStatus'
+
+export type { TimeRegistrationStatus } from '@/enums/TimeRegistrationStatus'
+
 import type { TimeRegistrationApplication } from '@/enums/TimeRegistrationApplication'
+
+export type { TimeRegistrationApplication } from '@/enums/TimeRegistrationApplication'
 
 export interface Entry {
   // Identification
@@ -66,6 +71,6 @@ export interface GroupedWorkEntries {
   days: Array<{
     date: string
     dateLabel: string
-    entries: any[]
+    entries: Entry[]
   }>
 }

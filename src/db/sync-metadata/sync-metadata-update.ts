@@ -1,6 +1,9 @@
 import { getDB } from '../index'
+
 import { Capacitor } from '@capacitor/core'
+
 import { getSyncMetadata } from './sync-metadata-query'
+
 import type { SyncMetadata } from './sync-metadata-types'
 
 export async function updateSyncMetadata(
@@ -9,7 +12,9 @@ export async function updateSyncMetadata(
 ): Promise<void> {
   if (Capacitor.isNativePlatform()) {
     const db = getDB()
+
     const existing = await getSyncMetadata(tableName)
+
     if (existing) {
       await db.run(
         `UPDATE sync_metadata 
@@ -25,10 +30,11 @@ export async function updateSyncMetadata(
           updates.lastSuccessfulSync ?? existing.lastSuccessfulSync,
           updates.syncState ?? existing.syncState,
           updates.errorMessage ?? existing.errorMessage,
-          tableName,
+          tableName
         ]
       )
-    } else {
+    }
+ else {
       await db.run(
         `INSERT INTO sync_metadata 
          (table_name, last_sync_timestamp, sync_token, last_successful_sync, sync_state, error_message)
@@ -39,13 +45,19 @@ export async function updateSyncMetadata(
           updates.syncToken ?? null,
           updates.lastSuccessfulSync ?? null,
           updates.syncState ?? 'idle',
-          updates.errorMessage ?? null,
+          updates.errorMessage ?? null
         ]
       )
     }
-  } else {
-    const { sqlJsDb, saveDatabase } = getDB() as any
+  }
+ else {
+    const { sqlJsDb, saveDatabase } = getDB() as {
+      sqlJsDb: { run: (sql: string, params?: unknown[]) => void }
+      saveDatabase: () => void
+    }
+
     const existing = await getSyncMetadata(tableName)
+
     if (existing) {
       sqlJsDb.run(
         `UPDATE sync_metadata 
@@ -61,10 +73,11 @@ export async function updateSyncMetadata(
           updates.lastSuccessfulSync ?? existing.lastSuccessfulSync,
           updates.syncState ?? existing.syncState,
           updates.errorMessage ?? existing.errorMessage,
-          tableName,
+          tableName
         ]
       )
-    } else {
+    }
+ else {
       sqlJsDb.run(
         `INSERT INTO sync_metadata 
          (table_name, last_sync_timestamp, sync_token, last_successful_sync, sync_state, error_message)
@@ -75,35 +88,34 @@ export async function updateSyncMetadata(
           updates.syncToken ?? null,
           updates.lastSuccessfulSync ?? null,
           updates.syncState ?? 'idle',
-          updates.errorMessage ?? null,
+          updates.errorMessage ?? null
         ]
       )
     }
+
     saveDatabase()
   }
 }
 
 export async function markSyncSuccess(tableName: string, syncToken?: string): Promise<void> {
   const now = Math.floor(Date.now() / 1000)
+
   await updateSyncMetadata(tableName, {
     lastSyncTimestamp: now,
     lastSuccessfulSync: now,
     syncToken: syncToken ?? null,
     syncState: 'idle',
-    errorMessage: null,
+    errorMessage: null
   })
 }
 
 export async function markSyncError(tableName: string, errorMessage: string): Promise<void> {
   await updateSyncMetadata(tableName, {
     syncState: 'error',
-    errorMessage,
+    errorMessage
   })
 }
 
-export async function setSyncState(
-  tableName: string,
-  state: SyncMetadata['syncState']
-): Promise<void> {
+export async function setSyncState(tableName: string, state: SyncMetadata['syncState']): Promise<void> {
   await updateSyncMetadata(tableName, { syncState: state })
 }

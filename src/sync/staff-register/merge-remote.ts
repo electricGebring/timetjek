@@ -1,11 +1,15 @@
 /**
  * Merge a remote work entry with the local one in memory (conflict resolution).
- * Does not persist to DB — the pull path only updates the store. DB is written only when pushing (unsynced → API → save result).
+ * Does not persist to DB — the pull path only updates the store. DB is written only when pushing 
+ * (unsynced → API → save result).
  */
 
 import * as repo from '@/db/staff-register/repo'
+
 import { defaultConflictResolver } from '@/sync/conflict-resolver'
-import type { Entry } from '@/views/staffRegister/types'
+
+import type { Entry, TimeRegistrationStatus, TimeRegistrationApplication } from '@/views/staffRegister/types'
+
 import {
   ConflictResolutionStrategy,
   type ConflictResolutionStrategy as StrategyType
@@ -16,8 +20,10 @@ type ResolverEntry = Entry & { updatedAt?: number }
 
 function toResolverFormat(entry: { updatedAt?: string | number | null }): ResolverEntry {
   const e = entry as Entry
+
   const updatedAt =
-    e.updatedAt == null ? undefined : typeof e.updatedAt === 'string' ? Date.parse(e.updatedAt) : e.updatedAt
+    e.updatedAt === null ? undefined : typeof e.updatedAt === 'string' ? Date.parse(e.updatedAt) : e.updatedAt
+
   return { ...e, updatedAt } as ResolverEntry
 }
 
@@ -43,36 +49,93 @@ export async function mergeRemoteWorkEntry(
   strategy: StrategyType = ConflictResolutionStrategy.LAST_WRITE_WINS
 ): Promise<{ resolved: Entry; conflictDetected: boolean }> {
   if (!remote.id) {
-    return { resolved: remote, conflictDetected: true }
+    // Return a dummy Entry with id 0 to satisfy type
+    return { resolved: { ...remote, id: 0 }, conflictDetected: true }
   }
 
   const locals = await repo.getWorkEntries()
-  const local = locals.find((e) => e.id === remote.id)
+
+  const local = locals.find((e) => (e.id ?? 0) === (remote.id ?? 0))
 
   if (!local) {
     // No local entry: persist remote to DB as synced
-    await repo.upsertWorkEntry({ ...remote, synced: 1 })
-    return { resolved: remote, conflictDetected: false }
+    const safeRemote = {
+      ...remote,
+      id: remote.id ?? 0,
+      work_day_id: remote.work_day_id ?? 0,
+      check_in_at: remote.check_in_at ?? '',
+      check_out_at: remote.check_out_at ?? '',
+      check_in_time_at: remote.check_in_time_at ?? '',
+      createdAt: remote.createdAt ?? new Date().toISOString(),
+      updatedAt: remote.updatedAt ?? new Date().toISOString(),
+      check_in_latitude: remote.check_in_latitude ?? 0,
+      check_in_longitude: remote.check_in_longitude ?? 0,
+      check_out_latitude: remote.check_out_latitude ?? 0,
+      check_out_longitude: remote.check_out_longitude ?? 0,
+      check_in_application: (remote.check_in_application ?? 'APP') as TimeRegistrationApplication,
+      check_out_application: (remote.check_out_application ?? null) as TimeRegistrationApplication | null,
+    }
+
+    await repo.upsertWorkEntry({ ...safeRemote, synced: 1 })
+
+    return { resolved: safeRemote, conflictDetected: false }
   }
 
   if (local.synced === 0) {
-    // Local changes not yet synced: do NOT overwrite, return local
-    return { resolved: local as Entry, conflictDetected: false }
+    // Local changes not ännu synkade: returnera local med säkra defaultvärden och rätt typ
+    const resolvedLocal: Entry = {
+      ...local,
+      id: local.id ?? 0,
+      work_day_id: local.work_day_id ?? 0,
+      status: (local.status ?? 'UNKNOWN') as TimeRegistrationStatus,
+      check_in_at: local.check_in_at ?? '',
+      check_out_at: local.check_out_at ?? '',
+      check_in_time_at: local.check_in_time_at ?? '',
+      updatedAt: local.updatedAt ?? new Date().toISOString(),
+      createdAt: local.createdAt ?? new Date().toISOString(),
+      check_in_latitude: local.check_in_latitude ?? 0,
+      check_in_longitude: local.check_in_longitude ?? 0,
+      check_out_latitude: local.check_out_latitude ?? 0,
+      check_out_longitude: local.check_out_longitude ?? 0,
+      check_in_application: (local.check_in_application ?? 'APP') as TimeRegistrationApplication,
+      check_out_application: (local.check_out_application ?? null) as TimeRegistrationApplication | null,
+    }
+
+    return { resolved: resolvedLocal, conflictDetected: false }
   }
 
   // Conflict resolution, persist result to DB only if changed (avoid unnecessary writes)
   const result = defaultConflictResolver.resolve(toResolverFormat(local), toResolverFormat(remote), strategy)
+
   const toPersist = fromResolverFormat(result.resolved as ResolverEntry)
+
   // Jämför local och toPersist, upserta bara om ändrad
   function entriesAreEqual(a: Entry, b: Entry): boolean {
-    return (
-      a.id === b.id &&
-      a.updatedAt === b.updatedAt &&
-      a.status === b.status
-    );
+    return a.id === b.id && a.updatedAt === b.updatedAt && a.status === b.status
   }
-  if (!entriesAreEqual(local, toPersist)) {
-    await repo.upsertWorkEntry({ ...toPersist, synced: 1 })
+
+
+  // Ensure id and work_day_id are never null for Entry
+  const safeToPersist = {
+    ...toPersist,
+    id: toPersist.id ?? 0,
+    work_day_id: toPersist.work_day_id ?? 0,
+    check_in_at: toPersist.check_in_at ?? '',
+    check_out_at: toPersist.check_out_at ?? '',
+    check_in_time_at: toPersist.check_in_time_at ?? '',
+    createdAt: toPersist.createdAt ?? new Date().toISOString(),
+    updatedAt: toPersist.updatedAt ?? new Date().toISOString(),
+    check_in_latitude: toPersist.check_in_latitude ?? 0,
+    check_in_longitude: toPersist.check_in_longitude ?? 0,
+    check_out_latitude: toPersist.check_out_latitude ?? 0,
+    check_out_longitude: toPersist.check_out_longitude ?? 0,
+    check_in_application: (toPersist.check_in_application ?? 'APP') as TimeRegistrationApplication,
+    check_out_application: (toPersist.check_out_application ?? null) as TimeRegistrationApplication | null,
   }
+
+  if (!entriesAreEqual(local, safeToPersist)) {
+    await repo.upsertWorkEntry({ ...safeToPersist, synced: 1 })
+  }
+
   return { resolved: toPersist, conflictDetected: result.conflictDetected }
 }

@@ -1,26 +1,42 @@
 // Import core Vue and app dependencies
 import { createApp } from 'vue'
+
 import { createPinia } from 'pinia'
+
 import './style.css'
+
 import App from './App.vue'
+
 import { initDB } from '@/db/index'
+
 import router from './router'
+
 import i18n from './i18n'
+
 import { runMigrations } from '@/db/migrate'
 
 // Import sync and connectivity dependencies
 import { CapacitorConnectivityAdapter } from './sync/capacitor-connectivity.adapter'
+
 import { OnlineOfflineCoordinator } from './domain/services/online-offline-coordinator'
+
 import { cleanupAllTables } from './domain/services/data-cleanup'
+
 import { SyncManager } from './sync/sync-manager'
+
 import type { SyncPort } from './domain/ports/sync.port'
+
 import { initSyncTrigger } from './domain/services/sync-trigger'
+
 import { createLogger } from '@/utils/logger'
+
 import { FontAwesomeIcon } from './fontawesome/icons'
 
 // Import generic sync adapter registration and table adapters
 import { TABLE_WORK_ENTRIES } from '@/constants/tables'
+
 import { registerTableAdapter } from '@/sync/table-sync-adapter'
+
 import { createStaffRegisterAdapter } from '@/sync/staff-register/adapter'
 
 // Import service layer (exposes on window for debugging)
@@ -30,6 +46,7 @@ import '@/domain/staff-register/service'
 async function bootstrap() {
   // Initialize database (tables, migrations, etc)
   await initDB()
+
   // Run database migrations after database is initialized
   await runMigrations()
 
@@ -38,10 +55,15 @@ async function bootstrap() {
 
   // Create and mount Vue app
   const app = createApp(App)
+
   app.component('FontAwesomeIcon', FontAwesomeIcon)
+
   app.use(createPinia())
+
   app.use(router)
+
   app.use(i18n)
+
   app.mount('#app')
 
   // Setup connectivity and sync dependencies
@@ -60,14 +82,14 @@ async function bootstrap() {
     },
     isRunning() {
       return syncManager.isAnyRunning()
-    },
+    }
   }
 
   // Setup online/offline coordinator for automatic sync
   const coordinator = new OnlineOfflineCoordinator({
     connectivity,
     sync: syncAdapter,
-    logger: createLogger('Coordinator'),
+    logger: createLogger('Coordinator')
     // Optional: Enable periodic sync for always-online apps
     // syncIntervalMs: 30 * 1000, // Uncomment to enable
   })
@@ -76,68 +98,88 @@ async function bootstrap() {
   // This enables instant sync when online, but still works offline
   initSyncTrigger(syncAdapter, connectivity)
 
-
   // Start coordinator after app is mounted
   await coordinator.start()
 
+  // Create a logger for bootstrap
+  const logger = createLogger('Bootstrap')
+
   // Run initial sync to populate database with API data
   try {
-    console.log('[Bootstrap] Running initial sync...')
+    logger.log('[Bootstrap] Running initial sync...')
+
     await syncAdapter.start('manual')
-    console.log('[Bootstrap] Initial sync completed')
-  } catch (error) {
+
+    logger.log('[Bootstrap] Initial sync completed')
+  }
+ catch (error) {
     console.error('[Bootstrap] Initial sync failed:', error)
   }
 
   // Run initial cleanup of expired data based on configured policies
   try {
     const results = await cleanupAllTables()
+
     const totalCleaned = Object.values(results).reduce((sum, count) => sum + count, 0)
+
     if (totalCleaned > 0) {
-      console.log(`[Bootstrap] Cleaned up expired data:`, results)
+      logger.log(`[Bootstrap] Cleaned up expired data:`, results)
     }
-  } catch (error) {
-    console.error('[Bootstrap] Initial cleanup failed:', error)
+  }
+ catch (error) {
+    logger.error('[Bootstrap] Initial cleanup failed:', error)
   }
 
   // Schedule periodic cleanup (daily at midnight)
-  scheduleDailyCleanup()
+  scheduleDailyCleanup(logger)
 }
 
 /**
  * Schedule daily cleanup of expired data
  * Runs cleanup once per day based on configured retention policies
  */
-function scheduleDailyCleanup() {
+type LoggerLike = { log: (...args: unknown[]) => void; error: (...args: unknown[]) => void }
+
+function scheduleDailyCleanup(logger: LoggerLike = console) {
   const runCleanup = async () => {
     try {
       const results = await cleanupAllTables()
+
       const totalCleaned = Object.values(results).reduce((sum, count) => sum + count, 0)
+
       if (totalCleaned > 0) {
-        console.log(`[Cleanup] Cleaned up expired data:`, results)
+        logger.log(`[Cleanup] Cleaned up expired data:`, results)
       }
-    } catch (error) {
-      console.error('[Cleanup] Scheduled cleanup failed:', error)
+    }
+ catch (error) {
+      logger.error('[Cleanup] Scheduled cleanup failed:', error)
     }
   }
 
   // Calculate milliseconds until next midnight
   const now = new Date()
+
   const tomorrow = new Date(now)
+
   tomorrow.setDate(tomorrow.getDate() + 1)
+
   tomorrow.setHours(0, 0, 0, 0)
+
   const msUntilMidnight = tomorrow.getTime() - now.getTime()
 
   // Run cleanup at next midnight, then every 24 hours
   setTimeout(() => {
     runCleanup()
+
     setInterval(runCleanup, 24 * 60 * 60 * 1000) // Every 24 hours
   }, msUntilMidnight)
 
-  console.log(`[Bootstrap] Scheduled daily cleanup starting at ${tomorrow.toISOString()}`)
+  logger.log(`[Bootstrap] Scheduled daily cleanup starting at ${tomorrow.toISOString()}`)
 }
 
 // Start the app bootstrap process
 bootstrap().catch((err) => {
-  console.error('Bootstrap error:', err)
+  const logger = createLogger('Bootstrap')
+
+  logger.error('Bootstrap error:', err)
 })

@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+
 import StaffRegister from '@/views/staffRegister/StaffRegister.vue'
 
 const router = createRouter({

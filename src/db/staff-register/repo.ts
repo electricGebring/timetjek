@@ -10,4 +10,5 @@ export {
 } from './work-entry.delete'
 
 export { workEntryToEntry } from './work-entry.mapper'
+
 export { calculateTotalWorkingSeconds } from './work-entry.helpers'

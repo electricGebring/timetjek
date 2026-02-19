@@ -1,9 +1,12 @@
 import { TABLE_WORK_ENTRIES } from '@/constants/tables'
+
 import { ConflictResolutionStrategy } from '@/enums/ConflictResolutionStrategy'
+
 import { SyncMode } from '@/enums/SyncMode'
 
 /** Re-export for use across the project */
 export { ConflictResolutionStrategy } from '@/enums/ConflictResolutionStrategy'
+
 export { SyncMode } from '@/enums/SyncMode'
 
 export type DataRetentionPolicy = {
@@ -16,10 +19,9 @@ export type DataRetentionPolicy = {
   customCleanup?: (tableName: string) => Promise<number>
 }
 
-/**
- * Default data policies configuration
- * Register your data types here with their retention policies
- */
+// Default data policies configuration
+// Register your data types here with their retention policies
+
 export const DATA_POLICIES: Record<string, DataRetentionPolicy> = {
   [TABLE_WORK_ENTRIES]: {
     tableName: TABLE_WORK_ENTRIES,
@@ -43,8 +45,11 @@ export function getDataPolicy(tableName: string): DataRetentionPolicy | undefine
  */
 export function shouldSyncTable(tableName: string): boolean {
   const policy = getDataPolicy(tableName)
+
   if (!policy) return false // Unknown tables are not synced by default
+
   if (policy.syncMode === SyncMode.ONLINE_ONLY) return false // Online-only doesn't sync
+
   return policy.autoSync !== false // Default to true unless explicitly false
 }
 
@@ -53,7 +58,9 @@ export function shouldSyncTable(tableName: string): boolean {
  */
 export function supportsOfflineStorage(tableName: string): boolean {
   const policy = getDataPolicy(tableName)
+
   if (!policy) return false
+
   return policy.syncMode === SyncMode.OFFLINE_FIRST || policy.syncMode === SyncMode.CACHE_ONLY
 }
 
@@ -62,6 +69,7 @@ export function supportsOfflineStorage(tableName: string): boolean {
  */
 export function getRetentionDays(tableName: string): number | undefined {
   const policy = getDataPolicy(tableName)
+
   return policy?.retentionDays
 }
 
@@ -70,6 +78,7 @@ export function getRetentionDays(tableName: string): number | undefined {
  */
 export function shouldSoftDeleteOnly(tableName: string): boolean {
   const policy = getDataPolicy(tableName)
+
   return policy?.softDeleteOnly === true
 }
 
@@ -79,6 +88,7 @@ export function shouldSoftDeleteOnly(tableName: string): boolean {
  */
 export function getConflictStrategy(tableName: string): ConflictResolutionStrategy {
   const policy = getDataPolicy(tableName)
+
   return policy?.conflictStrategy ?? ConflictResolutionStrategy.LAST_WRITE_WINS
 }
 
@@ -93,7 +103,7 @@ export function registerDataPolicy(policy: DataRetentionPolicy): void {
  * Get all policies that need cleanup
  */
 export function getPoliciesNeedingCleanup(): DataRetentionPolicy[] {
-  return Object.values(DATA_POLICIES).filter(
+  return (Object.values(DATA_POLICIES) as DataRetentionPolicy[]).filter(
     (policy) =>
       (policy.syncMode === SyncMode.OFFLINE_FIRST || policy.syncMode === SyncMode.CACHE_ONLY) &&
       policy.retentionDays !== undefined &&
@@ -105,5 +115,5 @@ export function getPoliciesNeedingCleanup(): DataRetentionPolicy[] {
  * Get all policies that should be synced
  */
 export function getPoliciesForSync(): DataRetentionPolicy[] {
-  return Object.values(DATA_POLICIES).filter((policy) => shouldSyncTable(policy.tableName))
+  return (Object.values(DATA_POLICIES) as DataRetentionPolicy[]).filter((policy) => shouldSyncTable(policy.tableName))
 }

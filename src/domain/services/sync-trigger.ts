@@ -7,7 +7,9 @@
  */
 
 import type { SyncPort, SyncReason } from '../ports/sync.port'
+
 import type { ConnectivityPort } from '../ports/connectivity.port'
+
 import { createLogger } from '@/utils/logger'
 
 const logger = createLogger('SyncTrigger')
@@ -15,11 +17,14 @@ const logger = createLogger('SyncTrigger')
 const DEBOUNCE_MS = 100
 
 let globalSyncPort: SyncPort | null = null
+
 let globalConnectivity: ConnectivityPort | null = null
+
 let pendingSyncTimeout: ReturnType<typeof setTimeout> | null = null
 
 export function initSyncTrigger(sync: SyncPort, connectivity: ConnectivityPort): void {
   globalSyncPort = sync
+
   globalConnectivity = connectivity
 }
 
@@ -32,27 +37,34 @@ export function triggerSyncIfOnline(reason: 'manual' | 'mutation' = 'manual'): v
 
   if (pendingSyncTimeout) {
     clearTimeout(pendingSyncTimeout)
+
     pendingSyncTimeout = null
   }
 
   pendingSyncTimeout = setTimeout(() => {
     pendingSyncTimeout = null
+
     runSyncIfOnline(reason)
   }, DEBOUNCE_MS)
 }
 
 async function runSyncIfOnline(reason: 'manual' | 'mutation'): Promise<void> {
   const sync = globalSyncPort
+
   const connectivity = globalConnectivity
+
   if (!sync || !connectivity) return
 
   try {
     const state = await connectivity.getCurrent()
+
     if (!state.online || sync.isRunning()) return
+
     sync.start(reason as unknown as SyncReason).catch((err) => {
       logger.warn('Immediate sync failed', err)
     })
-  } catch (error) {
+  }
+ catch (error) {
     logger.warn('Failed to check connectivity', error)
   }
 }

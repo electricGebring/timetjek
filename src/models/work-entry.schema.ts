@@ -5,12 +5,15 @@ import { z } from 'zod'
  * Single source of truth: column order here = SELECT order in queries.
  */
 const nullableNumber = z.union([z.number(), z.null(), z.undefined()]).transform((v) => v ?? null)
+
 const nullableString = z.union([z.string(), z.null(), z.undefined()]).transform((v) => v ?? null)
+
 const optionalNumber = z.union([z.number(), z.null(), z.undefined()]).transform((v) => v ?? null)
+
 const optionalString = z.union([z.string(), z.null(), z.undefined()]).transform((v) => v ?? null)
-const booleanLike = z
-  .union([z.literal(0), z.literal(1), z.boolean(), z.undefined()])
-  .transform((v) => !!v)
+
+const booleanLike = z.union([z.literal(0), z.literal(1), z.boolean(), z.undefined()]).transform((v) => !!v)
+
 const defaultZero = z.union([z.number(), z.null(), z.undefined()]).transform((v) => v ?? 0)
 
 export const workEntryRowSchema = z
@@ -54,9 +57,7 @@ export const workEntryRowSchema = z
 export type WorkEntry = z.infer<typeof workEntryRowSchema>
 
 /** Column names in SELECT order – derived from schema key order */
-export const WORK_ENTRY_COLUMNS = Object.keys(
-  workEntryRowSchema.shape
-) as (keyof WorkEntry)[]
+export const WORK_ENTRY_COLUMNS = Object.keys(workEntryRowSchema.shape) as (keyof WorkEntry)[]
 
 export type WorkEntryColumn = (typeof WORK_ENTRY_COLUMNS)[number]
 
