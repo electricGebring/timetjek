@@ -13,4 +13,5 @@ export {
 } from './queries'
 
 export { createWorkEntry, updateWorkEntry, deleteWorkEntry } from './commands'
+
 export { updateStoreFromDb, updateStoreFromEntries } from './store-sync'

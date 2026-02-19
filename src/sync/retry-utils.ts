@@ -19,12 +19,14 @@ const DEFAULT_OPTIONS: Required<RetryOptions> = {
  */
 export async function retryWithBackoff<T>(fn: () => Promise<T>, options: RetryOptions = {}): Promise<T> {
   const opts = { ...DEFAULT_OPTIONS, ...options }
+
   let lastError: Error | unknown
 
   for (let attempt = 0; attempt <= opts.maxRetries; attempt++) {
     try {
       return await fn()
-    } catch (error: any) {
+    }
+ catch (error: any) {
       lastError = error
 
       // Don't retry on last attempt
@@ -34,6 +36,7 @@ export async function retryWithBackoff<T>(fn: () => Promise<T>, options: RetryOp
 
       // Check if error is retryable
       const errorMessage = error?.message || ''
+
       const isRetryable = opts.retryableErrors.some((retryableError) => errorMessage.includes(retryableError))
 
       if (!isRetryable) {
@@ -59,6 +62,7 @@ export function isRetryableError(error: unknown): boolean {
   if (!error || typeof error !== 'object') return false
 
   const errorMessage = (error as any)?.message || ''
+
   const status = (error as any)?.status
 
   // Network errors are retryable

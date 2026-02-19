@@ -9,5 +9,6 @@ export function registerTableAdapter(tableName: string, factory: () => TableSync
 
 export function getTableAdapter(tableName: string): TableSyncAdapter | null {
   const factory = tableAdapters.get(tableName)
+
   return factory ? factory() : null
 }

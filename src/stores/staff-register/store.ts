@@ -1,6 +1,9 @@
 import { defineStore } from 'pinia'
+
 import * as domain from '@/domain/staff-register/domain'
+
 import type { Entry, GroupedWorkEntries } from '@/views/staffRegister/types'
+
 import { TimeRegistrationStatus } from '@/enums/TimeRegistrationStatus'
 
 export const useStaffRegisterStore = defineStore('staffRegister', {
@@ -57,6 +60,7 @@ export const useStaffRegisterStore = defineStore('staffRegister', {
     },
     async loadGroupedWorkEntries() {
       const grouped = await domain.getWorkSchemeGrouped()
+
       this.setGroupedWorkEntries(grouped)
     },
 
@@ -65,23 +69,32 @@ export const useStaffRegisterStore = defineStore('staffRegister', {
      */
     async loadWorkEntries() {
       this.setLoading(true)
+
       try {
         const entries = await domain.getAllWorkEntries()
+
         // Convert WorkEntry to Entry format
         const convertedEntries = entries.map(domain.workEntryToEntry)
+
         this.setWorkEntries(convertedEntries)
+
         this.setError(null)
-      } catch (e: any) {
+      }
+ catch (e: any) {
         this.setError(e?.message || 'Failed to load work entries')
-      } finally {
+      }
+ finally {
         this.setLoading(false)
       }
     },
 
     async checkIn(work_day_id: number) {
       console.log('hello')
+
       console.log('[2. STORE] 📦 Calling domain.createWorkEntry...', { work_day_id })
+
       const all = await domain.getAllWorkEntries()
+
       const todays = all.filter((e) => e.work_day_id === work_day_id)
 
       // Check if there's an open break entry (has break field and is still open)
@@ -90,7 +103,9 @@ export const useStaffRegisterStore = defineStore('staffRegister', {
       if (breakEntry) {
         // Close the break entry and update break time with actual end time
         const now = new Date().toISOString()
+
         const breakStart = breakEntry.break?.split('-')[0] || '00:00:00'
+
         const breakEnd = now.split('T')[1]?.split('.')[0] || '00:00:00'
 
         await domain.updateWorkEntry({
@@ -104,15 +119,18 @@ export const useStaffRegisterStore = defineStore('staffRegister', {
 
         // After closing break entry, reload to get updated data
         await this.loadWorkEntries()
-      } else {
+      }
+ else {
         // Check if there's already an open work entry
         const hasOpen = todays.some((e) => e.check_in_at && !e.check_out_at)
+
         if (hasOpen) {
           throw new Error('Du är redan instämplad. Stämpla ut först.')
         }
       }
 
       const now = new Date().toISOString()
+
       await domain.createWorkEntry({
         work_day_id: work_day_id ?? 0,
         employee_id: 1,
@@ -149,6 +167,7 @@ export const useStaffRegisterStore = defineStore('staffRegister', {
 
     async checkOut(work_day_id: number) {
       const entries = await domain.getAllWorkEntries()
+
       // Find open work entry (not a break entry)
       const openEntry = entries.find(
         (e) => e.work_day_id === work_day_id && e.check_in_at && !e.check_out_at && !e.break
@@ -171,16 +190,19 @@ export const useStaffRegisterStore = defineStore('staffRegister', {
 
     async goOnBreak(work_day_id: number) {
       const entries = await domain.getAllWorkEntries()
+
       const todaysEntries = entries.filter((e) => e.work_day_id === work_day_id)
 
       // Check if already on break (entry with break field set but no check_out)
       const onBreak = todaysEntries.some((e) => e.check_in_at && !e.check_out_at && e.break)
+
       if (onBreak) {
         throw new Error('Du är redan på rast')
       }
 
       // Find open work entry and close it
       const openEntry = todaysEntries.find((e) => e.check_in_at && !e.check_out_at)
+
       if (openEntry) {
         await domain.updateWorkEntry({
           ...openEntry,
@@ -193,6 +215,7 @@ export const useStaffRegisterStore = defineStore('staffRegister', {
 
       // Create new break entry with break start time (end will be set when returning)
       const now = new Date().toISOString()
+
       const breakStart = now.split('T')[1]?.split('.')[0] || '00:00:00'
 
       const breakValue = `${breakStart}-00:00:00`

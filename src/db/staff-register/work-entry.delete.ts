@@ -1,21 +1,30 @@
 import { getDB } from '../index'
+
 import { Capacitor } from '@capacitor/core'
+
 import { WORK_ENTRY_SQL } from './work-entry.sql'
 
 const SQL = WORK_ENTRY_SQL
 
 async function runStatement(sql: string, params: unknown[]) {
   if (Capacitor.isNativePlatform()) {
-    await getDB().run(sql, params as any[])
-  } else {
-    const { sqlJsDb, saveDatabase } = getDB() as any
+    await getDB().run(sql, params as unknown[])
+  }
+ else {
+    const { sqlJsDb, saveDatabase } = getDB() as {
+      sqlJsDb: { run: (sql: string, params: unknown[]) => void }
+      saveDatabase: () => void
+    }
+
     sqlJsDb.run(sql, params)
+
     saveDatabase()
   }
 }
 
 export async function softDeleteWorkEntry(id: number) {
   const now = new Date().toISOString()
+
   await runStatement(SQL.UPDATE_SOFT_DELETE, [now, id])
 }
 

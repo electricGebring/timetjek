@@ -89,23 +89,37 @@ export function calculateTotalWorkingSeconds(
 
   if (breakStr) {
     const parts = breakStr.split('-')
+
     if (parts.length === 2 && parts[0] && parts[1] && parts[1] !== '00:00:00') {
       const startParts = parts[0].split(':')
+
       const endParts = parts[1].split(':')
+
       const startH = parseInt(startParts[0] || '0', 10)
+
       const startM = parseInt(startParts[1] || '0', 10)
+
       const startS = parseInt(startParts[2] || '0', 10)
+
       const endH = parseInt(endParts[0] || '0', 10)
+
       const endM = parseInt(endParts[1] || '0', 10)
+
       const endS = parseInt(endParts[2] || '0', 10)
+
       const breakSeconds = (endH - startH) * 3600 + (endM - startM) * 60 + (endS - startS)
+
       return Math.max(0, breakSeconds)
     }
+
     return null
   }
 
   const checkIn = new Date(checkInAt).getTime()
+
   const checkOut = new Date(checkOutAt).getTime()
+
   const totalSeconds = Math.floor((checkOut - checkIn) / 1000)
+
   return Math.max(0, totalSeconds)
 }

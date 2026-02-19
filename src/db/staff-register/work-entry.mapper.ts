@@ -1,7 +1,11 @@
 import type { Entry } from '@/views/staffRegister/types'
+
 import type { TimeRegistrationApplication } from '@/enums/TimeRegistrationApplication'
+
 import { TimeRegistrationStatus } from '@/enums/TimeRegistrationStatus'
+
 import type { WorkEntry, WorkEntryColumn } from '@/models/work-entry.schema'
+
 import { WORK_ENTRY_COLUMNS, parseWorkEntryRow } from '@/models/work-entry.schema'
 
 /** Build a record from a row array using column order (same as WORK_ENTRY_COLUMNS). */
@@ -10,9 +14,11 @@ export function rowToRecord(
   columns: readonly WorkEntryColumn[] = WORK_ENTRY_COLUMNS
 ): Record<string, unknown> {
   const record: Record<string, unknown> = {}
+
   columns.forEach((col, i) => {
     record[col] = row[i]
   })
+
   return record
 }
 
@@ -21,9 +27,11 @@ export function mapRowToWorkEntry(row: unknown): WorkEntry {
   if (Array.isArray(row)) {
     return parseWorkEntryRow(rowToRecord(row))
   }
+
   if (row && typeof row === 'object') {
     return parseWorkEntryRow(row as Record<string, unknown>)
   }
+
   return parseWorkEntryRow({})
 }
 

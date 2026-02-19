@@ -10,6 +10,7 @@ import type { Logger } from './logger'
  */
 export function isBrowserOffline(): boolean {
   if (typeof window === 'undefined' || typeof navigator === 'undefined') return false
+
   return navigator.onLine === false
 }
 
@@ -20,6 +21,7 @@ export function isBrowserOffline(): boolean {
 export function assertOnline(operation: string, logger?: Logger): void {
   if (isBrowserOffline()) {
     logger?.warn(`${operation} blocked: offline mode`)
+
     throw new Error(`Offline: cannot ${operation}`)
   }
 }
@@ -32,7 +34,9 @@ export function assertOnline(operation: string, logger?: Logger): void {
 export function whenOffline(operation: string, logger?: Logger): boolean {
   if (isBrowserOffline()) {
     logger?.warn(`${operation} blocked: offline mode`)
+
     return true
   }
+
   return false
 }

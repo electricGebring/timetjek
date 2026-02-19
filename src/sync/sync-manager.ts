@@ -3,9 +3,13 @@
  */
 
 import type { SyncReason } from '../domain/ports/sync.port'
+
 import { createLogger } from '@/utils/logger'
+
 import { getPoliciesForSync, shouldSyncTable } from '../domain/config/data-policies'
+
 import { SyncEngine } from './sync-engine'
+
 import { getTableAdapter } from './table-sync-adapter'
 
 type SyncManagerDeps = {
@@ -36,6 +40,7 @@ export class SyncManager {
 
     if (!this.syncEngines.has(tableName)) {
       const adapter = getTableAdapter(tableName)
+
       if (!adapter) {
         // NOTE: Missing adapter means this table is intentionally not synced.
         return null
@@ -61,37 +66,46 @@ export class SyncManager {
   async syncAll(reason: SyncReason): Promise<void> {
     if (this.syncInProgress) {
       this.logger.log('[SyncManager] ⏳ Sync already in progress, skipping')
+
       return
     }
+
     // Extra safety: never run sync when offline (web)
     if (typeof window !== 'undefined' && typeof navigator !== 'undefined' && navigator.onLine === false) {
       this.logger.warn('[SyncManager] Aborting sync: navigator.onLine is false (offline mode)')
+
       return
     }
 
     this.syncInProgress = true
+
     try {
       const policies = getPoliciesForSync()
 
       const results = await Promise.allSettled(
         policies.map(async (policy) => {
           const engine = this.getSyncEngine(policy.tableName)
+
           if (!engine) return
 
           try {
             await engine.start(reason)
-          } catch (error) {
+          }
+ catch (error) {
             this.logger.error(`[SyncManager] Failed to sync ${policy.tableName}:`, error)
+
             throw error
           }
         })
       )
 
       const failed = results.filter((r) => r.status === 'rejected')
+
       if (failed.length > 0) {
         this.logger.warn(`[SyncManager] ${failed.length} tables failed to sync`)
       }
-    } finally {
+    }
+ finally {
       this.syncInProgress = false
     }
   }
@@ -102,10 +116,12 @@ export class SyncManager {
   async syncTable(tableName: string, reason: SyncReason): Promise<void> {
     if (!shouldSyncTable(tableName)) {
       this.logger.warn(`[SyncManager] Table ${tableName} is not configured for sync`)
+
       return
     }
 
     const engine = this.getSyncEngine(tableName)
+
     if (!engine) {
       throw new Error(`No sync engine available for ${tableName}`)
     }
@@ -125,6 +141,7 @@ export class SyncManager {
    */
   async stopTable(tableName: string): Promise<void> {
     const engine = this.syncEngines.get(tableName)
+
     if (engine) {
       await engine.stop()
     }
@@ -142,6 +159,7 @@ export class SyncManager {
    */
   isTableRunning(tableName: string): boolean {
     const engine = this.syncEngines.get(tableName)
+
     return engine?.isRunning() ?? false
   }
 }

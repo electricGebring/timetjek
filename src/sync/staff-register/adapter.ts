@@ -1,10 +1,17 @@
 import type { TableSyncAdapter } from '../table-sync-adapter'
+
 import { TABLE_WORK_ENTRIES } from '@/constants/tables'
+
 import { assertOnline, whenOffline } from '@/utils/connectivity'
+
 import * as repo from '@/db/staff-register/repo'
+
 import { fetchStaffRegisterEntries, deleteEntry } from '@/api/staff-register'
+
 import type { Entry } from '@/views/staffRegister/types'
+
 import type { ConflictResolutionStrategy as ConflictStrategyType } from '@/enums/ConflictResolutionStrategy'
+
 import { mergeRemoteWorkEntry } from './merge-remote'
 
 export function createStaffRegisterAdapter(): TableSyncAdapter {
@@ -16,6 +23,7 @@ export function createStaffRegisterAdapter(): TableSyncAdapter {
     tableName: TABLE_WORK_ENTRIES,
     getUnsynced: async (): Promise<Entry[]> => {
       const unsynced = (await repo.getUnsyncedWorkEntries()).filter((e) => e.id !== null).map(repo.workEntryToEntry)
+
       return unsynced
     },
     getDeleted: async (): Promise<Entry[]> =>
@@ -30,21 +38,27 @@ export function createStaffRegisterAdapter(): TableSyncAdapter {
       assertOnline('batchUpsert')
 
       const api = await import('@/api/staff-register')
+
       const allEntries = await fetchEntriesOrThrow(api)
+
       const results = []
 
       for (const item of items) {
         if (!item.id) continue
 
         const existsInApi = allEntries.some((e) => e.id === item.id)
+
         let resultItem: Entry
+
         if (existsInApi) {
           resultItem = await api.updateEntry(item)
-        } else {
+        }
+ else {
           resultItem = await api.createEntry(item)
         }
 
         await repo.upsertWorkEntry({ ...resultItem })
+
         results.push(resultItem)
       }
 
@@ -52,56 +66,69 @@ export function createStaffRegisterAdapter(): TableSyncAdapter {
     },
     batchDelete: async (ids: number[]): Promise<void> => {
       if (whenOffline('batchDelete')) return
+
       for (const id of ids) {
         try {
           await deleteEntry(id)
-        } catch (e) {
+        }
+ catch (e) {
           if ((e as any)?.message?.includes('404')) continue
+
           throw e
         }
       }
     },
     createItem: async (item: Entry): Promise<Entry> => {
       assertOnline('createItem')
+
       const api = await import('@/api/staff-register')
 
       const allEntries = await fetchEntriesOrThrow(api)
+
       const existsInApi = allEntries.some((e) => e.id === item.id)
 
       let resultItem: Entry
+
       if (existsInApi) {
         resultItem = await api.updateEntry(item)
-      } else {
+      }
+ else {
         resultItem = await api.createEntry(item)
       }
 
       await repo.upsertWorkEntry({ ...resultItem })
+
       return resultItem
     },
     deleteItem: async (id: number): Promise<void> => {
       if (whenOffline('deleteItem')) return
+
       await deleteEntry(id)
     },
     fetchAll: async (): Promise<Entry[]> => {
       try {
         return await fetchStaffRegisterEntries()
-      } catch (_error) {
+      }
+ catch (_error) {
         return []
       }
     },
     fetchSince: async (): Promise<Entry[]> => {
       try {
         return await fetchStaffRegisterEntries()
-      } catch (_error) {
+      }
+ catch (_error) {
         return []
       }
     },
     mergeRemote: (remoteItem: Entry, strategy?: ConflictStrategyType) => mergeRemoteWorkEntry(remoteItem, strategy),
     updateStore: async (entries?: Entry[]): Promise<void> => {
       const domain = await import('@/domain/staff-register/domain')
+
       if (entries != null) {
         await domain.updateStoreFromEntries(entries)
-      } else {
+      }
+ else {
         await domain.updateStoreFromDb()
       }
     }

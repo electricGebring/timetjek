@@ -1,4 +1,5 @@
 import type { TimeRegistrationStatus } from '@/enums/TimeRegistrationStatus'
+
 import type { TimeRegistrationApplication } from '@/enums/TimeRegistrationApplication'
 
 export interface Entry {
