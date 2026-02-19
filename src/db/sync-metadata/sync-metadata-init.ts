@@ -14,9 +14,12 @@ const SYNC_METADATA_DDL = `
 `
 
 async function initSyncMetadataTableNative(): Promise<void> {
-  const db = getDB()
+  // Type assertion for Capacitor SQLite DB
+  const db = getDB() as {
+    execute: (options: { statements: string }) => Promise<unknown>
+  }
 
-  await db.execute(SYNC_METADATA_DDL)
+  await db.execute({ statements: SYNC_METADATA_DDL })
 }
 
 function initSyncMetadataTableWeb(): void {

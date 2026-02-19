@@ -219,7 +219,7 @@ export async function clearAllData() {
 
 ;
 
-interface StaffRegisterService {
+export interface StaffRegisterService {
   getWorkHistory: typeof getWorkHistory;
   getEntriesForDate: typeof getEntriesForDate;
   getCurrentStatus: typeof getCurrentStatus;

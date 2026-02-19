@@ -92,7 +92,9 @@ async function queryRows(sql: string, params: unknown[] = []): Promise<unknown[]
     const res = await db.query(sql, params)
 
     // Filter out metadata rows that have 'ios_columns' or similar keys
-    const values = (res.values ?? []).filter((row: unknown) => !('ios_columns' in row && Object.keys(row).length === 1))
+    const values = (res.values ?? []).filter((row: unknown) => {
+      return !(typeof row === 'object' && row !== null && 'ios_columns' in row && Object.keys(row).length === 1)
+    })
 
     return values as unknown[][]
   }

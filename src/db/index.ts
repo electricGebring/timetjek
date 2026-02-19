@@ -24,9 +24,11 @@ export async function initDB() {
       sqlite = new SQLiteConnection(CapacitorSQLite)
     }
 
+
     capacitorDb = await sqlite.createConnection('appdb', false, 'no-encryption', 1, false)
 
-    await capacitorDb.open()
+    // Type assertion for Capacitor SQLite DB
+    await (capacitorDb as { open: () => Promise<unknown> }).open()
 
     await initStaffRegisterDb(capacitorDb, true)
 
@@ -47,9 +49,16 @@ export async function initDB() {
           return `https://sql.js.org/dist/${file}`
         }
       })
-     }
-   catch (error: unknown) {
-      if (error.message?.includes('fetch') || error.message?.includes('WASM') || error.message?.includes('404')) {
+    }
+ catch (error: unknown) {
+      if (
+        typeof error === 'object' && error !== null &&
+        'message' in error &&
+        typeof (error as { message?: string }).message === 'string' &&
+        ((error as { message: string }).message.includes('fetch') ||
+          (error as { message: string }).message.includes('WASM') ||
+          (error as { message: string }).message.includes('404'))
+      ) {
         console.warn('[DB] Public WASM not found, trying CDN...')
 
         try {
@@ -74,10 +83,10 @@ export async function initDB() {
     if (savedDb) {
       const buf = Uint8Array.from(atob(savedDb), (c) => c.charCodeAt(0))
 
-      sqlJsDb = new SQL.Database(buf)
+      sqlJsDb = new (SQL as import('sql.js').SqlJsStatic).Database(buf)
     }
  else {
-      sqlJsDb = new SQL.Database()
+      sqlJsDb = new (SQL as import('sql.js').SqlJsStatic).Database()
     }
 
     if (!sqlJsDb) {

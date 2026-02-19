@@ -1,3 +1,4 @@
+export type { DayGroup } from '@/domain/staff-register/types'
 import type { TimeRegistrationStatus } from '@/enums/TimeRegistrationStatus'
 
 export type { TimeRegistrationStatus } from '@/enums/TimeRegistrationStatus'
@@ -53,7 +54,7 @@ export interface Entry {
   deleted: number
 }
 
-interface Day {
+export interface Day {
   date: string
   dateLabel: string
   entries: Entry[]

@@ -8,7 +8,12 @@ const SQL = WORK_ENTRY_SQL
 
 async function runStatement(sql: string, params: unknown[]) {
   if (Capacitor.isNativePlatform()) {
-    await getDB().run(sql, params as unknown[])
+    // Type assertion for Capacitor SQLite DB
+    const db = getDB() as {
+      run: (sql: string, params?: unknown[]) => Promise<unknown>
+    }
+
+    await db.run(sql, params as unknown[])
   }
  else {
     const { sqlJsDb, saveDatabase } = getDB() as {

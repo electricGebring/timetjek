@@ -11,7 +11,11 @@ export async function updateSyncMetadata(
   updates: Partial<Omit<SyncMetadata, 'tableName'>>
 ): Promise<void> {
   if (Capacitor.isNativePlatform()) {
-    const db = getDB()
+
+    // Type assertion: Capacitor SQLite DB type
+    const db = getDB() as {
+      run: (sql: string, params?: unknown[]) => Promise<unknown>
+    }
 
     const existing = await getSyncMetadata(tableName)
 

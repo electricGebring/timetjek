@@ -1,5 +1,7 @@
 import { getAllWorkEntries } from './queries'
 
+import { workEntryToEntry } from '@/db/staff-register/repo'
+
 import type { Entry } from '@/views/staffRegister/types'
 
 export async function updateStoreFromDb() {
@@ -9,7 +11,10 @@ export async function updateStoreFromDb() {
 
   const store = useStaffRegisterStore()
 
-  store.setWorkEntries(allEntries)
+  // Map WorkEntry[] to Entry[]
+  const entryList: Entry[] = allEntries.map(workEntryToEntry)
+
+  store.setWorkEntries(entryList)
 }
 
 /** Update store from a list of entries (e.g. after pull: resolved API items + unsynced local). */

@@ -22,7 +22,7 @@
         </thead>
         <tbody class="divide-y divide-gray-200">
           <template
-            v-for="day in entriesByDay"
+            v-for="day in safeEntriesByDay"
             :key="day.date"
           >
             <tr>
@@ -131,11 +131,15 @@
 </template>
 
 <script lang="ts" setup>
+import { computed } from 'vue'
+
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 
 import type { PropType } from 'vue'
 
-defineProps({
+import type { Entry } from '@/views/staffRegister/types'
+
+const props = defineProps({
   entriesByDay: {
     type: Array as PropType<Array<{ date: string; dateLabel: string; entries: unknown[] }>>,
     required: true
@@ -164,5 +168,17 @@ defineProps({
     type: Function as PropType<(type: string) => string>,
     required: true
   }
+})
+
+// Type guard for Entry
+function isEntry(entry: unknown): entry is Entry {
+  return typeof entry === 'object' && entry !== null && 'id' in entry && 'name' in entry && 'type' in entry
+}
+
+const safeEntriesByDay = computed(() => {
+  return (props.entriesByDay as Array<{ date: string; dateLabel: string; entries: unknown[] }>).map(day => ({
+    ...day,
+    entries: day.entries.filter(isEntry) as Entry[]
+  }))
 })
 </script>

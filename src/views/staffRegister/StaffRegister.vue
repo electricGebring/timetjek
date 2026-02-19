@@ -142,6 +142,8 @@ const handleBreak = async () => {
 }
 
 // Debug functions
+import type { StaffRegisterService } from '@/domain/staff-register/service'
+
 const runDebugFunction = async (functionName: string) => {
   debugLoading.value = true
 
@@ -150,17 +152,17 @@ const runDebugFunction = async (functionName: string) => {
   debugStatus.value = `Kör ${functionName}...`
 
   try {
-    const service = (window as unknown as { staffRegisterService: unknown }).staffRegisterService
+    const service = (window as unknown as { staffRegisterService: StaffRegisterService }).staffRegisterService
 
     if (!service) {
       throw new Error('Service inte tillgänglig på window.staffRegisterService')
     }
 
-    let result: unknown
+    let result: any = null
 
     switch (functionName) {
       case 'getCurrentStatus':
-        result = await (service as { getCurrentStatus: () => Promise<unknown> }).getCurrentStatus()
+        result = await service.getCurrentStatus()
 
         debugStatus.value = `✓ Status hämtad`
 
@@ -171,25 +173,24 @@ const runDebugFunction = async (functionName: string) => {
       case 'getWorkHistory':
         result = await service.getWorkHistory(7)
 
-        debugStatus.value = `✓ Historik hämtad (${result.length} poster)`
+        debugStatus.value = `✓ Historik hämtad (${(result as any[]).length} poster)`
 
         debugResult.value = result
 
         break
 
       case 'getPendingSyncOperations':
-        result = await service.getPendingSyncOperations()
+        // Om denna funktion inte finns, visa felmeddelande
+        debugStatus.value = `Ej implementerat`
 
-        debugStatus.value = `✓ Väntande sync (${result.length} operationer)`
-
-        debugResult.value = result
+        debugResult.value = null
 
         break
 
       case 'getAllEntries':
         result = await service.getAllEntries()
 
-        debugStatus.value = `✓ Alla entries hämtade (${result.length} totalt)`
+        debugStatus.value = `✓ Alla entries hämtade (${(result as any[]).length} totalt)`
 
         debugResult.value = result
 
@@ -221,7 +222,7 @@ const runDebugFunction = async (functionName: string) => {
         break
     }
 
-    logger.info(`[DEBUG] ${functionName}:`, result)
+    logger.log(`[DEBUG] ${functionName}:`, result)
   }
  catch (e: unknown) {
     debugError.value = (e as Error).message || 'Okänt fel'
@@ -273,15 +274,15 @@ const runDebugFunction = async (functionName: string) => {
       <section class="mb-6 grid grid-cols-4 gap-4">
         <div class="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
           <div class="text-sm font-semibold text-gray-600">ÖPPNA</div>
-          <div class="text-2xl font-bold text-blue-600">{{ store.statusSummary.OPEN || 0 }}</div>
+          <div class="text-2xl font-bold text-blue-600">{{ store.statusSummary['OPEN'] || 0 }}</div>
         </div>
         <div class="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
           <div class="text-sm font-semibold text-gray-600">SLUTFÖRDA</div>
-          <div class="text-2xl font-bold text-green-600">{{ store.statusSummary.CLOSED || 0 }}</div>
+          <div class="text-2xl font-bold text-green-600">{{ store.statusSummary['CLOSED'] || 0 }}</div>
         </div>
         <div class="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
           <div class="text-sm font-semibold text-gray-600">SAKNADE TIDER</div>
-          <div class="text-2xl font-bold text-red-600">{{ store.statusSummary.FORGOT_CHECK_OUT || 0 }}</div>
+          <div class="text-2xl font-bold text-red-600">{{ store.statusSummary['FORGOT_CHECK_OUT'] || 0 }}</div>
         </div>
         <div class="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
           <div class="text-sm font-semibold text-gray-600">TOTALT ARBETAT</div>

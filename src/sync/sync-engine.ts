@@ -360,7 +360,9 @@ export class SyncEngine implements SyncPort {
 
         if (result.conflictDetected) conflictCount++
 
-        if (result.resolved !== null) resolvedItems.push(result.resolved)
+        if (result.resolved && typeof result.resolved === 'object' && 'id' in result.resolved) {
+          resolvedItems.push(result.resolved as Entry)
+        }
       }
       catch (err: unknown) {
         mergeErrors++

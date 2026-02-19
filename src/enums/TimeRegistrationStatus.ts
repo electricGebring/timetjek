@@ -5,4 +5,4 @@ export const TimeRegistrationStatus = {
   AWAITS_APPROVAL: 'AWAITS_APPROVAL'
 } as const
 
-export type TimeRegistrationStatus = 'UNKNOWN' | 'CHECKED_IN' | 'CHECKED_OUT' | 'APPROVED' | 'REJECTED'
+export type TimeRegistrationStatus = 'OPEN' | 'CLOSED' | 'FORGOT_CHECK_OUT' | 'AWAITS_APPROVAL'

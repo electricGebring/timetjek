@@ -13,7 +13,12 @@ import { WORK_ENTRY_SQL } from './work-entry.sql'
 const SQL = WORK_ENTRY_SQL
 
 async function upsertWorkEntryNative(safeEntry: SafeWorkEntry) {
-  const db = getDB()
+
+  // Type assertion for Capacitor SQLite DB
+  const db = getDB() as {
+    query: (sql: string, params?: unknown[]) => Promise<{ values?: unknown[][] }>
+    run: (sql: string, params?: unknown[]) => Promise<unknown>
+  }
 
   let rowExists = false
 
@@ -47,12 +52,14 @@ function upsertWorkEntryWeb(safeEntry: SafeWorkEntry) {
 
   let rowExists = false
 
-  if (safeEntry.id !== null) {
-    if (safeEntry.id !== null && safeEntry.id !== undefined) {
-      const results = sqlJsDb.exec(SQL.SELECT_ID, [safeEntry.id])
+  if (safeEntry.id !== null && safeEntry.id !== undefined) {
+    const results = sqlJsDb.exec(SQL.SELECT_ID, [safeEntry.id])
 
-      rowExists = results.length > 0 && results[0].values.length > 0
-    }
+    rowExists =
+      results.length > 0 &&
+      !!results[0]?.values &&
+      Array.isArray(results[0].values) &&
+      results[0].values.length > 0
   }
 
   if (rowExists) {

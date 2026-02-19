@@ -14,7 +14,11 @@ async function queryWorkEntries(where: string, params: unknown[] = []): Promise<
   const sql = `${SQL.SELECT_WHERE} ${where}`.trim()
 
   if (Capacitor.isNativePlatform()) {
-    const res = await getDB().query(sql, params as unknown[])
+    // Type assertion for Capacitor SQLite DB
+    const db = getDB() as {
+      query: (sql: string, params?: unknown[]) => Promise<{ values?: unknown[][] }>
+    }
+    const res = await db.query(sql, params as unknown[])
 
     if (!res.values) return []
 
@@ -22,12 +26,12 @@ async function queryWorkEntries(where: string, params: unknown[] = []): Promise<
   }
 
   const { sqlJsDb } = getDB() as {
-    sqlJsDb: { exec: (sql: string, params: unknown[]) => { length: number; values: unknown[] }[] }
+    sqlJsDb: { exec: (sql: string, params: unknown[]) => { length: number; values: unknown[][] }[] }
   }
 
   const results = sqlJsDb.exec(sql, params)
 
-  if (results.length === 0) return []
+  if (results.length === 0 || !results[0]?.values) return []
 
   return results[0].values.map(mapRowToWorkEntry)
 }

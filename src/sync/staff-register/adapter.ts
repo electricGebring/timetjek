@@ -146,7 +146,7 @@ export function createStaffRegisterAdapter(): TableSyncAdapter<Entry> {
     updateStore: async (entries?: Entry[]): Promise<void> => {
       const domain = await import('@/domain/staff-register/domain')
 
-      if (entries !== null) {
+      if (entries && Array.isArray(entries)) {
         await domain.updateStoreFromEntries(entries)
       }
  else {
