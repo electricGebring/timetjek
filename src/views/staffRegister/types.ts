@@ -1,4 +1,5 @@
 export type { DayGroup } from '@/domain/staff-register/types'
+
 import type { TimeRegistrationStatus } from '@/enums/TimeRegistrationStatus'
 
 export type { TimeRegistrationStatus } from '@/enums/TimeRegistrationStatus'

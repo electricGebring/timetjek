@@ -18,6 +18,7 @@ async function queryWorkEntries(where: string, params: unknown[] = []): Promise<
     const db = getDB() as {
       query: (sql: string, params?: unknown[]) => Promise<{ values?: unknown[][] }>
     }
+    
     const res = await db.query(sql, params as unknown[])
 
     if (!res.values) return []

@@ -1,8 +1,13 @@
+import { fileURLToPath } from 'url'
+import { dirname } from 'path'
+
 import vue from 'eslint-plugin-vue'
-
 import typescript from '@typescript-eslint/eslint-plugin'
-
 import vueTsConfig from '@vue/eslint-config-typescript'
+
+const tsconfigRootDir = typeof import.meta.url === 'string'
+  ? dirname(fileURLToPath(import.meta.url))
+  : process.cwd()
 
 export default [
   ...vueTsConfig(),
@@ -10,7 +15,11 @@ export default [
     files: ['**/*.{js,ts,vue}'],
     languageOptions: {
       ecmaVersion: 2021,
-      sourceType: 'module'
+      sourceType: 'module',
+      parserOptions: {
+        project: ['./tsconfig.app.json'],
+        tsconfigRootDir
+      }
     },
     plugins: {
       vue,

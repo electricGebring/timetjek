@@ -158,7 +158,7 @@ const runDebugFunction = async (functionName: string) => {
       throw new Error('Service inte tillgänglig på window.staffRegisterService')
     }
 
-    let result: any = null
+    let result: unknown = null
 
     switch (functionName) {
       case 'getCurrentStatus':
@@ -173,7 +173,7 @@ const runDebugFunction = async (functionName: string) => {
       case 'getWorkHistory':
         result = await service.getWorkHistory(7)
 
-        debugStatus.value = `✓ Historik hämtad (${(result as any[]).length} poster)`
+        debugStatus.value = `✓ Historik hämtad (${(result as unknown[]).length} poster)`
 
         debugResult.value = result
 
@@ -190,7 +190,7 @@ const runDebugFunction = async (functionName: string) => {
       case 'getAllEntries':
         result = await service.getAllEntries()
 
-        debugStatus.value = `✓ Alla entries hämtade (${(result as any[]).length} totalt)`
+        debugStatus.value = `✓ Alla entries hämtade (${(result as unknown[]).length} totalt)`
 
         debugResult.value = result
 

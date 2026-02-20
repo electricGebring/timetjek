@@ -36,10 +36,14 @@ export async function retryWithBackoff<T>(fn: () => Promise<T>, options: RetryOp
 
       // Check if error is retryable
       const hasMessage = (e: unknown): e is { message: string } =>
-        typeof e === 'object' && e !== null && 'message' in e && typeof (e as { message: unknown }).message === 'string';
+        typeof e === 'object' && e !== null && 'message' in e && 
+      typeof (e as { message: unknown }).message === 'string';
+
       const errorMessage = hasMessage(error) ? error.message : ''
 
-      const isRetryable = opts.retryableErrors.some((retryableError) => errorMessage.includes(retryableError))
+      const isRetryable = opts.retryableErrors.some((retryableError) =>
+        errorMessage.includes(retryableError)
+      )
 
       if (!isRetryable) {
         // Not a retryable error, throw immediately
