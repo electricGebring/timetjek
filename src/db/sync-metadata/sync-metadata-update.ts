@@ -40,7 +40,7 @@ export async function updateSyncMetadata(
     }
  else {
       await db.run(
-        `INSERT INTO sync_metadata 
+        `INSERT OR REPLACE INTO sync_metadata 
          (table_name, last_sync_timestamp, sync_token, last_successful_sync, sync_state, error_message)
          VALUES (?, ?, ?, ?, ?, ?)`,
         [
@@ -83,7 +83,7 @@ export async function updateSyncMetadata(
     }
  else {
       sqlJsDb.run(
-        `INSERT INTO sync_metadata 
+        `INSERT OR REPLACE INTO sync_metadata 
          (table_name, last_sync_timestamp, sync_token, last_successful_sync, sync_state, error_message)
          VALUES (?, ?, ?, ?, ?, ?)`,
         [
