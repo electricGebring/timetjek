@@ -1,8 +1,13 @@
 import type { SyncPort, SyncReason } from '../domain/ports/sync.port'
+
 import type { Entry } from '@/views/staffRegister/types'
+
 import { getConflictStrategy } from '@/domain/config/data-policies'
+
 import * as syncMetadata from '@/db/sync-metadata/repo'
+
 import { retryWithBackoff, isRetryableError } from './retry-utils'
+
 import { getTableAdapter, type TableSyncAdapter } from './table-sync-adapter'
 
 type SyncEngineDeps = {
@@ -254,11 +259,15 @@ export class SyncEngine implements SyncPort {
    * Fetch items from API: incremental när vi har lastSyncTimestamp, annars full; faller tillbaka till full vid fel.
    */
   private async fetchRemoteItems(): Promise<{ apiItems: Entry[]; isIncremental: boolean }> {
+    
     const metadata = await syncMetadata.getSyncMetadata(this.tableName)
+
     const since = metadata?.lastSyncTimestamp ?? 0
 
     if (since === 0) {
+
       const apiItems = await this.adapter.fetchAll() as Entry[]
+      
       return { apiItems, isIncremental: false }
     }
 
@@ -267,13 +276,17 @@ export class SyncEngine implements SyncPort {
         maxRetries: 2,
         initialDelay: 1000
       }) as Entry[]
+      
       return { apiItems, isIncremental: true }
-    } catch (error: unknown) {
+    } 
+    catch (error: unknown) {
       this.logger.warn('Incremental sync failed for', this.tableName, 'falling back to full sync', error)
+      
       const apiItems = await retryWithBackoff(async () => this.adapter.fetchAll(), {
         maxRetries: 3,
         initialDelay: 1000
       }) as Entry[]
+
       return { apiItems, isIncremental: false }
     }
   }
@@ -296,10 +309,12 @@ export class SyncEngine implements SyncPort {
       // Om API är offline, fetch misslyckas, ELLER apiItems är tom array, ladda från DB istället
       if (!apiItems || !Array.isArray(apiItems) || apiItems.length === 0) {
         this.logger.warn('[SYNC] API offline, fetch misslyckades eller tom lista – laddar entries från lokal DB')
+        
         await this.adapter.updateStore()
+
         return
       }
-      // console.log('här går vi förbi kontrollen')
+  
       const { conflictCount, mergeErrors, resolvedItems } = await this.mergeItemsInMemory(apiItems, signal)
 
       if (signal?.aborted) return
@@ -325,8 +340,10 @@ export class SyncEngine implements SyncPort {
       await this.adapter.updateStore(combined)
 
       this.logPullResult(apiItems.length, isIncremental, conflictCount, mergeErrors)
-    } catch (error) {
+    } 
+    catch (error) {
       this.logger.error('Failed to pull remote changes for', this.tableName, error)
+      
       // If sync with API fails, restore store from local DB
       await this.adapter.updateStore()
     }

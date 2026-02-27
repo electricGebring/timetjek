@@ -182,12 +182,17 @@ const runDebugFunction = async (functionName: string) => {
       case 'getPendingSyncOperations':
         if (service.getPendingSyncOperations) {
           result = await service.getPendingSyncOperations()
+          
           debugStatus.value = `✓ Väntande sync hämtad (${(result as unknown[]).length} poster)`
+          
           debugResult.value = result
-        } else {
+        } 
+        else {
           debugStatus.value = `Ej implementerat`
+          
           debugResult.value = null
         }
+        
         break
 
       case 'getAllEntries':
