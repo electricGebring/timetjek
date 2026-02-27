@@ -410,6 +410,7 @@ const runDebugFunction = async (functionName: string) => {
           :debugLoading="debugLoading"
           :debugError="debugError"
           :runDebugFunction="runDebugFunction"
+          :syncTimings="syncTimings"
         />
       </section>
 
