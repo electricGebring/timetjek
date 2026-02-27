@@ -31,9 +31,9 @@ export class SyncManager {
   }
 
   /**
-   * Get or create sync engine for a table
+   * Get or create sync engine for a table (public for debug/timing)
    */
-  private getSyncEngine(tableName: string): SyncEngine | null {
+  public getSyncEngine(tableName: string): SyncEngine | null {
     if (!shouldSyncTable(tableName)) {
       return null
     }

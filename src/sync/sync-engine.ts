@@ -53,54 +53,133 @@ export class SyncEngine implements SyncPort {
     return this.running
   }
 
-  async start(reason: SyncReason): Promise<void> {
-    if (this.running) {
-      this.logger.log('[SyncEngine] ⏩ Already running, skipping start', reason)
+  // Store timings for debug
+  public lastSyncTimings: Record<string, number> = {}
 
-      return
+  async start(reason: SyncReason): Promise<void> {
+    console.warn('[SyncEngine.start]', this.tableName, 'STARTED');
+
+    // Extra debug: log timings before sync
+    console.warn(
+      '[SyncEngine.start]',
+      this.tableName,
+      'lastSyncTimings BEFORE',
+      JSON.stringify(this.lastSyncTimings || {}, null, 2)
+    );
+
+    if (this.running) {
+      this.logger.log('[SyncEngine] ⏩ Already running, skipping start', reason);
+
+      return;
     }
 
-    this.running = true
+    this.running = true;
 
-    this.abortController = new AbortController()
+    this.abortController = new AbortController();
 
-    const signal = this.abortController.signal
+    const signal = this.abortController.signal;
+
+    const timings: Record<string, number> = {};
 
     try {
-      await syncMetadata.setSyncState(this.tableName, 'syncing')
 
-      if (signal.aborted) return
+      const t0 = performance.now();
 
-      await this.drainOutbox(signal)
+      await syncMetadata.setSyncState(this.tableName, 'syncing');
 
-      if (signal.aborted) return
+      timings.setSyncState = performance.now() - t0;
 
-      await this.drainDeletions(signal)
+      console.warn('[SyncEngine.start]', this.tableName, 'setSyncState', timings.setSyncState);
 
-      if (signal.aborted) return
+      if (signal.aborted) {
+        this.lastSyncTimings = timings;
 
-      await this.pullRemoteChanges(signal)
+        return;
+      }
 
-      if (signal.aborted) return
+      const t1 = performance.now();
 
-      await syncMetadata.markSyncSuccess(this.tableName)
+      await this.drainOutbox(signal);
+
+      timings.drainOutbox = performance.now() - t1;
+
+      console.warn('[SyncEngine.start]', this.tableName, 'drainOutbox', timings.drainOutbox);
+
+      if (signal.aborted) {
+        this.lastSyncTimings = timings;
+
+        return;
+      }
+
+      const t2 = performance.now();
+
+      await this.drainDeletions(signal);
+
+      timings.drainDeletions = performance.now() - t2;
+
+      console.warn('[SyncEngine.start]', this.tableName, 'drainDeletions', timings.drainDeletions);
+
+      if (signal.aborted) {
+        this.lastSyncTimings = timings;
+
+        return;
+      }
+
+      const t3 = performance.now();
+
+      await this.pullRemoteChanges(signal);
+
+      timings.pullRemoteChanges = performance.now() - t3;
+
+      console.warn('[SyncEngine.start]', this.tableName, 'pullRemoteChanges', timings.pullRemoteChanges);
+
+      if (signal.aborted) {
+        this.lastSyncTimings = timings;
+
+        return;
+      }
+
+      const t4 = performance.now();
+
+      await syncMetadata.markSyncSuccess(this.tableName);
+
+      timings.markSyncSuccess = performance.now() - t4;
+
+      console.warn('[SyncEngine.start]', this.tableName, 'markSyncSuccess', timings.markSyncSuccess);
     }
     catch (err: unknown) {
-      this.logger.error('Sync failed for', this.tableName, err)
+      this.logger.error('Sync failed for', this.tableName, err);
 
-      await syncMetadata.markSyncError(this.tableName, (err as Error)?.message || 'Unknown error')
+      timings.error = 1;
+
+      await syncMetadata.markSyncError(
+        this.tableName,
+        (err as Error)?.message || 'Unknown error'
+      );
     }
     finally {
-      this.running = false
+      this.lastSyncTimings = timings;
 
-      this.abortController = null
+      // Log actual timings object after sync
+      console.warn(
+        '[SyncEngine.start]',
+        this.tableName,
+        'lastSyncTimings',
+        JSON.stringify(this.lastSyncTimings, null, 2)
+      );
+
+      this.running = false;
+
+      this.abortController = null;
     }
   }
 
   async stop(): Promise<void> {
-    if (!this.abortController) return
+    if (!this.abortController) {
+      return;
+    }
 
-    this.abortController.abort()
+    this.abortController.abort();
     // running is cleared in start()'s finally when the run exits at next step boundary
   }
 
@@ -109,12 +188,14 @@ export class SyncEngine implements SyncPort {
    * Uses batch operations when possible for better efficiency
    */
   private async drainOutbox(signal?: AbortSignal): Promise<void> {
-    if (signal?.aborted) return
+    if (signal?.aborted) {
+      return;
+    }
 
-    const unsyncedItems = await this.adapter.getUnsynced() as Entry[]
+    const unsyncedItems = await this.adapter.getUnsynced() as Entry[];
 
     if (unsyncedItems.length === 0) {
-      return
+      return;
     }
 
     this.logger.log(`[6. SYNC] 📤 Draining outbox for ${this.tableName}, found ${unsyncedItems.length} unsynced items`)
@@ -188,12 +269,14 @@ export class SyncEngine implements SyncPort {
    * Uses batch operations when possible for better efficiency
    */
   private async drainDeletions(signal?: AbortSignal): Promise<void> {
-    if (signal?.aborted) return
+    if (signal?.aborted) {
+      return;
+    }
 
-    const deletedItems = await this.adapter.getDeleted()
+    const deletedItems = await this.adapter.getDeleted();
 
     if (deletedItems.length === 0) {
-      return
+      return;
     }
 
     // Try batch operation first (if API supports it)
@@ -231,8 +314,8 @@ export class SyncEngine implements SyncPort {
       catch (error: unknown) {
         // If 404, the item doesn't exist in API - safe to delete locally
         const hasMessage = (e: unknown): e is { message: string } =>
-          typeof e === 'object' && e !== null && 'message' in e && 
-        typeof (e as { message: unknown }).message === 'string';
+          typeof e === 'object' && e !== null && 'message' in e &&
+          typeof (e as { message: unknown }).message === 'string';
 
         const hasStatus = (e: unknown): e is { status: number } =>
           typeof e === 'object' && e !== null && 'status' in e && typeof (e as { status: unknown }).status === 'number';
@@ -259,16 +342,15 @@ export class SyncEngine implements SyncPort {
    * Fetch items from API: incremental när vi har lastSyncTimestamp, annars full; faller tillbaka till full vid fel.
    */
   private async fetchRemoteItems(): Promise<{ apiItems: Entry[]; isIncremental: boolean }> {
-    
-    const metadata = await syncMetadata.getSyncMetadata(this.tableName)
 
-    const since = metadata?.lastSyncTimestamp ?? 0
+    const metadata = await syncMetadata.getSyncMetadata(this.tableName);
+
+    const since = metadata?.lastSyncTimestamp ?? 0;
 
     if (since === 0) {
+      const apiItems = await this.adapter.fetchAll() as Entry[];
 
-      const apiItems = await this.adapter.fetchAll() as Entry[]
-      
-      return { apiItems, isIncremental: false }
+      return { apiItems, isIncremental: false };
     }
 
     try {
@@ -276,12 +358,12 @@ export class SyncEngine implements SyncPort {
         maxRetries: 2,
         initialDelay: 1000
       }) as Entry[]
-      
+
       return { apiItems, isIncremental: true }
-    } 
+    }
     catch (error: unknown) {
       this.logger.warn('Incremental sync failed for', this.tableName, 'falling back to full sync', error)
-      
+
       const apiItems = await retryWithBackoff(async () => this.adapter.fetchAll(), {
         maxRetries: 3,
         initialDelay: 1000
@@ -297,56 +379,67 @@ export class SyncEngine implements SyncPort {
    * DB is written only when pushing (drainOutbox: unsynced → API → save result).
    */
   private async pullRemoteChanges(signal?: AbortSignal): Promise<void> {
-    this.logger.log('[6. SYNC] 📥 Pulling remote changes for', this.tableName)
+    this.logger.log('[6. SYNC] 📥 Pulling remote changes for', this.tableName);
 
-    if (signal?.aborted) return
+    if (signal?.aborted) {
+      return;
+    }
 
     try {
-      const { apiItems, isIncremental } = await this.fetchRemoteItems()
+      const { apiItems, isIncremental } = await this.fetchRemoteItems();
 
-      if (signal?.aborted) return
+      if (signal?.aborted) {
+        return;
+      }
 
       // Om API är offline, fetch misslyckas, ELLER apiItems är tom array, ladda från DB istället
       if (!apiItems || !Array.isArray(apiItems) || apiItems.length === 0) {
-        this.logger.warn('[SYNC] API offline, fetch misslyckades eller tom lista – laddar entries från lokal DB')
-        
-        await this.adapter.updateStore()
+        this.logger.warn('[SYNC] API offline, fetch misslyckades eller tom lista – laddar entries från lokal DB');
 
-        return
+        await this.adapter.updateStore();
+
+        return;
       }
-  
-      const { conflictCount, mergeErrors, resolvedItems } = await this.mergeItemsInMemory(apiItems, signal)
 
-      if (signal?.aborted) return
+      const { conflictCount, mergeErrors, resolvedItems } = await this.mergeItemsInMemory(apiItems, signal);
+
+      if (signal?.aborted) {
+        return;
+      }
 
       if (mergeErrors > 0) {
-        this.logger.warn(mergeErrors, 'item(s) failed to merge for', this.tableName)
+        this.logger.warn(mergeErrors, 'item(s) failed to merge for', this.tableName);
       }
 
-      const unsyncedItems = await this.adapter.getUnsynced()
+      const unsyncedItems = await this.adapter.getUnsynced();
 
-      const byId = new Map<number, Entry>()
+      const byId = new Map<number, Entry>();
 
       for (const item of resolvedItems as Entry[]) {
-        if ((item as Entry)?.id !== null) byId.set((item as Entry).id, item as Entry)
+        if ((item as Entry)?.id !== null) {
+          byId.set((item as Entry).id, item as Entry);
+        }
       }
 
       for (const item of unsyncedItems as Entry[]) {
-        if ((item as Entry)?.id !== null) byId.set((item as Entry).id, item as Entry)
+        if ((item as Entry)?.id !== null) {
+          byId.set((item as Entry).id, item as Entry);
+        }
       }
 
-      const combined = Array.from(byId.values())
+      const combined = Array.from(byId.values());
 
-      await this.adapter.updateStore(combined)
+      await this.adapter.updateStore(combined);
 
-      this.logPullResult(apiItems.length, isIncremental, conflictCount, mergeErrors)
-    } 
-    catch (error) {
-      this.logger.error('Failed to pull remote changes for', this.tableName, error)
-      
-      // If sync with API fails, restore store from local DB
-      await this.adapter.updateStore()
+      this.logPullResult(apiItems.length, isIncremental, conflictCount, mergeErrors);
     }
+    catch (error) {
+      this.logger.error('Failed to pull remote changes for', this.tableName, error);
+
+      // If sync with API fails, restore store from local DB
+      await this.adapter.updateStore();
+    }
+
   }
 
   /** Resolve each API item with local in memory (no DB write); returns resolved list for store update. */
@@ -363,7 +456,9 @@ export class SyncEngine implements SyncPort {
     const resolvedItems: Entry[] = []
 
     for (const item of apiItems) {
-      if (signal?.aborted) break
+      if (signal?.aborted) {
+        break;
+      }
 
       try {
         const result = await this.adapter.mergeRemote(item, strategy)
@@ -375,14 +470,19 @@ export class SyncEngine implements SyncPort {
         }
       }
       catch (err: unknown) {
-        mergeErrors++
+        mergeErrors++;
 
-        this.logger.error('mergeRemote failed for', this.tableName, 'item', item && typeof item === 'object' && 
-          'id' in item ? (item as Entry).id : undefined, err)
+        this.logger.error(
+          'mergeRemote failed for',
+          this.tableName,
+          'item',
+          item && typeof item === 'object' && 'id' in item ? (item as Entry).id : undefined,
+          err
+        );
       }
     }
 
-    return { conflictCount, mergeErrors, resolvedItems }
+    return { conflictCount, mergeErrors, resolvedItems };
   }
 
   private logPullResult(itemCount: number, isIncremental: boolean, conflictCount: number, mergeErrors: number): void {
@@ -392,12 +492,16 @@ export class SyncEngine implements SyncPort {
       'items from API for',
       this.tableName,
       isIncremental ? '(incremental)' : '(full)'
-    ]
+    ];
 
-    if (conflictCount > 0) parts.push(`resolved ${conflictCount} conflicts`)
+    if (conflictCount > 0) {
+      parts.push(`resolved ${conflictCount} conflicts`);
+    }
 
-    if (mergeErrors > 0) parts.push(`${mergeErrors} merge error(s)`)
+    if (mergeErrors > 0) {
+      parts.push(`${mergeErrors} merge error(s)`);
+    }
 
-    this.logger.log(...parts)
+    this.logger.log(...parts);
   }
 }

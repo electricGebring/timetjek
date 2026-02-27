@@ -26,7 +26,7 @@ export default [
       '@typescript-eslint': typescript
     },
     rules: {
-      'no-console': ['warn', { allow: ['warn', 'error'] }],
+      'no-console': ['warn', { allow: ['warn', 'error', 'debug'] }],
       'no-debugger': 'warn',
       eqeqeq: 'warn',
       // 'eol-last': ['warn', 'always'],

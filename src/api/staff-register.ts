@@ -76,7 +76,6 @@ export async function createEntry(item: Entry): Promise<Entry> {
     deleted: item.deleted ?? 0
   }
 
-  // eslint-disable-next-line no-console
   console.debug('[8. API] 🌐 POST to API, creating entry:', entryToCreate.id)
 
   const response = await fetchWithRetry(API_URL, {
@@ -89,7 +88,6 @@ export async function createEntry(item: Entry): Promise<Entry> {
 
   const result = await response.json()
 
-  // eslint-disable-next-line no-console
   console.debug('[9. API] ✅ Entry created in API, id:', result.id)
 
   return result

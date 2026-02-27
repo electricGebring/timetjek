@@ -33,24 +33,115 @@ const { sortedEntriesByDay, dateRange } = useWorkEntryList(toRef(store, 'workEnt
 // Debug panel state (dev mode only)
 const debugStatus = ref<string>('')
 
-const debugResult = ref<unknown>(null)
+const debugResult = ref<string[]>([])
 
 const debugLoading = ref(false)
 
 const debugError = ref<string>('')
 
+  const syncTimings = ref<Record<string, number> | undefined>(undefined)
+
+// Typ för window med syncManager
+import type { SyncManager } from '@/sync/sync-manager'
+
+interface WindowWithSyncManager extends Window {
+  syncManager?: SyncManager
+}
+
+function updateSyncTimings() {
+  try {
+    const syncManager = (window as WindowWithSyncManager).syncManager
+
+    console.warn('[DebugPanel] updateSyncTimings called')
+
+    if (!syncManager) {
+      
+      console.warn('[DebugPanel] No syncManager on window')
+      
+      return
+    }
+
+    // Try common table names
+    const possibleTables = ['work_entries', 'staff_register', 'staffregister', 'entries']
+    
+    let engine = null
+
+    for (const t of possibleTables) {
+      engine = syncManager.getSyncEngine?.(t)
+      
+      console.warn('[DebugPanel] getSyncEngine(', t, ') =>', engine)
+      
+      if (engine) {
+        
+        console.warn('[DebugPanel] Engine.lastSyncTimings for', t, engine.lastSyncTimings)
+        
+        if (engine.lastSyncTimings && Object.keys(engine.lastSyncTimings).length > 0) {
+          syncTimings.value = { ...engine.lastSyncTimings }
+          
+          console.warn('[DebugPanel] Found timings for table', t, syncTimings.value)
+          
+          return
+        }
+      }
+    }
+
+    // If no timings found, clear
+    syncTimings.value = undefined
+    
+    console.warn('[DebugPanel] No timings found for any table')
+  } 
+  catch (e) {
+    console.error('[DebugPanel] updateSyncTimings error', e)
+  }
+}
+
 onMounted(async () => {
+  
+  // Patch console.debug to also push logs to debugResult for DebugPanel
+  const originalDebug = console.debug
+  
+  console.debug = function (...args) {
+    originalDebug.apply(console, args)
+    
+    // Only push logs relevant to SyncEngine timing
+    if (typeof args[0] === 'string' && args[0].includes('[SyncEngine.start]')) {
+      // Special formatting for lastSyncTimings logs
+      if (args[0].includes('lastSyncTimings')) {
+        let obj = args.find((a) => typeof a === 'object')
+        
+        if (!obj) obj = {}
+        
+        debugResult.value.push(`${args[0]} ${JSON.stringify(obj, null, 2)}`)
+      } 
+      else {
+        debugResult.value.push(args.map(String).join(' '))
+      }
+    }
+  }
+  
   await store.loadWorkEntries()
-
+  
   await store.loadGroupedWorkEntries()
-
   // prettier-ignore
+  
   ;(window as unknown as { staffRegisterData: typeof store.workEntries }).staffRegisterData = store.workEntries
-
   // Listen for sync-completed events and reload data
+  
   window.addEventListener('sync-completed', async () => {
     await store.loadWorkEntries()
+    
+    updateSyncTimings()
   })
+  
+  // Listen for debug-status events and show debug messages
+  window.addEventListener('debug-status', (e: Event) => {
+    const customEvent = e as CustomEvent<string>
+    
+      debugStatus.value = customEvent.detail || ''
+  })
+  // Fetch timings after initial sync (page load)
+  
+  setTimeout(updateSyncTimings, 500)
 })
 
 const getTypeColor = (type: string) => {
@@ -90,13 +181,13 @@ const handleCheckIn = async () => {
     logger.log(`[1. UI] 🎬 CheckIn started - ${traceId}`, { work_day_id })
 
     await store.checkIn(work_day_id)
-  }
- catch (e: unknown) {
+  } 
+  catch (e: unknown) {
     alert((e as Error).message || 'Instämpling misslyckades')
 
     console.error('Check-in failed:', e)
-  }
- finally {
+  } 
+  finally {
     isProcessing.value = false
   }
 }
@@ -110,13 +201,13 @@ const handleCheckOut = async () => {
     const work_day_id = Number(new Date().setHours(0, 0, 0, 0))
 
     await store.checkOut(work_day_id)
-  }
- catch (e: unknown) {
+  } 
+  catch (e: unknown) {
     alert((e as Error).message || 'Utstämpling misslyckades')
 
     console.error('Check-out failed:', e)
-  }
- finally {
+  } 
+  finally {
     isProcessing.value = false
   }
 }
@@ -130,13 +221,13 @@ const handleBreak = async () => {
     const work_day_id = Number(new Date().setHours(0, 0, 0, 0))
 
     await store.goOnBreak(work_day_id)
-  }
- catch (e: unknown) {
+  } 
+  catch (e: unknown) {
     alert((e as Error).message || 'Gå på rast misslyckades')
 
     console.error('Break failed:', e)
-  }
- finally {
+  } 
+  finally {
     isProcessing.value = false
   }
 }
@@ -165,51 +256,61 @@ const runDebugFunction = async (functionName: string) => {
         result = await service.getCurrentStatus()
 
         debugStatus.value = `✓ Status hämtad`
-
-        debugResult.value = result
-
-        break
+        
+        debugResult.value = Array.isArray(result)
+          ? result.map((r) => JSON.stringify(r, null, 2))
+          : [JSON.stringify(result, null, 2)]
+        
+          break
 
       case 'getWorkHistory':
         result = await service.getWorkHistory(7)
 
         debugStatus.value = `✓ Historik hämtad (${(result as unknown[]).length} poster)`
-
-        debugResult.value = result
-
+        
+        debugResult.value = Array.isArray(result)
+          ? result.map((r) => JSON.stringify(r, null, 2))
+          : [JSON.stringify(result, null, 2)]
+        
         break
 
       case 'getPendingSyncOperations':
         if (service.getPendingSyncOperations) {
           result = await service.getPendingSyncOperations()
-          
+
           debugStatus.value = `✓ Väntande sync hämtad (${(result as unknown[]).length} poster)`
           
-          debugResult.value = result
+          debugResult.value = Array.isArray(result)
+            ? result.map((r) => JSON.stringify(r, null, 2))
+            : [JSON.stringify(result, null, 2)]
         } 
         else {
           debugStatus.value = `Ej implementerat`
           
-          debugResult.value = null
+          debugResult.value = []
         }
-        
+
         break
 
       case 'getAllEntries':
         result = await service.getAllEntries()
 
         debugStatus.value = `✓ Alla entries hämtade (${(result as unknown[]).length} totalt)`
-
-        debugResult.value = result
+        
+        debugResult.value = Array.isArray(result)
+          ? result.map((r) => JSON.stringify(r, null, 2))
+          : [JSON.stringify(result, null, 2)]
 
         break
-
-      case 'getDatabaseInfo':
+      
+        case 'getDatabaseInfo':
         result = await service.getDatabaseInfo()
 
         debugStatus.value = `✓ Database info hämtad`
-
-        debugResult.value = result
+        
+        debugResult.value = Array.isArray(result)
+          ? result.map((r) => JSON.stringify(r, null, 2))
+          : [JSON.stringify(result, null, 2)]
 
         break
 
@@ -219,11 +320,11 @@ const runDebugFunction = async (functionName: string) => {
 
           debugStatus.value = `✓ All data raderad`
 
-          debugResult.value = null
+          debugResult.value = []
 
           await store.loadWorkEntries()
-        }
- else {
+        } 
+        else {
           debugStatus.value = `Avbruten`
         }
 
@@ -231,15 +332,18 @@ const runDebugFunction = async (functionName: string) => {
     }
 
     logger.log(`[DEBUG] ${functionName}:`, result)
-  }
- catch (e: unknown) {
+    // Uppdatera timings efter varje debug-operation
+    
+    updateSyncTimings()
+  } 
+  catch (e: unknown) {
     debugError.value = (e as Error).message || 'Okänt fel'
 
     debugStatus.value = `✗ Fel`
 
     console.error(`[DEBUG ERROR] ${functionName}:`, e)
-  }
- finally {
+  } 
+  finally {
     debugLoading.value = false
   }
 }

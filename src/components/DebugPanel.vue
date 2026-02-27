@@ -1,13 +1,25 @@
 <script setup lang="ts">
 import { debugSyncNow } from '@/views/staffRegister/debug-sync'
 
+import { ref, watch } from 'vue'
+
 const props = defineProps<{
   debugStatus: string
   debugResult: unknown
   debugLoading: boolean
   debugError: string
   runDebugFunction: (fn: string) => void
+  syncTimings?: Record<string, number>
 }>()
+
+const showTimings = ref(false)
+
+// Auto-collapse timings if they disappear, expand if new timings arrive
+watch(() => props.syncTimings, (val, oldVal) => {
+  if (val && val !== oldVal) showTimings.value = true
+  
+  if (!val) showTimings.value = false
+})
 </script>
 
 <template>
@@ -19,6 +31,7 @@ const props = defineProps<{
       />
       <h2 class="text-xl font-bold text-yellow-700">Debug Panel</h2>
     </div>
+    
     <div class="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
       <button
         @click="props.runDebugFunction('getCurrentStatus')"
@@ -78,15 +91,14 @@ const props = defineProps<{
     >
       Fel: {{ props.debugError }}
     </div>
-    <div
-      v-if="props.debugResult"
-      class="mt-4"
-    >
-      <details class="rounded-lg bg-white p-3">
-        <summary class="cursor-pointer font-semibold text-gray-700">Resultat (klicka för att expandera)</summary>
-        <pre class="mt-2 max-h-48 overflow-auto rounded-lg bg-gray-100 p-2 text-xs text-gray-800">
-          {{ JSON.stringify(props.debugResult, null, 2) }}
-        </pre>
+    <div v-if="props.debugResult" class="mb-2 text-xs text-gray-700">
+      <details closed>
+        <summary class="cursor-pointer font-semibold text-gray-700">Sync timings (klicka för att expandera)</summary>
+        <ul class="ml-5 mt-1 list-disc">
+          <li v-for="(log, idx) in props.debugResult" :key="idx">
+            <span class="font-mono">{{ log }}</span>
+          </li>
+        </ul>
       </details>
     </div>
   </section>

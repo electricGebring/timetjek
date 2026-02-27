@@ -71,6 +71,9 @@ async function bootstrap() {
 
   // Create SyncManager to handle all registered tables (central logging)
   const syncManager = new SyncManager({ logger: createLogger('SyncManager') })
+    // Expose syncManager globally for debug/timing access
+
+    ; (window as unknown as { syncManager: SyncManager }).syncManager = syncManager
 
   // Create a SyncPort adapter that wraps SyncManager
   const syncAdapter: SyncPort = {
@@ -112,7 +115,7 @@ async function bootstrap() {
 
     logger.log('[Bootstrap] Initial sync completed')
   }
- catch (error) {
+  catch (error) {
     console.error('[Bootstrap] Initial sync failed:', error)
   }
 
@@ -126,7 +129,7 @@ async function bootstrap() {
       logger.log(`[Bootstrap] Cleaned up expired data:`, results)
     }
   }
- catch (error) {
+  catch (error) {
     logger.error('[Bootstrap] Initial cleanup failed:', error)
   }
 
@@ -151,7 +154,7 @@ function scheduleDailyCleanup(logger: LoggerLike = console) {
         logger.log(`[Cleanup] Cleaned up expired data:`, results)
       }
     }
- catch (error) {
+    catch (error) {
       logger.error('[Cleanup] Scheduled cleanup failed:', error)
     }
   }
