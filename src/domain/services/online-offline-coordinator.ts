@@ -62,8 +62,7 @@ export class OnlineOfflineCoordinator {
       if (this.deps.syncIntervalMs) {
         this.startPeriodicSync()
       }
-    }
- else {
+    } else {
       this.logger.log('[Coordinator] 🔴 Offline -> stopping sync')
 
       this.stopPeriodicSync()
