@@ -213,6 +213,43 @@ export async function clearAllData() {
   }
 }
 
+/**
+ * Get pending sync operations (unsynced entries updated recently)
+ * @returns Array of unsynced work entries sorted by updatedAt desc
+ */
+export async function getPendingSyncOperations() {
+  try {
+    const entries = await getWorkEntries()
+
+    const now = Date.now()
+
+    const oneDayAgo = now - 24 * 60 * 60 * 1000
+
+    // Filter for unsynced items (synced = 0) updated recently
+    return entries
+      .filter((e) => {
+        if (e.deleted_at || e.synced !== 0) return false
+
+        // Only show entries updated in last 24h (real pending mutations)
+        const updatedTime = e.updatedAt ? new Date(e.updatedAt).getTime() : 0
+
+        return updatedTime > oneDayAgo
+      })
+      .sort((a, b) => {
+        const timeA = a.updatedAt ? new Date(a.updatedAt).getTime() : 0
+
+        const timeB = b.updatedAt ? new Date(b.updatedAt).getTime() : 0
+
+        return timeB - timeA // newest first
+      })
+  }
+ catch (e) {
+    console.warn('Failed to fetch pending sync operations:', e)
+
+    return []
+  }
+}
+
 // ─────────────────────────────────────────────────────────
 // Export for debugging
 // ─────────────────────────────────────────────────────────
@@ -226,6 +263,7 @@ export interface StaffRegisterService {
   getAllEntries: typeof getAllEntries;
   getDatabaseInfo: typeof getDatabaseInfo;
   clearAllData: typeof clearAllData;
+  getPendingSyncOperations: typeof getPendingSyncOperations;
 }
 
 declare global {
@@ -240,7 +278,8 @@ window.staffRegisterService = {
   getCurrentStatus,
   getAllEntries,
   getDatabaseInfo,
-  clearAllData
+  clearAllData,
+  getPendingSyncOperations
 }
 
 console.warn('📋 Staff Register Service exposed on window.staffRegisterService')
