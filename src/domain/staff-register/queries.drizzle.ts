@@ -3,10 +3,11 @@
  * Used in backend/sync contexts (not in browser)
  */
 
-import * as staffRepo from '../../db/staff-register/repo.drizzle.ts'
-import { hasOpenCheckIn } from './rules.ts'
-import type { DayGroup } from './types.ts'
-import type { WorkEntry } from '../../models/work-entry.schema.ts'
+import * as staffRepo from '../../db/staff-register/repo'
+import { hasOpenCheckIn } from './rules'
+import type { DayGroup } from './types'
+import type { WorkEntry } from '../../models/work-entry.schema'
+import type { WorkEntry as DrizzleWorkEntry } from '../../db/schema'
 
 function isWorkEntry(e: unknown): e is WorkEntry {
   if (typeof e !== 'object' || e === null) return false
@@ -34,48 +35,54 @@ export async function getUnsyncedWorkEntries(): Promise<WorkEntry[]> {
   const entries = await staffRepo.getUnsyncedWorkEntries()
 
   return entries
-    .filter((e) => e.work_day_id !== null && e.createdAt !== null)
-    .map((e) => ({
+    .filter((e: DrizzleWorkEntry) => e.work_day_id !== null && e.createdAt !== null)
+    .map((e: DrizzleWorkEntry) => ({
       ...e,
       work_day_id: e.work_day_id as number,
       createdAt: e.createdAt ?? '',
-      updatedAt: e.updatedAt ?? ''
+      updatedAt: e.updatedAt ?? '',
+      meal_benefit_has_breakfast: !!e.meal_benefit_has_breakfast,
+      meal_benefit_has_lunch: !!e.meal_benefit_has_lunch
     }))
-    .filter(isWorkEntry)
+    .filter(isWorkEntry) as unknown as WorkEntry[]
 }
 
 export async function getDeletedWorkEntries(): Promise<WorkEntry[]> {
   const entries = await staffRepo.getDeletedWorkEntries()
 
   return entries
-    .filter((e) => e.work_day_id !== null && e.createdAt !== null)
-    .map((e) => ({
+    .filter((e: DrizzleWorkEntry) => e.work_day_id !== null && e.createdAt !== null)
+    .map((e: DrizzleWorkEntry) => ({
       ...e,
       work_day_id: e.work_day_id as number,
       createdAt: e.createdAt ?? '',
-      updatedAt: e.updatedAt ?? ''
+      updatedAt: e.updatedAt ?? '',
+      meal_benefit_has_breakfast: !!e.meal_benefit_has_breakfast,
+      meal_benefit_has_lunch: !!e.meal_benefit_has_lunch
     }))
-    .filter(isWorkEntry)
+    .filter(isWorkEntry) as unknown as WorkEntry[]
 }
 
 export async function getAllWorkEntries(): Promise<WorkEntry[]> {
   const entries = await staffRepo.getWorkEntries()
 
   return entries
-    .filter((e) => e.work_day_id !== null && e.createdAt !== null)
-    .map((e) => ({
+    .filter((e: DrizzleWorkEntry) => e.work_day_id !== null && e.createdAt !== null)
+    .map((e: DrizzleWorkEntry) => ({
       ...e,
       work_day_id: e.work_day_id as number,
       createdAt: e.createdAt ?? '',
-      updatedAt: e.updatedAt ?? ''
+      updatedAt: e.updatedAt ?? '',
+      meal_benefit_has_breakfast: !!e.meal_benefit_has_breakfast,
+      meal_benefit_has_lunch: !!e.meal_benefit_has_lunch
     }))
-    .filter(isWorkEntry)
+    .filter(isWorkEntry) as unknown as WorkEntry[]
 }
 
 export async function canCheckIn(work_day_id: number): Promise<boolean> {
   const all = await staffRepo.getWorkEntries()
 
-  const todays = all.filter((e) => e.work_day_id === work_day_id)
+  const todays = all.filter((e: DrizzleWorkEntry) => e.work_day_id === work_day_id)
 
   return !hasOpenCheckIn(todays)
 }
@@ -83,7 +90,7 @@ export async function canCheckIn(work_day_id: number): Promise<boolean> {
 export async function canCheckOut(work_day_id: number): Promise<boolean> {
   const all = await staffRepo.getWorkEntries()
 
-  const todays = all.filter((e) => e.work_day_id === work_day_id)
+  const todays = all.filter((e: DrizzleWorkEntry) => e.work_day_id === work_day_id)
 
   return hasOpenCheckIn(todays)
 }

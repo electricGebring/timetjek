@@ -4,7 +4,7 @@
  */
 
 import { createLogger } from '../../utils/logger.ts'
-import * as staffRepo from '../../db/staff-register/repo.drizzle.ts'
+import * as staffRepo from '../../db/staff-register/repo.ts'
 import type { WorkEntry } from '../../models/work-entry.schema.ts'
 import { TimeRegistrationStatus } from '../../enums/TimeRegistrationStatus.ts'
 

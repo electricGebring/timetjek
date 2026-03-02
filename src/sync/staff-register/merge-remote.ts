@@ -5,6 +5,7 @@
  */
 
 import * as repo from '@/db/staff-register/repo'
+import { entryToWorkEntry, workEntryToEntry } from '@/db/staff-register/work-entry.mapper'
 
 import { defaultConflictResolver } from '@/sync/conflict-resolver'
 
@@ -76,30 +77,15 @@ export async function mergeRemoteWorkEntry(
       check_out_application: (remote.check_out_application ?? null) as TimeRegistrationApplication | null,
     }
 
-    await repo.upsertWorkEntry({ ...safeRemote, synced: 1 })
+    await repo.upsertWorkEntry(entryToWorkEntry({ ...safeRemote, synced: 1 }))
 
     return { resolved: safeRemote, conflictDetected: false }
   }
 
   if (local.synced === 0) {
     // Local changes not ännu synkade: returnera local med säkra defaultvärden och rätt typ
-    const resolvedLocal: Entry = {
-      ...local,
-      id: local.id ?? 0,
-      work_day_id: local.work_day_id ?? 0,
-      status: (local.status ?? 'UNKNOWN') as TimeRegistrationStatus,
-      check_in_at: local.check_in_at ?? '',
-      check_out_at: local.check_out_at ?? '',
-      check_in_time_at: local.check_in_time_at ?? '',
-      updatedAt: local.updatedAt ?? new Date().toISOString(),
-      createdAt: local.createdAt ?? new Date().toISOString(),
-      check_in_latitude: local.check_in_latitude ?? 0,
-      check_in_longitude: local.check_in_longitude ?? 0,
-      check_out_latitude: local.check_out_latitude ?? 0,
-      check_out_longitude: local.check_out_longitude ?? 0,
-      check_in_application: (local.check_in_application ?? 'APP') as TimeRegistrationApplication,
-      check_out_application: (local.check_out_application ?? null) as TimeRegistrationApplication | null,
-    }
+    // Use workEntryToEntry to properly convert from Drizzle WorkEntry to Entry
+    const resolvedLocal = workEntryToEntry(local)
 
     return { resolved: resolvedLocal, conflictDetected: false }
   }
@@ -166,8 +152,8 @@ export async function mergeRemoteWorkEntry(
     check_out_longitude: local.check_out_longitude ?? null,
     check_out_application: (local.check_out_application ?? null) as TimeRegistrationApplication | null,
     break: local.break ?? null,
-    meal_benefit_has_breakfast: local.meal_benefit_has_breakfast ?? false,
-    meal_benefit_has_lunch: local.meal_benefit_has_lunch ?? false,
+    meal_benefit_has_breakfast: !!local.meal_benefit_has_breakfast,
+    meal_benefit_has_lunch: !!local.meal_benefit_has_lunch,
     name: local.name ?? '',
     type: local.type ?? '',
     personalNumber: local.personalNumber ?? '',
@@ -184,7 +170,7 @@ export async function mergeRemoteWorkEntry(
   }
 
   if (!entriesAreEqual(safeLocal, safeToPersist)) {
-    await repo.upsertWorkEntry({ ...safeToPersist, synced: 1 })
+    await repo.upsertWorkEntry(entryToWorkEntry({ ...safeToPersist, synced: 1 }))
   }
 
   return { resolved: toPersist, conflictDetected: result.conflictDetected }

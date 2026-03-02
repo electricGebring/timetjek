@@ -1,5 +1,6 @@
 import { getDb } from '@/db/drizzle'
-import { workEntries, type WorkEntry } from '@/db/schema'
+import { workEntries, type WorkEntry as DrizzleWorkEntry } from '@/db/schema'
+import type { WorkEntry } from '@/models/work-entry.schema'
 import { eq } from 'drizzle-orm'
 import { Capacitor } from '@capacitor/core'
 
@@ -19,8 +20,9 @@ function saveDatabase() {
 
 /**
  * Insert or update a work entry using Drizzle ORM
+ * Accepts both Drizzle WorkEntry and Zod WorkEntry formats
  */
-export async function upsertWorkEntry(entry: Partial<WorkEntry>) {
+export async function upsertWorkEntry(entry: Partial<WorkEntry> | Partial<DrizzleWorkEntry> | Record<string, unknown>) {
   console.debug('[DRIZZLE] 💾 Upserting work entry...')
 
   const db = getDb()
@@ -29,7 +31,7 @@ export async function upsertWorkEntry(entry: Partial<WorkEntry>) {
     ...entry,
     createdAt: entry.createdAt ?? new Date().toISOString(),
     updatedAt: entry.updatedAt ?? new Date().toISOString()
-  }
+  } as Record<string, unknown> & { id?: number; createdAt: string; updatedAt: string }
 
   if (safeEntry.id !== null && safeEntry.id !== undefined) {
     // Check if row exists
@@ -55,7 +57,7 @@ export async function upsertWorkEntry(entry: Partial<WorkEntry>) {
 
       await db.insert(workEntries).values({
         ...safeEntry
-      } as WorkEntry)
+      } as unknown as DrizzleWorkEntry)
     }
   } else {
     // Insert with auto-ID
@@ -65,7 +67,7 @@ export async function upsertWorkEntry(entry: Partial<WorkEntry>) {
 
     await db.insert(workEntries).values({
       ...withoutId
-    } as WorkEntry)
+    } as unknown as DrizzleWorkEntry)
   }
 
   console.debug('[DRIZZLE] ✅ Upsert complete')

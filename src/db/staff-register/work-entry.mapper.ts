@@ -8,6 +8,11 @@ import type { WorkEntry, WorkEntryColumn } from '../../models/work-entry.schema.
 
 import { WORK_ENTRY_COLUMNS, parseWorkEntryRow } from '../../models/work-entry.schema.ts'
 
+import type { WorkEntry as DrizzleWorkEntry } from '../schema.ts'
+
+// Flexible type for mapper functions - accepts any object with WorkEntry-like properties
+export type AnyWorkEntry = Record<string, unknown>
+
 /** Build a record from a row array using column order (same as WORK_ENTRY_COLUMNS). */
 export function rowToRecord(
   row: unknown[],
@@ -36,46 +41,49 @@ export function mapRowToWorkEntry(row: unknown): WorkEntry {
 }
 
 /** Map WorkEntry (DB type - from either Zod or Drizzle schema) to Entry (view/API type). */
-export function workEntryToEntry(w: any): Entry {
+export function workEntryToEntry(w: AnyWorkEntry): Entry {
+  // Type assertion to access properties - we know this has WorkEntry-like shape
+  const entry = w as unknown as (WorkEntry | DrizzleWorkEntry)
+  
   return {
-    id: w.id ?? 0,
-    employee_id: w.employee_id ?? 1,
-    workplace_id: w.workplace_id ?? 1,
-    cost_center_id: w.cost_center_id ?? null,
-    work_day_id: w.work_day_id ?? 0,
-    status: (w.status ?? TimeRegistrationStatus.OPEN) as Entry['status'],
-    check_in_at: w.check_in_at ?? '',
-    check_in_time_at: w.check_in_time_at ?? '',
-    check_in_latitude: w.check_in_latitude ?? 0,
-    check_in_longitude: w.check_in_longitude ?? 0,
-    check_in_application: (w.check_in_application ?? 'APP') as TimeRegistrationApplication,
-    check_out_at: w.check_out_at ?? null,
-    check_out_time_at: w.check_out_time_at ?? null,
-    check_out_latitude: w.check_out_latitude ?? null,
-    check_out_longitude: w.check_out_longitude ?? null,
-    check_out_application: w.check_out_application as TimeRegistrationApplication | null,
-    break: w.break ?? null,
+    id: entry.id ?? 0,
+    employee_id: entry.employee_id ?? 1,
+    workplace_id: entry.workplace_id ?? 1,
+    cost_center_id: entry.cost_center_id ?? null,
+    work_day_id: entry.work_day_id ?? 0,
+    status: (entry.status ?? TimeRegistrationStatus.OPEN) as Entry['status'],
+    check_in_at: entry.check_in_at ?? '',
+    check_in_time_at: entry.check_in_time_at ?? '',
+    check_in_latitude: entry.check_in_latitude ?? 0,
+    check_in_longitude: entry.check_in_longitude ?? 0,
+    check_in_application: (entry.check_in_application ?? 'APP') as TimeRegistrationApplication,
+    check_out_at: entry.check_out_at ?? null,
+    check_out_time_at: entry.check_out_time_at ?? null,
+    check_out_latitude: entry.check_out_latitude ?? null,
+    check_out_longitude: entry.check_out_longitude ?? null,
+    check_out_application: entry.check_out_application as TimeRegistrationApplication | null,
+    break: entry.break ?? null,
     meal_benefit_has_breakfast:
-      typeof w.meal_benefit_has_breakfast === 'number'
-        ? !!w.meal_benefit_has_breakfast
-        : !!w.meal_benefit_has_breakfast,
+      typeof entry.meal_benefit_has_breakfast === 'number'
+        ? !!entry.meal_benefit_has_breakfast
+        : !!entry.meal_benefit_has_breakfast,
     meal_benefit_has_lunch:
-      typeof w.meal_benefit_has_lunch === 'number' ? !!w.meal_benefit_has_lunch : !!w.meal_benefit_has_lunch,
-    name: w.name ?? '',
-    type: w.type ?? '',
-    personalNumber: w.personalNumber ?? '',
-    administrator_comment: w.administrator_comment ?? null,
-    total_working_seconds: w.total_working_seconds ?? null,
-    createdAt: w.createdAt ?? new Date().toISOString(),
-    updatedAt: w.updatedAt ?? new Date().toISOString(),
-    deleted_at: w.deleted_at ?? null,
-    synced: w.synced ?? 0,
-    deleted: w.deleted ?? 0
+      typeof entry.meal_benefit_has_lunch === 'number' ? !!entry.meal_benefit_has_lunch : !!entry.meal_benefit_has_lunch,
+    name: entry.name ?? '',
+    type: entry.type ?? '',
+    personalNumber: entry.personalNumber ?? '',
+    administrator_comment: entry.administrator_comment ?? null,
+    total_working_seconds: entry.total_working_seconds ?? null,
+    createdAt: entry.createdAt ?? new Date().toISOString(),
+    updatedAt: entry.updatedAt ?? new Date().toISOString(),
+    deleted_at: entry.deleted_at ?? null,
+    synced: entry.synced ?? 0,
+    deleted: entry.deleted ?? 0
   }
 }
 
 /** Map Entry (view/API type) to Drizzle WorkEntry format (DB type with numbers for booleans). */
-export function entryToWorkEntry(e: Entry): any {
+export function entryToWorkEntry(e: Entry): AnyWorkEntry {
   return {
     id: e.id,
     employee_id: e.employee_id,

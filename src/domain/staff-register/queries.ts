@@ -37,9 +37,11 @@ export async function getUnsyncedWorkEntries(): Promise<WorkEntry[]> {
       ...e,
       work_day_id: e.work_day_id as number,
       createdAt: e.createdAt ?? '',
-      updatedAt: e.updatedAt ?? ''
+      updatedAt: e.updatedAt ?? '',
+      meal_benefit_has_breakfast: !!e.meal_benefit_has_breakfast,
+      meal_benefit_has_lunch: !!e.meal_benefit_has_lunch
     }))
-    .filter(isWorkEntry)
+    .filter(isWorkEntry) as unknown as WorkEntry[]
 }
 
 export async function getDeletedWorkEntries(): Promise<WorkEntry[]> {
@@ -51,9 +53,11 @@ export async function getDeletedWorkEntries(): Promise<WorkEntry[]> {
       ...e,
       work_day_id: e.work_day_id as number,
       createdAt: e.createdAt ?? '',
-      updatedAt: e.updatedAt ?? ''
+      updatedAt: e.updatedAt ?? '',
+      meal_benefit_has_breakfast: !!e.meal_benefit_has_breakfast,
+      meal_benefit_has_lunch: !!e.meal_benefit_has_lunch
     }))
-    .filter(isWorkEntry)
+    .filter(isWorkEntry) as unknown as WorkEntry[]
 }
 
 export async function getAllWorkEntries(): Promise<WorkEntry[]> {
@@ -65,9 +69,11 @@ export async function getAllWorkEntries(): Promise<WorkEntry[]> {
       ...e,
       work_day_id: e.work_day_id as number,
       createdAt: e.createdAt ?? '',
-      updatedAt: e.updatedAt ?? ''
+      updatedAt: e.updatedAt ?? '',
+      meal_benefit_has_breakfast: !!e.meal_benefit_has_breakfast,
+      meal_benefit_has_lunch: !!e.meal_benefit_has_lunch
     }))
-    .filter(isWorkEntry)
+    .filter(isWorkEntry) as unknown as WorkEntry[]
 }
 
 export async function canCheckIn(work_day_id: number): Promise<boolean> {

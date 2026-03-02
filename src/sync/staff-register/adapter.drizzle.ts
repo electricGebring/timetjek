@@ -5,22 +5,10 @@
 
 import type { TableSyncAdapter } from '../table-sync-adapter.ts'
 import { TABLE_WORK_ENTRIES } from '../../constants/tables.ts'
-import * as repo from '../../db/staff-register/repo.drizzle.ts'
+import * as repo from '../../db/staff-register/repo.ts'
+import { workEntryToEntry, entryToWorkEntry, type AnyWorkEntry } from '../../db/staff-register/work-entry.mapper.ts'
 import type { Entry } from '../../views/staffRegister/types.ts'
-import type { WorkEntry } from '../../models/work-entry.schema.ts'
-
-/**
- * Convert WorkEntry (Drizzle schema) to Entry (view model)
- */
-function workEntryToEntry(workEntry: WorkEntry): Entry {
-  return {
-    ...workEntry,
-    id: workEntry.id ?? 0,
-    work_day_id: workEntry.work_day_id ?? 0,
-    updatedAt: workEntry.updatedAt ?? '',
-    createdAt: workEntry.createdAt ?? ''
-  } as Entry
-}
+import type { ConflictResolutionStrategy } from '../../enums/ConflictResolutionStrategy.ts'
 
 /**
  * Drizzle-based sync adapter for work_entries table
@@ -40,7 +28,7 @@ export function createStaffRegisterDrizzleAdapter(): TableSyncAdapter<Entry> {
       const unsyncedWorkEntries = await repo.getUnsyncedForSync()
       
       const entries = unsyncedWorkEntries
-        .filter((e) => e.id !== null)
+        .filter((e: AnyWorkEntry) => e.id !== null)
         .map(workEntryToEntry)
       
       console.log(`[DRIZZLE ADAPTER] ✅ Found ${entries.length} unsynced entries`)
@@ -57,7 +45,7 @@ export function createStaffRegisterDrizzleAdapter(): TableSyncAdapter<Entry> {
       const deletedWorkEntries = await repo.getDeletedForSync()
       
       const entries = deletedWorkEntries
-        .filter((e) => e.id !== null)
+        .filter((e: AnyWorkEntry) => e.id !== null)
         .map(workEntryToEntry)
       
       console.log(`[DRIZZLE ADAPTER] ✅ Found ${entries.length} deleted entries`)
@@ -159,7 +147,7 @@ export function createStaffRegisterDrizzleAdapter(): TableSyncAdapter<Entry> {
       // For now, return local entries (simulating API response)
       
       const allWorkEntries = await repo.getWorkEntries()
-      const entries = allWorkEntries.map(workEntryToEntry)
+      const entries = allWorkEntries.map((e: AnyWorkEntry) => workEntryToEntry(e))
       
       console.log(`[DRIZZLE ADAPTER] ✅ Fetched ${entries.length} entries`)
       return entries
@@ -171,16 +159,44 @@ export function createStaffRegisterDrizzleAdapter(): TableSyncAdapter<Entry> {
      */
     mergeRemote: async (
       remoteItem: Entry,
-      strategy: string
-    ): Promise<void> => {
+      strategy?: ConflictResolutionStrategy
+    ): Promise<{ resolved: Entry; conflictDetected: boolean }> => {
       console.log(`[DRIZZLE ADAPTER] 🔀 Merging remote entry ${remoteItem.id} with strategy: ${strategy}`)
 
       // TODO: Implement proper conflict resolution with Drizzle
       // For now, just upsert (last-write-wins)
       
-      await repo.upsertWorkEntry(remoteItem)
+      await repo.upsertWorkEntry(entryToWorkEntry(remoteItem))
       
       console.log(`[DRIZZLE ADAPTER] ✅ Remote entry merged`)
+      return { resolved: remoteItem, conflictDetected: false }
+    },
+
+    /**
+     * Fetch entries modified since timestamp
+     * NOTE: In Drizzle adapter, we return all entries
+     * In production, replace with actual API call with timestamp filter
+     */
+    fetchSince: async (): Promise<Entry[]> => {
+      console.log(`[DRIZZLE ADAPTER] 🔄 Fetching entries since timestamp...`)
+
+      // TODO: Replace with actual API call in production
+      // For now, return all entries (simulating API response)
+      
+      const allWorkEntries = await repo.getWorkEntries()
+      const entries = allWorkEntries.map((e: AnyWorkEntry) => workEntryToEntry(e))
+      
+      console.log(`[DRIZZLE ADAPTER] ✅ Fetched ${entries.length} entries`)
+      return entries
+    },
+
+    /**
+     * Update UI store with entries
+     * NOTE: In Drizzle adapter, this is a no-op since we don't have a store
+     * In production with Vue store, implement proper store update
+     */
+    updateStore: async (): Promise<void> => {
+      console.log(`[DRIZZLE ADAPTER] 📦 Updating store (no-op in Drizzle adapter)`)
     }
   }
 }
