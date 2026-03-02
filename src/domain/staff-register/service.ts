@@ -281,5 +281,3 @@ window.staffRegisterService = {
   clearAllData,
   getPendingSyncOperations
 }
-
-console.warn('📋 Staff Register Service exposed on window.staffRegisterService')

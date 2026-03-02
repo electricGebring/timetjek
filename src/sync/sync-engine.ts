@@ -57,15 +57,6 @@ export class SyncEngine implements SyncPort {
   public lastSyncTimings: Record<string, number> = {}
 
   async start(reason: SyncReason): Promise<void> {
-    console.warn('[SyncEngine.start]', this.tableName, 'STARTED');
-
-    // Extra debug: log timings before sync
-    console.warn(
-      '[SyncEngine.start]',
-      this.tableName,
-      'lastSyncTimings BEFORE',
-      JSON.stringify(this.lastSyncTimings || {}, null, 2)
-    );
 
     if (this.running) {
       this.logger.log('[SyncEngine] ⏩ Already running, skipping start', reason);
@@ -89,7 +80,6 @@ export class SyncEngine implements SyncPort {
 
       timings.setSyncState = performance.now() - t0;
 
-      console.warn('[SyncEngine.start]', this.tableName, 'setSyncState', timings.setSyncState);
 
       if (signal.aborted) {
         this.lastSyncTimings = timings;
@@ -103,8 +93,6 @@ export class SyncEngine implements SyncPort {
 
       timings.drainOutbox = performance.now() - t1;
 
-      console.warn('[SyncEngine.start]', this.tableName, 'drainOutbox', timings.drainOutbox);
-
       if (signal.aborted) {
         this.lastSyncTimings = timings;
 
@@ -116,8 +104,6 @@ export class SyncEngine implements SyncPort {
       await this.drainDeletions(signal);
 
       timings.drainDeletions = performance.now() - t2;
-
-      console.warn('[SyncEngine.start]', this.tableName, 'drainDeletions', timings.drainDeletions);
 
       if (signal.aborted) {
         this.lastSyncTimings = timings;
@@ -131,8 +117,6 @@ export class SyncEngine implements SyncPort {
 
       timings.pullRemoteChanges = performance.now() - t3;
 
-      console.warn('[SyncEngine.start]', this.tableName, 'pullRemoteChanges', timings.pullRemoteChanges);
-
       if (signal.aborted) {
         this.lastSyncTimings = timings;
 
@@ -145,7 +129,6 @@ export class SyncEngine implements SyncPort {
 
       timings.markSyncSuccess = performance.now() - t4;
 
-      console.warn('[SyncEngine.start]', this.tableName, 'markSyncSuccess', timings.markSyncSuccess);
     }
     catch (err: unknown) {
       this.logger.error('Sync failed for', this.tableName, err);
@@ -159,14 +142,6 @@ export class SyncEngine implements SyncPort {
     }
     finally {
       this.lastSyncTimings = timings;
-
-      // Log actual timings object after sync
-      console.warn(
-        '[SyncEngine.start]',
-        this.tableName,
-        'lastSyncTimings',
-        JSON.stringify(this.lastSyncTimings, null, 2)
-      );
 
       this.running = false;
 

@@ -52,8 +52,6 @@ function updateSyncTimings() {
   try {
     const syncManager = (window as WindowWithSyncManager).syncManager
 
-    console.warn('[DebugPanel] updateSyncTimings called')
-
     if (!syncManager) {
       
       console.warn('[DebugPanel] No syncManager on window')
@@ -69,16 +67,10 @@ function updateSyncTimings() {
     for (const t of possibleTables) {
       engine = syncManager.getSyncEngine?.(t)
       
-      console.warn('[DebugPanel] getSyncEngine(', t, ') =>', engine)
-      
       if (engine) {
-        
-        console.warn('[DebugPanel] Engine.lastSyncTimings for', t, engine.lastSyncTimings)
-        
+          
         if (engine.lastSyncTimings && Object.keys(engine.lastSyncTimings).length > 0) {
           syncTimings.value = { ...engine.lastSyncTimings }
-          
-          console.warn('[DebugPanel] Found timings for table', t, syncTimings.value)
           
           return
         }
