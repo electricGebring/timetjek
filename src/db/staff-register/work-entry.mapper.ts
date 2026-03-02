@@ -1,12 +1,12 @@
-import type { Entry } from '@/views/staffRegister/types'
+import type { Entry } from '../../views/staffRegister/types.ts'
 
-import type { TimeRegistrationApplication } from '@/enums/TimeRegistrationApplication'
+import type { TimeRegistrationApplication } from '../../enums/TimeRegistrationApplication.ts'
 
-import { TimeRegistrationStatus } from '@/enums/TimeRegistrationStatus'
+import { TimeRegistrationStatus } from '../../enums/TimeRegistrationStatus.ts'
 
-import type { WorkEntry, WorkEntryColumn } from '@/models/work-entry.schema'
+import type { WorkEntry, WorkEntryColumn } from '../../models/work-entry.schema.ts'
 
-import { WORK_ENTRY_COLUMNS, parseWorkEntryRow } from '@/models/work-entry.schema'
+import { WORK_ENTRY_COLUMNS, parseWorkEntryRow } from '../../models/work-entry.schema.ts'
 
 /** Build a record from a row array using column order (same as WORK_ENTRY_COLUMNS). */
 export function rowToRecord(
@@ -35,8 +35,8 @@ export function mapRowToWorkEntry(row: unknown): WorkEntry {
   return parseWorkEntryRow({})
 }
 
-/** Map WorkEntry (DB type) to Entry (view/API type). */
-export function workEntryToEntry(w: WorkEntry): Entry {
+/** Map WorkEntry (DB type - from either Zod or Drizzle schema) to Entry (view/API type). */
+export function workEntryToEntry(w: any): Entry {
   return {
     id: w.id ?? 0,
     employee_id: w.employee_id ?? 1,
@@ -71,5 +71,40 @@ export function workEntryToEntry(w: WorkEntry): Entry {
     deleted_at: w.deleted_at ?? null,
     synced: w.synced ?? 0,
     deleted: w.deleted ?? 0
+  }
+}
+
+/** Map Entry (view/API type) to Drizzle WorkEntry format (DB type with numbers for booleans). */
+export function entryToWorkEntry(e: Entry): any {
+  return {
+    id: e.id,
+    employee_id: e.employee_id,
+    workplace_id: e.workplace_id,
+    cost_center_id: e.cost_center_id,
+    work_day_id: e.work_day_id,
+    status: e.status,
+    check_in_at: e.check_in_at,
+    check_in_time_at: e.check_in_time_at,
+    check_in_latitude: e.check_in_latitude,
+    check_in_longitude: e.check_in_longitude,
+    check_in_application: e.check_in_application,
+    check_out_at: e.check_out_at,
+    check_out_time_at: e.check_out_time_at,
+    check_out_latitude: e.check_out_latitude,
+    check_out_longitude: e.check_out_longitude,
+    check_out_application: e.check_out_application,
+    break: e.break,
+    meal_benefit_has_breakfast: e.meal_benefit_has_breakfast ? 1 : 0,
+    meal_benefit_has_lunch: e.meal_benefit_has_lunch ? 1 : 0,
+    name: e.name,
+    type: e.type,
+    personalNumber: e.personalNumber,
+    administrator_comment: e.administrator_comment,
+    total_working_seconds: e.total_working_seconds,
+    createdAt: e.createdAt,
+    updatedAt: e.updatedAt,
+    deleted_at: e.deleted_at,
+    synced: e.synced,
+    deleted: e.deleted
   }
 }

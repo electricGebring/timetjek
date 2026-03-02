@@ -1,4 +1,4 @@
-import { TimeRegistrationStatus } from '@/enums/TimeRegistrationStatus'
+import { TimeRegistrationStatus } from '../../enums/TimeRegistrationStatus.ts'
 
 /** Normalized shape for DB bindings (numbers for booleans, required defaults). */
 export type SafeWorkEntry = {

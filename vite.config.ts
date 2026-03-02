@@ -21,6 +21,6 @@ export default defineConfig({
     }
   },
   optimizeDeps: {
-    exclude: ['jeep-sqlite']
+    exclude: ['jeep-sqlite', 'better-sqlite3', 'drizzle-orm/better-sqlite3']
   }
 })

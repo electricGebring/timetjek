@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Export Browser Database</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 800px;
+      margin: 50px auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    h1 { color: #333; }
+    button {
+      background: #0066cc;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      font-size: 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin: 10px 10px 10px 0;
+    }
+    button:hover { background: #0052a3; }
+    button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+    pre {
+      background: #f8f8f8;
+      padding: 15px;
+      border-radius: 4px;
+      overflow-x: auto;
+      max-height: 400px;
+    }
+    .success { color: #28a745; }
+    .error { color: #dc3545; }
+    .info { color: #666; margin: 15px 0; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>📤 Export Browser Database</h1>
+    
+    <div class="info">
+      Dette script eksporterer work_entries fra din browsers localStorage til en JSON-fil
+      som kan importeres til app.db
+    </div>
+
+    <button onclick="exportData()">Export Database</button>
+    <button onclick="copyToClipboard()" id="copyBtn" disabled>Copy to Clipboard</button>
+    
+    <div id="status"></div>
+    <pre id="output"></pre>
+  </div>
+
+  <script>
+    let exportedData = null;
+
+    async function exportData() {
+      const statusEl = document.getElementById('status');
+      const outputEl = document.getElementById('output');
+      const copyBtn = document.getElementById('copyBtn');
+      
+      try {
+        statusEl.innerHTML = '<p>🔍 Reading localStorage...</p>';
+        
+        // Get the base64 encoded database from localStorage
+        const savedDb = localStorage.getItem('sqljs_db');
+        
+        if (!savedDb) {
+          throw new Error('No database found in localStorage (key: sqljs_db)');
+        }
+
+        statusEl.innerHTML += '<p>📦 Loading sql.js...</p>';
+        
+        // Load sql.js
+        const SQL = await initSqlJs({
+          locateFile: file => `https://sql.js.org/dist/${file}`
+        });
+        
+        statusEl.innerHTML += '<p>🔓 Decoding database...</p>';
+        
+        // Decode the base64 database
+        const buf = Uint8Array.from(atob(savedDb), c => c.charCodeAt(0));
+        const db = new SQL.Database(buf);
+        
+        statusEl.innerHTML += '<p>📊 Reading work_entries...</p>';
+        
+        // Query the work_entries table
+        const result = db.exec('SELECT * FROM work_entries');
+        
+        if (result.length === 0 || !result[0].values.length) {
+          throw new Error('No entries found in work_entries table');
+        }
+
+        // Convert to array of objects
+        const columns = result[0].columns;
+        const entries = result[0].values.map(row => {
+          const obj = {};
+          columns.forEach((col, idx) => {
+            obj[col] = row[idx];
+          });
+          return obj;
+        });
+
+        exportedData = entries;
+        
+        const json = JSON.stringify(entries, null, 2);
+        outputEl.textContent = json;
+        
+        statusEl.innerHTML = `<p class="success">✅ Successfully exported ${entries.length} entries!</p>`;
+        copyBtn.disabled = false;
+        
+        // Auto-download
+        downloadJSON(entries, 'browser-work-entries.json');
+        
+      } catch (error) {
+        statusEl.innerHTML = `<p class="error">❌ Error: ${error.message}</p>`;
+        console.error(error);
+      }
+    }
+
+    function downloadJSON(data, filename) {
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function copyToClipboard() {
+      const outputEl = document.getElementById('output');
+      const text = outputEl.textContent;
+      navigator.clipboard.writeText(text).then(() => {
+        alert('✅ Copied to clipboard!');
+      });
+    }
+  </script>
+  
+  <script src="https://sql.js.org/dist/sql-wasm.js"></script>
+</body>
+</html>

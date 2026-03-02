@@ -12,7 +12,18 @@
     "format": "prettier . --write",
     "format:check": "prettier . --check",
     "lint": "eslint --ext .js,.ts,.vue src",
-    "lint:fix": "eslint --ext .js,.ts,.vue src --fix"
+    "lint:fix": "eslint --ext .js,.ts,.vue src --fix",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:push": "drizzle-kit push",
+    "db:drop": "drizzle-kit drop",
+    "db:studio": "drizzle-kit studio",
+    "test:drizzle": "tsx --tsconfig tsconfig.app.json test-drizzle.mjs",
+    "test:drizzle-domain": "tsx --tsconfig tsconfig.app.json test-drizzle-domain.mjs",
+    "test:sync-engine": "tsx --tsconfig tsconfig.app.json test-sync-engine-drizzle.mjs",
+    "seed": "tsx seed-test-data.mjs",
+    "clean:seeded": "tsx clean-seeded-entries.mjs",
+    "import:browser": "tsx import-browser-entries.mjs"
   },
   "dependencies": {
     "@capacitor-community/sqlite": "^7.0.3",
@@ -25,6 +36,8 @@
     "@fortawesome/fontawesome-svg-core": "^7.1.0",
     "@fortawesome/free-solid-svg-icons": "^7.1.0",
     "@fortawesome/vue-fontawesome": "^3.1.3",
+    "better-sqlite3": "^12.6.2",
+    "drizzle-orm": "^0.45.1",
     "jeep-sqlite": "^2.8.0",
     "pinia": "^3.0.4",
     "sql.js": "^1.13.0",
@@ -35,6 +48,7 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.18",
+    "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^24.10.1",
     "@types/sql.js": "^1.4.9",
     "@typescript-eslint/eslint-plugin": "^8.56.0",
@@ -43,6 +57,7 @@
     "@vue/eslint-config-typescript": "^14.7.0",
     "@vue/tsconfig": "^0.8.1",
     "autoprefixer": "^10.4.23",
+    "drizzle-kit": "^0.31.9",
     "eslint": "^10.0.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.5",
@@ -52,6 +67,7 @@
     "prettier": "^3.8.1",
     "prettier-plugin-tailwindcss": "^0.7.2",
     "tailwindcss": "^4.1.18",
+    "tsx": "^4.21.0",
     "typescript": "~5.9.3",
     "vite": "^7.2.4",
     "vue-tsc": "^3.1.4"

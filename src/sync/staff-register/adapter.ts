@@ -63,7 +63,7 @@ export function createStaffRegisterAdapter(): TableSyncAdapter<Entry> {
           resultItem = await api.createEntry(entry)
         }
 
-        await repo.upsertWorkEntry({ ...resultItem })
+        await repo.upsertWorkEntry(repo.entryToWorkEntry(resultItem))
 
         results.push(resultItem)
       }
@@ -117,7 +117,7 @@ export function createStaffRegisterAdapter(): TableSyncAdapter<Entry> {
         resultItem = await api.createEntry(entry)
       }
 
-      await repo.upsertWorkEntry({ ...resultItem })
+      await repo.upsertWorkEntry(repo.entryToWorkEntry(resultItem))
 
       return resultItem
     },

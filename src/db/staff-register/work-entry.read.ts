@@ -1,50 +1,57 @@
-import { getDB } from '../index'
+import { getDb } from '@/db/drizzle'
+import { workEntries, type WorkEntry } from '@/db/schema'
+import { and, eq, isNull } from 'drizzle-orm'
 
-import { Capacitor } from '@capacitor/core'
+/**
+ * Get all non-deleted work entries
+ */
+export async function getWorkEntries(): Promise<WorkEntry[]> {
+  console.debug('[DRIZZLE] 🔍 Fetching all work entries...')
 
-import type { WorkEntry } from '@/models/work-entry.schema'
+  const entries = await getDb()
+    .select()
+    .from(workEntries)
+    .where(and(eq(workEntries.deleted, 0), isNull(workEntries.deleted_at)))
 
-import { mapRowToWorkEntry } from './work-entry.mapper'
+  console.debug(`[DRIZZLE] ✅ Found ${entries.length} entries`)
 
-import { WORK_ENTRY_SQL } from './work-entry.sql'
-
-const SQL = WORK_ENTRY_SQL
-
-async function queryWorkEntries(where: string, params: unknown[] = []): Promise<WorkEntry[]> {
-  const sql = `${SQL.SELECT_WHERE} ${where}`.trim()
-
-  if (Capacitor.isNativePlatform()) {
-    // Type assertion for Capacitor SQLite DB
-    const db = getDB() as {
-      query: (sql: string, params?: unknown[]) => Promise<{ values?: unknown[][] }>
-    }
-    
-    const res = await db.query(sql, params as unknown[])
-
-    if (!res.values) return []
-
-    return res.values.map(mapRowToWorkEntry)
-  }
-
-  const { sqlJsDb } = getDB() as {
-    sqlJsDb: { exec: (sql: string, params: unknown[]) => { length: number; values: unknown[][] }[] }
-  }
-
-  const results = sqlJsDb.exec(sql, params)
-
-  if (results.length === 0 || !results[0]?.values) return []
-
-  return results[0].values.map(mapRowToWorkEntry)
+  return entries
 }
 
-export async function getWorkEntries() {
-  return queryWorkEntries('WHERE deleted = 0 AND deleted_at IS NULL')
+/**
+ * Get unsynced work entries for outbox drain
+ */
+export async function getUnsyncedWorkEntries(): Promise<WorkEntry[]> {
+  console.debug('[DRIZZLE] 📤 Fetching unsynced entries...')
+
+  const entries = await getDb()
+    .select()
+    .from(workEntries)
+    .where(
+      and(
+        eq(workEntries.synced, 0),
+        eq(workEntries.deleted, 0),
+        isNull(workEntries.deleted_at)
+      )
+    )
+
+  console.debug(`[DRIZZLE] ✅ Found ${entries.length} unsynced entries`)
+
+  return entries
 }
 
-export async function getUnsyncedWorkEntries() {
-  return queryWorkEntries('WHERE synced = 0 AND deleted = 0 AND deleted_at IS NULL')
-}
+/**
+ * Get soft-deleted entries that need to be synced
+ */
+export async function getDeletedWorkEntries(): Promise<WorkEntry[]> {
+  console.debug('[DRIZZLE] 🗑️  Fetching deleted entries...')
 
-export async function getDeletedWorkEntries() {
-  return queryWorkEntries('WHERE deleted = 1 AND synced = 0')
+  const entries = await getDb()
+    .select()
+    .from(workEntries)
+    .where(and(eq(workEntries.deleted, 1), eq(workEntries.synced, 0)))
+
+  console.debug(`[DRIZZLE] ✅ Found ${entries.length} deleted entries`)
+
+  return entries
 }

@@ -1,46 +1,88 @@
-import { getDB } from '../index'
-
+import { getDb } from '@/db/drizzle'
+import { workEntries } from '@/db/schema'
+import { eq } from 'drizzle-orm'
 import { Capacitor } from '@capacitor/core'
 
-import { WORK_ENTRY_SQL } from './work-entry.sql'
-
-const SQL = WORK_ENTRY_SQL
-
-async function runStatement(sql: string, params: unknown[]) {
-  if (Capacitor.isNativePlatform()) {
-    // Type assertion for Capacitor SQLite DB
-    const db = getDB() as {
-      run: (sql: string, params?: unknown[]) => Promise<unknown>
-    }
-
-    await db.run(sql, params as unknown[])
-  }
- else {
-    const { sqlJsDb, saveDatabase } = getDB() as {
-      sqlJsDb: { run: (sql: string, params: unknown[]) => void }
-      saveDatabase: () => void
-    }
-
-    sqlJsDb.run(sql, params)
-
-    saveDatabase()
+/**
+ * Save database to localStorage (web only)
+ */
+function saveDatabase() {
+  if (!Capacitor.isNativePlatform()) {
+    import('@/db/index').then(({ getDB }) => {
+      const db = getDB() as { saveDatabase: () => void }
+      if (db.saveDatabase) {
+        db.saveDatabase()
+      }
+    })
   }
 }
 
+/**
+ * Soft delete a work entry (marks as deleted but keeps data)
+ */
 export async function softDeleteWorkEntry(id: number) {
+  console.debug(`[DRIZZLE] 🗑️  Soft-deleting entry ${id}...`)
+
   const now = new Date().toISOString()
 
-  await runStatement(SQL.UPDATE_SOFT_DELETE, [now, id])
+  await getDb()
+    .update(workEntries)
+    .set({
+      deleted: 1,
+      deleted_at: now,
+      updatedAt: now
+    })
+    .where(eq(workEntries.id, id))
+
+  console.debug('[DRIZZLE] ✅ Soft-delete complete')
+  saveDatabase()
 }
 
+/**
+ * Restore a soft-deleted work entry
+ */
 export async function restoreWorkEntry(id: number) {
-  await runStatement(SQL.UPDATE_RESTORE, [id])
+  console.debug(`[DRIZZLE] ♻️  Restoring entry ${id}...`)
+
+  await getDb()
+    .update(workEntries)
+    .set({
+      deleted: 0,
+      deleted_at: null,
+      updatedAt: new Date().toISOString()
+    })
+    .where(eq(workEntries.id, id))
+
+  console.debug('[DRIZZLE] ✅ Restore complete')
+  saveDatabase()
 }
 
+/**
+ * Mark a work entry as synced with backend
+ */
 export async function markWorkEntryAsSynced(id: number) {
-  await runStatement(SQL.UPDATE_SYNCED, [id])
+  console.debug(`[DRIZZLE] ☑️  Marking entry ${id} as synced...`)
+
+  await getDb()
+    .update(workEntries)
+    .set({
+      synced: 1,
+      updatedAt: new Date().toISOString()
+    })
+    .where(eq(workEntries.id, id))
+
+  console.debug('[DRIZZLE] ✅ Sync mark complete')
+  saveDatabase()
 }
 
+/**
+ * Permanently delete a work entry from database
+ */
 export async function permanentDeleteWorkEntry(id: number) {
-  await runStatement(SQL.DELETE_BY_ID, [id])
+  console.debug(`[DRIZZLE] 💀 Permanently deleting entry ${id}...`)
+
+  await getDb().delete(workEntries).where(eq(workEntries.id, id))
+
+  console.debug('[DRIZZLE] ✅ Permanent delete complete')
+  saveDatabase()
 }

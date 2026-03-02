@@ -11,12 +11,70 @@ The app runs in the **browser** (web) or via **Capacitor** (iOS/Android). The **
 - **UI**: Views and components (e.g. StaffRegister for time registration). User actions are handled here.
 - **State**: **Pinia** stores hold reactive state (e.g. work entries, grouped entries). Views read from and dispatch actions to stores.
 - **Domain**: Business logic lives in domain services (e.g. staff-register domain). Data policies define offline-first behaviour and retention; a **SyncTrigger** can start sync when a mutation happens (if online). A **Data Cleanup** service enforces TTL and daily cleanup.
-- **Storage**: **Repositories** talk to the local database. On native we use **Capacitor SQLite**; on web we use **sql.js**. Tables include `work_entries` and `sync_metadata`.
+- **Storage**: **Repositories** talk to the local database. On native we use **Capacitor SQLite**; on web we use **sql.js**. Tables include `work_entries` and `sync_metadata`. For type-safety and query building, we use **Drizzle ORM** (see "Data Access Layer & ORM" below).
 - **Connectivity**: The **Capacitor Network API** reports online/offline. An **OnlineOfflineCoordinator** reacts to connectivity and starts or stops sync accordingly.
 - **Sync**: A **SyncManager** runs one sync at a time and drives a **SyncEngine** per table. Each table has an **adapter** (e.g. staff-register) that knows how to talk to the repo, call the API, and merge remote data. **Retry** and **conflict resolution** are part of the sync layer. Conflict resolution **strategy is configurable per table** via data policies (e.g. last-write-wins, local-wins for drafts, remote-wins for server-authoritative data).
 - **API / Backend**: API clients (e.g. staff-register.ts, workscheme.ts) call backend services (e.g. `/entries`, `/workScheme`).
 
 So: **User → Vue → Pinia → Domain → Repositories → SQLite**, and when online, **Coordinator / SyncTrigger → SyncManager → SyncEngine → Adapters → API → Backend**.
+
+---
+
+### Data Access Layer & ORM
+
+We use **Drizzle ORM** for type-safe database operations. The approach is **hybrid**:
+
+- **Browser (web)**: Uses `sql.js` as the SQL execution engine. Drizzle schema provides TypeScript types for type-safety, but execution is sql.js-powered.
+- **Node.js (backend, scripts, sync engines)**: Uses `better-sqlite3` as the SQL execution engine with Drizzle ORM for query building and type-safety.
+- **Future backend API**: Will use Drizzle ORM with a production SQL database (PostgreSQL, MySQL, etc.).
+
+**Why hybrid?**
+- `sql.js` is the only viable in-browser SQL engine for offline-first apps (no network dependencies).
+- Drizzle lets us write type-safe queries that work across both environments.
+- Gradual adoption: We can expand Drizzle usage as the backend grows without refactoring app code.
+
+**Current state:**
+- Browser code uses sql.js-based repositories (e.g. `work-entry.read.ts`, `work-entry.upsert.ts`).
+- Node.js scripts and future server logic use Drizzle ORM (e.g. `work-entry.read.drizzle.ts`, `work-entry.upsert.drizzle.ts`).
+- All code is type-safe via Drizzle schema (`src/db/schema.ts`).
+
+### Domain & Repository Integration
+
+The **domain layer** (business logic) is decoupled from database implementation via the **repository pattern**:
+
+- **Browser context** (`src/domain/staff-register/commands.ts`, `queries.ts`): Uses `repo.ts` which delegates to sql.js-based queries & commands.
+- **Node.js context** (`src/domain/staff-register/commands.drizzle.ts`, `queries.drizzle.ts`): Uses `repo.drizzle.ts` which delegates to Drizzle ORM queries & commands.
+
+The domain layer has identical logic in both contexts; only the repository implementation changes. This allows:
+1. **Type safety**: Both paths use Drizzle schema for type inference.
+2. **Clear separation**: Domain logic is database-agnostic; repository layer handles dialect differences.
+3. **Reusability**: Sync engine and backend logic can use the Drizzle versions; browser UI uses sql.js versions.
+
+### Sync Engine Integration
+
+The **sync engine** orchestrates bi-directional sync between local and remote databases:
+
+- **Browser sync** (`src/sync/staff-register/adapter.ts`): Uses sql.js-based repository for sync operations in the browser.
+- **Node.js sync** (`src/sync/staff-register/adapter.drizzle.ts`): Uses Drizzle ORM repository for sync operations in Node.js contexts (backend workers, scheduled tasks).
+
+Both adapters implement the same `TableSyncAdapter` interface:
+- `getUnsynced()` - Fetch outbox entries (synced=0)
+- `getDeleted()` - Fetch soft-deleted entries pending API deletion
+- `batchUpsert(items)` - Push entries to API and mark as synced
+- `batchDelete(ids)` - Delete entries from API and remove locally
+- `markAsSynced(id)` - Mark single entry as synced after successful API push
+- `permanentDelete(id)` - Hard delete after successful API deletion
+
+**Sync workflow:**
+1. Local mutations → outbox (synced=0)
+2. Sync trigger → SyncEngine.start()
+3. Drain outbox: `getUnsynced()` → `batchUpsert()` → `markAsSynced()`
+4. Drain deletions: `getDeleted()` → `batchDelete()` → `permanentDelete()`
+5. Pull remote: `fetchAll()` → `mergeRemote()` with conflict resolution
+
+**Testing:**
+- `npm run test:drizzle-domain` - Tests domain commands/queries with Drizzle
+- `npm run test:sync-engine` - Tests sync adapter operations with Drizzle
 
 ---
 

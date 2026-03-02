@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Export Database</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 800px;
+      margin: 50px auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    h1 { color: #333; }
+    button {
+      background: #0066cc;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      font-size: 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin: 10px 10px 10px 0;
+    }
+    button:hover { background: #0052a3; }
+    button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+    .success { color: #28a745; font-weight: bold; }
+    .error { color: #dc3545; font-weight: bold; }
+    .info { color: #666; margin: 15px 0; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>📤 Export Browser Database</h1>
+    
+    <div class="info">
+      This exports your work_entries from localStorage and saves as JSON file
+    </div>
+
+    <button onclick="exportData()">Export & Download</button>
+    
+    <div id="status"></div>
+  </div>
+
+  <script>
+    async function exportData() {
+      const statusEl = document.getElementById('status');
+      
+      try {
+        statusEl.innerHTML = '<p>⏳ Exporting...</p>';
+        
+        const savedDb = localStorage.getItem('sqljs_db');
+        
+        if (!savedDb) {
+          throw new Error('No database found in localStorage');
+        }
+
+        // Load sql.js to read the database
+        const SQL = await initSqlJs();
+        
+        // Decode the base64 database
+        const buf = Uint8Array.from(atob(savedDb), c => c.charCodeAt(0));
+        const db = new SQL.Database(buf);
+        
+        // Query work_entries
+        const result = db.exec('SELECT * FROM work_entries');
+        
+        if (!result.length || !result[0].values.length) {
+          throw new Error('No work_entries found in database');
+        }
+
+        // Convert to array of objects
+        const columns = result[0].columns;
+        const entries = result[0].values.map(row => {
+          const obj = {};
+          columns.forEach((col, idx) => {
+            obj[col] = row[idx];
+          });
+          return obj;
+        });
+
+        // Save as JSON
+        const json = JSON.stringify(entries, null, 2);
+        const blob = new Blob([json], {type: 'application/json'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'browser-export.json';
+        a.click();
+        URL.revokeObjectURL(url);
+        
+        statusEl.innerHTML = `<p class="success">✅ Downloaded ${entries.length} entries as browser-export.json<br><br>Next step in terminal:<br><code>npm run import:browser browser-export.json</code></p>`;
+        
+      } catch (error) {
+        statusEl.innerHTML = `<p class="error">❌ Error: ${error.message}</p>`;
+        console.error(error);
+      }
+    }
+  </script>
+  
+  <script src="https://sql.js.org/dist/sql-wasm.js"></script>
+</body>
+</html>

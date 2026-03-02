@@ -1,0 +1,13 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1772440326685,
+      "tag": "0000_modern_vision",
+      "breakpoints": true
+    }
+  ]
+}
