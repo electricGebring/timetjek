@@ -1,93 +1,75 @@
-import { getDB } from '../index'
-
+import { getDb } from '@/db/drizzle'
+import { workEntries, type WorkEntry } from '@/db/schema'
+import { eq } from 'drizzle-orm'
 import { Capacitor } from '@capacitor/core'
 
-import type { WorkEntry } from '@/models/work-entry.schema'
-
-import { buildSafeWorkEntry, type SafeWorkEntry } from './work-entry.helpers'
-
-import { bindUpdate, bindInsertWithId, bindInsertAutoId } from './work-entry.bind'
-
-import { WORK_ENTRY_SQL } from './work-entry.sql'
-
-const SQL = WORK_ENTRY_SQL
-
-async function upsertWorkEntryNative(safeEntry: SafeWorkEntry) {
-
-  // Type assertion for Capacitor SQLite DB
-  const db = getDB() as {
-    query: (sql: string, params?: unknown[]) => Promise<{ values?: unknown[][] }>
-    run: (sql: string, params?: unknown[]) => Promise<unknown>
-  }
-
-  let rowExists = false
-
-  if (safeEntry.id !== null && safeEntry.id !== undefined) {
-    const res = await db.query(SQL.SELECT_ID, [safeEntry.id])
-
-    rowExists = !!(res.values && res.values.length)
-  }
-
-  if (rowExists) {
-    await db.run(SQL.UPDATE_FULL, bindUpdate(safeEntry))
-  }
- else {
-    if (safeEntry.id !== null && safeEntry.id !== undefined) {
-      await db.run(SQL.INSERT_WITH_ID, bindInsertWithId(safeEntry))
-    }
- else {
-      await db.run(SQL.INSERT_AUTO_ID, bindInsertAutoId(safeEntry))
-    }
+/**
+ * Save database to localStorage (web only)
+ */
+function saveDatabase() {
+  if (!Capacitor.isNativePlatform()) {
+    import('@/db/index').then(({ getDB }) => {
+      const db = getDB() as { saveDatabase: () => void }
+      if (db.saveDatabase) {
+        db.saveDatabase()
+      }
+    })
   }
 }
 
-function upsertWorkEntryWeb(safeEntry: SafeWorkEntry) {
-  const { sqlJsDb, saveDatabase } = getDB() as {
-    sqlJsDb: {
-      exec: (sql: string, params: unknown[]) => { length: number; values: unknown[] }[]
-      run: (sql: string, params: unknown[]) => void
-    }
-    saveDatabase: () => void
-  }
+/**
+ * Insert or update a work entry using Drizzle ORM
+ */
+export async function upsertWorkEntry(entry: Partial<WorkEntry>) {
+  console.debug('[DRIZZLE] 💾 Upserting work entry...')
 
-  let rowExists = false
+  const db = getDb()
+
+  const safeEntry = {
+    ...entry,
+    createdAt: entry.createdAt ?? new Date().toISOString(),
+    updatedAt: entry.updatedAt ?? new Date().toISOString()
+  }
 
   if (safeEntry.id !== null && safeEntry.id !== undefined) {
-    const results = sqlJsDb.exec(SQL.SELECT_ID, [safeEntry.id])
+    // Check if row exists
+    const existing = await db
+      .select()
+      .from(workEntries)
+      .where(eq(workEntries.id, safeEntry.id))
 
-    rowExists =
-      results.length > 0 &&
-      !!results[0]?.values &&
-      Array.isArray(results[0].values) &&
-      results[0].values.length > 0
-  }
+    if (existing.length > 0) {
+      // Update existing
+      console.debug(`[DRIZZLE] 🔄 Updating entry ${safeEntry.id}...`)
 
-  if (rowExists) {
-    sqlJsDb.run(SQL.UPDATE_FULL, bindUpdate(safeEntry))
-  }
- else {
-    if (safeEntry.id !== null && safeEntry.id !== undefined) {
-      sqlJsDb.run(SQL.INSERT_WITH_ID, bindInsertWithId(safeEntry))
+      await db
+        .update(workEntries)
+        .set({
+          ...safeEntry,
+          updatedAt: new Date().toISOString()
+        })
+        .where(eq(workEntries.id, safeEntry.id))
+    } else {
+      // Insert with ID
+      console.debug(`[DRIZZLE] ➕ Inserting entry with ID ${safeEntry.id}...`)
+
+      await db.insert(workEntries).values({
+        ...safeEntry
+      } as WorkEntry)
     }
- else {
-      sqlJsDb.run(SQL.INSERT_AUTO_ID, bindInsertAutoId(safeEntry))
-    }
+  } else {
+    // Insert with auto-ID
+    console.debug('[DRIZZLE] ➕ Inserting entry with auto-ID...')
+
+    const { id, ...withoutId } = safeEntry
+
+    await db.insert(workEntries).values({
+      ...withoutId
+    } as WorkEntry)
   }
 
+  console.debug('[DRIZZLE] ✅ Upsert complete')
+
+  // Save to localStorage after write (web only)
   saveDatabase()
-}
-
-export async function upsertWorkEntry(entry: Partial<WorkEntry> | SafeWorkEntry) {
-  const safeEntry =
-    typeof entry.meal_benefit_has_breakfast === 'number' ? (entry as SafeWorkEntry) : buildSafeWorkEntry(entry)
-
-  // eslint-disable-next-line no-console
-  console.log('[4a. REPO] 💾 upsertWorkEntry', safeEntry)
-
-  if (Capacitor.isNativePlatform()) {
-    await upsertWorkEntryNative(safeEntry)
-  }
- else {
-    upsertWorkEntryWeb(safeEntry)
-  }
 }

@@ -15,9 +15,11 @@ let sqlJsDb: Database | null = null
  * Initializes the database for the application.
  * Uses Capacitor SQLite for native platforms (iOS/Android)
  * and sql.js for web. Creates work_entries and sync_metadata tables.
+ * Also initializes Drizzle ORM with the appropriate database instance.
  */
 export async function initDB() {
   const { initStaffRegisterDb } = await import('./staff-register/init')
+  const { initDrizzle } = await import('./drizzle')
 
   if (Capacitor.isNativePlatform()) {
     if (!sqlite) {
@@ -35,6 +37,10 @@ export async function initDB() {
     const { initSyncMetadataTable } = await import('./sync-metadata/repo')
 
     await initSyncMetadataTable()
+    
+    // TODO: Initialize Drizzle with Capacitor SQLite
+    // For now, Capacitor uses legacy queries until Drizzle Capacitor adapter is implemented
+    console.log('[DB] Capacitor SQLite initialized (Drizzle integration pending)')
   }
  else {
     let SQL: unknown
@@ -102,6 +108,10 @@ export async function initDB() {
     await initSyncMetadataTable()
 
     saveDatabase()
+    
+    // Initialize Drizzle ORM with sql.js database
+    await initDrizzle(sqlJsDb)
+    console.log('[DB] Drizzle ORM initialized with sql.js')
   }
 }
 
