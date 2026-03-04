@@ -14,12 +14,12 @@ export type TableSyncAdapter<T = unknown> = {
   tableName: string
   getUnsynced: () => Promise<T[]>
   getDeleted: () => Promise<T[]>
-  markAsSynced: (id: number) => Promise<void>
-  permanentDelete: (id: number) => Promise<void>
+  markAsSynced: (id: string | number) => Promise<void>
+  permanentDelete: (id: string) => Promise<void>
   batchUpsert: (items: T[]) => Promise<T[]>
-  batchDelete: (ids: number[]) => Promise<void>
+  batchDelete: (ids: string[]) => Promise<void>
   createItem: (item: T) => Promise<T>
-  deleteItem: (id: number) => Promise<void>
+  deleteItem: (id: string) => Promise<void>
   fetchAll: () => Promise<T[]>
   fetchSince: (timestamp: number) => Promise<T[]>
   mergeRemote: (

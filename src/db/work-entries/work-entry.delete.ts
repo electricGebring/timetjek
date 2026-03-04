@@ -20,7 +20,7 @@ function saveDatabase() {
 /**
  * Soft delete a work entry (marks as deleted but keeps data)
  */
-export async function softDeleteWorkEntry(id: number) {
+export async function softDeleteWorkEntry(id: string) {
   console.debug(`[DRIZZLE] 🗑️  Soft-deleting entry ${id}...`)
 
   const now = new Date().toISOString()
@@ -41,7 +41,7 @@ export async function softDeleteWorkEntry(id: number) {
 /**
  * Restore a soft-deleted work entry
  */
-export async function restoreWorkEntry(id: number) {
+export async function restoreWorkEntry(id: string) {
   console.debug(`[DRIZZLE] ♻️  Restoring entry ${id}...`)
 
   await getDb()
@@ -60,7 +60,7 @@ export async function restoreWorkEntry(id: number) {
 /**
  * Mark a work entry as synced with backend
  */
-export async function markWorkEntryAsSynced(id: number) {
+export async function markWorkEntryAsSynced(id: string) {
   console.debug(`[DRIZZLE] ☑️  Marking entry ${id} as synced...`)
 
   await getDb()
@@ -78,7 +78,7 @@ export async function markWorkEntryAsSynced(id: number) {
 /**
  * Permanently delete a work entry from database
  */
-export async function permanentDeleteWorkEntry(id: number) {
+export async function permanentDeleteWorkEntry(id: string) {
   console.debug(`[DRIZZLE] 💀 Permanently deleting entry ${id}...`)
 
   await getDb().delete(workEntries).where(eq(workEntries.id, id))

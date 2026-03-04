@@ -9,6 +9,7 @@ import type { WorkEntry, WorkEntryColumn } from '../../models/work-entry.schema.
 import { WORK_ENTRY_COLUMNS, parseWorkEntryRow } from '../../models/work-entry.schema.ts'
 
 import type { WorkEntry as DrizzleWorkEntry } from '../schema.ts'
+import { createLocalWorkEntryId } from './work-entry.helpers.ts'
 
 // Flexible type for mapper functions - accepts any object with WorkEntry-like properties
 export type AnyWorkEntry = Record<string, unknown>
@@ -44,9 +45,18 @@ export function mapRowToWorkEntry(row: unknown): WorkEntry {
 export function workEntryToEntry(w: AnyWorkEntry): Entry {
   // Type assertion to access properties - we know this has WorkEntry-like shape
   const entry = w as unknown as (WorkEntry | DrizzleWorkEntry)
+  const resolvedId =
+    typeof entry.id === 'string'
+      ? entry.id.trim().length > 0
+        ? entry.id.trim()
+        : createLocalWorkEntryId()
+      : typeof entry.id === 'number'
+        ? String(entry.id)
+      : createLocalWorkEntryId()
   
   return {
-    id: entry.id ?? 0,
+    id: resolvedId,
+    remote_id: entry.remote_id ?? null,
     employee_id: entry.employee_id ?? 1,
     workplace_id: entry.workplace_id ?? 1,
     cost_center_id: entry.cost_center_id ?? null,
@@ -86,6 +96,7 @@ export function workEntryToEntry(w: AnyWorkEntry): Entry {
 export function entryToWorkEntry(e: Entry): AnyWorkEntry {
   return {
     id: e.id,
+    remote_id: e.remote_id ?? null,
     employee_id: e.employee_id,
     workplace_id: e.workplace_id,
     cost_center_id: e.cost_center_id,
