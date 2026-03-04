@@ -5,6 +5,7 @@ import * as schema from './schema'
 import type { Database as SqlJsDatabase } from 'sql.js'
 
 let dbInstance: unknown = null
+let rawSqlite: unknown = null // Raw better-sqlite3 instance for Node.js
 
 /**
  * Initialize Drizzle database instance
@@ -24,9 +25,9 @@ export async function initDrizzle(dbOrPath: string | SqlJsDatabase) {
     
     const Database = (await import('better-sqlite3')).default
     
-    const sqlite = new Database(dbOrPath)
+    rawSqlite = new Database(dbOrPath)
     
-    dbInstance = drizzleBetterSqlite(sqlite, { schema })
+    dbInstance = drizzleBetterSqlite(rawSqlite, { schema })
   } 
   // Otherwise assume it's a sql.js database instance (browser)
   else {
@@ -45,6 +46,16 @@ export function getDb(): ReturnType<typeof drizzleSqlJs> {
   }
 
   return dbInstance as ReturnType<typeof drizzleSqlJs>
+}
+
+/**
+ * Get the raw sqlite3 instance (Node.js only)
+ */
+export function getRawSqlite() {
+  if (!rawSqlite) {
+    throw new Error('Raw sqlite not available (only in Node.js)')
+  }
+  return rawSqlite as { prepare: (sql: string) => { run: (...params: unknown[]) => void, all: (...params: unknown[]) => unknown[] } }
 }
 
 /**

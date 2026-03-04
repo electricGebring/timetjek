@@ -1,64 +1,44 @@
-// --- Modern migration runner for native + web ---
-// Now uses Drizzle Kit for schema management - migrations in drizzle/ folder
+// --- Drizzle ORM migration runner for native + web ---
+// All schema changes now managed by Drizzle Kit - single source of truth
 import { Capacitor } from '@capacitor/core'
 
 import { getDB } from './index'
-
-// Legacy manually written migrations (kept for backwards compatibility)
-import migration_001 from '../../migrations/20260128_001_create_work_entries.sql?raw'
-
-import migration_003 from '../../migrations/20260205_002_upgrade_work_entries.sql?raw'
-
-import migration_004 from '../../migrations/20260205_001_add_total_break_seconds.sql?raw'
+import { getRawSqlite } from './drizzle'
 
 type Migration = { id: string; sql: string }
 
 let migrations: Migration[] = []
 
 if (typeof window === 'undefined') {
-  // Node.js: use fs
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const fs = require('fs')
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const path = require('path')
+  // Node.js: use fs to read all Drizzle migrations dynamically
+  const { readFileSync, readdirSync, existsSync } = await import('fs')
+  const { join } = await import('path')
+  const { cwd } = await import('process')
 
-  // Legacy migrations (already applied in existing DBs)
-  const legacyMigrations = [
-    {
-      id: '20260128_001_create_work_entries',
-      sql: fs.readFileSync('migrations/20260128_001_create_work_entries.sql', 'utf-8')
-    },
-    {
-      id: '20260205_002_upgrade_work_entries',
-      sql: fs.readFileSync('migrations/20260205_002_upgrade_work_entries.sql', 'utf-8')
-    },
-    {
-      id: '20260205_001_add_total_break_seconds',
-      sql: fs.readFileSync('migrations/20260205_001_add_total_break_seconds.sql', 'utf-8')
-    }
-  ]
-
-  // Read Drizzle-generated migrations from drizzle/ folder (future schema changes)
-  const drizzlePath = path.join(process.cwd(), 'drizzle')
-  const drizzleFiles = fs.existsSync(drizzlePath) 
-    ? fs.readdirSync(drizzlePath).filter((f: string) => f.endsWith('.sql')).sort() 
+  const drizzlePath = join(cwd(), 'drizzle')
+  const drizzleFiles = existsSync(drizzlePath) 
+    ? readdirSync(drizzlePath).filter((f: string) => f.endsWith('.sql')).sort() 
     : []
-  const drizzleMigrations = drizzleFiles.map((file: string) => ({
+  
+  migrations = drizzleFiles.map((file: string) => ({
     id: `drizzle_${file.replace('.sql', '')}`,
-    sql: fs.readFileSync(path.join(drizzlePath, file), 'utf-8')
+    sql: readFileSync(join(drizzlePath, file), 'utf-8')
   }))
-
-  migrations = [...legacyMigrations, ...drizzleMigrations]
 }
  else {
-  // Web/Vite: use imported SQL strings
-  // Note: New Drizzle migrations need to be manually imported here for web builds
-  migrations = [
-    { id: '20260128_001_create_work_entries', sql: migration_001 },
-    { id: '20260205_002_upgrade_work_entries', sql: migration_003 },
-    { id: '20260205_001_add_total_break_seconds', sql: migration_004 }
-    // Future Drizzle-generated migrations will be added here
-  ]
+  // Web/Vite: use dynamic imports for SQL files (Vite supports ?raw)
+  // This will be populated at build time by Vite's static analysis
+  const drizzleModules = import.meta.glob('../../drizzle/*.sql', { query: '?raw', eager: true })
+  
+  migrations = Object.entries(drizzleModules)
+    .map(([path, mod]) => {
+      const fileName = path.split('/').pop()?.replace('.sql', '') || ''
+      return {
+        id: `drizzle_${fileName}`,
+        sql: (mod as { default: string }).default
+      }
+    })
+    .sort((a, b) => a.id.localeCompare(b.id))
 }
 
 async function ensureMigrationsTable() {
@@ -91,7 +71,12 @@ async function getAppliedMigrationIds(): Promise<Set<string>> {
 }
 
 async function runSql(sql: string, params: unknown[] = []) {
-  if (Capacitor.isNativePlatform()) {
+  // Node.js test environment with better-sqlite3
+  if (typeof window === 'undefined') {
+    const sqlite = getRawSqlite()
+    sqlite.prepare(sql).run(...params)
+  }
+  else if (Capacitor.isNativePlatform()) {
     const db = getDB() as { run: (sql: string, params?: unknown[]) => Promise<void> }
 
     await db.run(sql, params)
@@ -104,7 +89,19 @@ async function runSql(sql: string, params: unknown[] = []) {
 }
 
 async function queryRows(sql: string, params: unknown[] = []): Promise<unknown[][]> {
-  if (Capacitor.isNativePlatform()) {
+  // Node.js test environment with better-sqlite3
+  if (typeof window === 'undefined') {
+    const sqlite = getRawSqlite()
+    const rows = sqlite.prepare(sql).all(...params)
+    // Convert from object format [{id: 'x'}] to array format [['x']] for consistency
+    return rows.map((row: unknown) => {
+      if (typeof row === 'object' && row !== null) {
+        return Object.values(row)
+      }
+      return [row]
+    })
+  }
+  else if (Capacitor.isNativePlatform()) {
     const db = getDB() as { query: (sql: string, params?: unknown[]) => Promise<{ values?: unknown[][] }> }
 
     const res = await db.query(sql, params)
@@ -128,7 +125,10 @@ async function queryRows(sql: string, params: unknown[] = []): Promise<unknown[]
 }
 
 async function saveIfWeb() {
-  if (!Capacitor.isNativePlatform()) {
+  if (typeof window === 'undefined') {
+    // Node.js with better-sqlite3 - no saveDatabase needed
+    return  }
+  else if (!Capacitor.isNativePlatform()) {
     const { saveDatabase } = getDB() as { saveDatabase: () => void }
 
     saveDatabase()
