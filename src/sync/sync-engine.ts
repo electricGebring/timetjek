@@ -257,7 +257,7 @@ export class SyncEngine implements SyncPort {
     // Try batch operation first (if API supports it)
     if (deletedItems.length > 1) {
       try {
-        const idsToDelete = (deletedItems as { id: string | number }[]).map((item) => item.id)
+        const idsToDelete = (deletedItems as { id: string }[]).map((item) => item.id)
 
         await this.adapter.batchDelete(idsToDelete)
         // this.logger.log(`[SyncEngine] Batch deleted ${idsToDelete.length} items from ${this.tableName}`)

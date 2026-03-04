@@ -28,10 +28,10 @@ export function createWorkEntriesAdapter(): TableSyncAdapter<Entry> {
     },
     getDeleted: async (): Promise<Entry[]> =>
       (await repo.getDeletedWorkEntries()).filter((e) => e.id !== null).map(repo.workEntryToEntry),
-    markAsSynced: async (id: string | number): Promise<void> => {
+    markAsSynced: async (id: string): Promise<void> => {
       await repo.markWorkEntryAsSynced(id)
     },
-    permanentDelete: async (id: string | number): Promise<void> => {
+    permanentDelete: async (id: string): Promise<void> => {
       await repo.permanentDeleteWorkEntry(id)
     },
     batchUpsert: async (items: Entry[]): Promise<Entry[]> => {
@@ -70,7 +70,7 @@ export function createWorkEntriesAdapter(): TableSyncAdapter<Entry> {
 
       return results
     },
-    batchDelete: async (ids: (string | number)[]): Promise<void> => {
+    batchDelete: async (ids: string[]): Promise<void> => {
       if (whenOffline('batchDelete')) return
 
       for (const id of ids) {
@@ -121,10 +121,10 @@ export function createWorkEntriesAdapter(): TableSyncAdapter<Entry> {
 
       return resultItem
     },
-    deleteItem: async (id: string | number): Promise<void> => {
+    deleteItem: async (id: string): Promise<void> => {
       if (whenOffline('deleteItem')) return
 
-      await deleteEntry(String(id))
+      await deleteEntry(id)
     },
     fetchAll: async (): Promise<Entry[]> => {
       try {

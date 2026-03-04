@@ -55,7 +55,7 @@ export function createWorkEntriesDrizzleAdapter(): TableSyncAdapter<Entry> {
     /**
      * Mark single entry as synced after successful API push
      */
-    markAsSynced: async (id: string | number): Promise<void> => {
+    markAsSynced: async (id: string): Promise<void> => {
       console.log(`[DRIZZLE ADAPTER] ✓ Marking entry ${id} as synced...`)
       await repo.markWorkEntryAsSynced(id)
     },
@@ -63,7 +63,7 @@ export function createWorkEntriesDrizzleAdapter(): TableSyncAdapter<Entry> {
     /**
      * Permanently delete entry after successful API deletion
      */
-    permanentDelete: async (id: string | number): Promise<void> => {
+    permanentDelete: async (id: string): Promise<void> => {
       console.log(`[DRIZZLE ADAPTER] 🔥 Permanently deleting entry ${id}...`)
       await repo.permanentDeleteWorkEntry(id)
     },
@@ -92,7 +92,7 @@ export function createWorkEntriesDrizzleAdapter(): TableSyncAdapter<Entry> {
      * NOTE: In Drizzle adapter, we simulate API calls
      * In production, replace with actual API client
      */
-    batchDelete: async (ids: (string | number)[]): Promise<void> => {
+    batchDelete: async (ids: string[]): Promise<void> => {
       console.log(`[DRIZZLE ADAPTER] 🗑️  Batch deleting ${ids.length} entries...`)
 
       // TODO: Replace with actual API calls in production
@@ -126,7 +126,7 @@ export function createWorkEntriesDrizzleAdapter(): TableSyncAdapter<Entry> {
      * Delete single item via API
      * NOTE: In Drizzle adapter, we simulate API call
      */
-    deleteItem: async (id: string | number): Promise<void> => {
+    deleteItem: async (id: string): Promise<void> => {
       console.log(`[DRIZZLE ADAPTER] 🗑️  Deleting entry ${id} via API...`)
 
       // TODO: Replace with actual API call in production

@@ -3,7 +3,9 @@
 
 PRAGMA foreign_keys = OFF;
 
-CREATE TABLE IF NOT EXISTS work_entries_uuid_tmp (
+ALTER TABLE work_entries RENAME TO work_entries_legacy;
+
+CREATE TABLE IF NOT EXISTS work_entries (
   id TEXT PRIMARY KEY,
   remote_id TEXT,
   employee_id INTEGER,
@@ -39,7 +41,7 @@ CREATE TABLE IF NOT EXISTS work_entries_uuid_tmp (
   deleted INTEGER DEFAULT 0
 );
 
-INSERT INTO work_entries_uuid_tmp (
+INSERT INTO work_entries (
   id,
   remote_id,
   employee_id,
@@ -111,10 +113,9 @@ SELECT
   deleted_at,
   synced,
   deleted
-FROM work_entries;
+FROM work_entries_legacy;
 
-DROP TABLE work_entries;
-ALTER TABLE work_entries_uuid_tmp RENAME TO work_entries;
+DROP TABLE work_entries_legacy;
 
 CREATE INDEX IF NOT EXISTS idx_work_entries_synced_deleted
   ON work_entries (synced, deleted);

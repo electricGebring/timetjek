@@ -15,11 +15,11 @@ export type TableSyncAdapter<T = unknown> = {
   getUnsynced: () => Promise<T[]>
   getDeleted: () => Promise<T[]>
   markAsSynced: (id: string | number) => Promise<void>
-  permanentDelete: (id: string | number) => Promise<void>
+  permanentDelete: (id: string) => Promise<void>
   batchUpsert: (items: T[]) => Promise<T[]>
-  batchDelete: (ids: (string | number)[]) => Promise<void>
+  batchDelete: (ids: string[]) => Promise<void>
   createItem: (item: T) => Promise<T>
-  deleteItem: (id: string | number) => Promise<void>
+  deleteItem: (id: string) => Promise<void>
   fetchAll: () => Promise<T[]>
   fetchSince: (timestamp: number) => Promise<T[]>
   mergeRemote: (
