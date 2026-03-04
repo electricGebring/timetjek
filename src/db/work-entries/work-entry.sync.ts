@@ -78,7 +78,7 @@ export async function getDeletedForSync(): Promise<WorkEntry[]> {
  * Mark multiple entries as synced after successful API push
  * Called after successfully upserting items on backend
  */
-export async function markEntriesAsSynced(ids: number[]): Promise<void> {
+export async function markEntriesAsSynced(ids: string[]): Promise<void> {
   if (ids.length === 0) return
 
   console.debug(`[DRIZZLE SYNC] ☑️  Marking ${ids.length} entries as synced...`)
@@ -102,7 +102,7 @@ export async function markEntriesAsSynced(ids: number[]): Promise<void> {
  * Permanently delete entries after successful delete on API
  * Called after successfully deleting items on backend
  */
-export async function deletePermanently(ids: number[]): Promise<void> {
+export async function deletePermanently(ids: string[]): Promise<void> {
   if (ids.length === 0) return
 
   console.debug(`[DRIZZLE SYNC] 💀 Permanently deleting ${ids.length} entries...`)

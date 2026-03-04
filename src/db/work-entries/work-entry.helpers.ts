@@ -2,7 +2,8 @@ import { TimeRegistrationStatus } from '../../enums/TimeRegistrationStatus.ts'
 
 /** Normalized shape for DB bindings (numbers for booleans, required defaults). */
 export type SafeWorkEntry = {
-  id: number | null
+  id: string
+  remote_id: string | null
   employee_id: number
   workplace_id: number
   cost_center_id: number | null
@@ -38,10 +39,41 @@ export type SafeWorkEntry = {
 
 const nowIso = (): string => new Date().toISOString()
 
+const uuidLike = (): string => {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID()
+  }
+
+  const part = () => Math.random().toString(16).slice(2, 10)
+
+  return `${part()}-${part()}-${part()}-${part()}`
+}
+
+export function createLocalWorkEntryId(): string {
+  return `local-${uuidLike()}`
+}
+
 /** Normalize a partial entry into a SafeWorkEntry for parameterized SQL. */
 export function buildSafeWorkEntry(entry: Record<string, unknown>): SafeWorkEntry {
+  const resolvedId =
+    typeof entry.id === 'string' && entry.id.trim().length > 0
+      ? entry.id.trim()
+      : typeof entry.id === 'number'
+        ? String(entry.id)
+      : createLocalWorkEntryId()
+
+  const resolvedRemoteId =
+    typeof entry.remote_id === 'string'
+      ? entry.remote_id.trim().length > 0
+        ? entry.remote_id.trim()
+        : null
+      : typeof entry.remote_id === 'number'
+        ? String(entry.remote_id)
+      : null
+
   return {
-    id: (entry.id as number) ?? null,
+    id: resolvedId,
+    remote_id: resolvedRemoteId,
     employee_id: (entry.employee_id as number) ?? 1,
     workplace_id: (entry.workplace_id as number) ?? 1,
     cost_center_id: (entry.cost_center_id as number) ?? null,
