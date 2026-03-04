@@ -3,8 +3,8 @@
 
 flowchart LR
   subgraph API["Backend"]
-    Server["Backend API\n(staff-register, workscheme)"]
-    Http["API Client\n(staff-register.ts, workscheme.ts)"]
+    Server["Backend API\n(work-entries, workscheme)"]
+    Http["API Client\n(work-entries.ts, workscheme.ts)"]
     Incremental["Incremental / batch\n(fetchSince, batchUpsert)"]
   end
 
@@ -14,7 +14,7 @@ flowchart LR
     SyncTrigger["SyncTrigger\n(immediate sync on mutation,\ndebounced if online)"]
     SyncManager["SyncManager\n(one sync at a time)\n• work_entries"]
     SyncEngine["Sync Engine\n(drain outbox → deletions → pull)"]
-    TableAdapter["Table Adapters\n(staff-register: repo + API + merge)"]
+    TableAdapter["Table Adapters\n(work-entries: repo + API + merge)"]
     Conflict["Conflict Resolver\n(per-table strategy:\nlast-write-wins, local-wins, …)"]
     Retry["Retry Utils\n(exponential backoff)"]
   end
@@ -26,14 +26,14 @@ flowchart LR
   end
 
   subgraph Domain["Domain Layer"]
-    UseCases["Use Cases / Services\n(staff-register/domain)"]
+    UseCases["Use Cases / Services\n(work-entries/domain)"]
     Repo["Repositories\n(work_entries, typed)"]
     Cleanup["Data Cleanup Service\n(TTL, daily schedule)"]
     Policies["Data Policies Config\n(SyncMode, retention days,\nconflict strategy per table)"]
   end
 
   subgraph State["State Layer"]
-    Pinia["Pinia Stores\n(useStaffRegisterStore,\nworkEntries, groupedEntries)"]
+    Pinia["Pinia Stores\n(useWorkEntriesStore,\nworkEntries, groupedEntries)"]
   end
 
   subgraph UI["Vue UI"]

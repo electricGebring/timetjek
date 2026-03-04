@@ -10,11 +10,11 @@ The app runs in the **browser** (web) or via **Capacitor** (iOS/Android). The **
 
 - **UI**: Views and components (e.g. StaffRegister for time registration). User actions are handled here.
 - **State**: **Pinia** stores hold reactive state (e.g. work entries, grouped entries). Views read from and dispatch actions to stores.
-- **Domain**: Business logic lives in domain services (e.g. staff-register domain). Data policies define offline-first behaviour and retention; a **SyncTrigger** can start sync when a mutation happens (if online). A **Data Cleanup** service enforces TTL and daily cleanup.
+- **Domain**: Business logic lives in domain services (e.g. work-entries domain). Data policies define offline-first behaviour and retention; a **SyncTrigger** can start sync when a mutation happens (if online). A **Data Cleanup** service enforces TTL and daily cleanup.
 - **Storage**: **Repositories** talk to the local database. On native we use **Capacitor SQLite**; on web we use **sql.js**. Tables include `work_entries` and `sync_metadata`. For type-safety and query building, we use **Drizzle ORM** (see "Data Access Layer & ORM" below).
 - **Connectivity**: The **Capacitor Network API** reports online/offline. An **OnlineOfflineCoordinator** reacts to connectivity and starts or stops sync accordingly.
-- **Sync**: A **SyncManager** runs one sync at a time and drives a **SyncEngine** per table. Each table has an **adapter** (e.g. staff-register) that knows how to talk to the repo, call the API, and merge remote data. **Retry** and **conflict resolution** are part of the sync layer. Conflict resolution **strategy is configurable per table** via data policies (e.g. last-write-wins, local-wins for drafts, remote-wins for server-authoritative data).
-- **API / Backend**: API clients (e.g. staff-register.ts, workscheme.ts) call backend services (e.g. `/entries`, `/workScheme`).
+- **Sync**: A **SyncManager** runs one sync at a time and drives a **SyncEngine** per table. Each table has an **adapter** (e.g. work-entries) that knows how to talk to the repo, call the API, and merge remote data. **Retry** and **conflict resolution** are part of the sync layer. Conflict resolution **strategy is configurable per table** via data policies (e.g. last-write-wins, local-wins for drafts, remote-wins for server-authoritative data).
+- **API / Backend**: API clients (e.g. work-entries.ts, workscheme.ts) call backend services (e.g. `/entries`, `/workScheme`).
 
 So: **User → Vue → Pinia → Domain → Repositories → SQLite**, and when online, **Coordinator / SyncTrigger → SyncManager → SyncEngine → Adapters → API → Backend**.
 
@@ -42,8 +42,8 @@ We use **Drizzle ORM** for type-safe database operations. The approach is **hybr
 
 The **domain layer** (business logic) is decoupled from database implementation via the **repository pattern**:
 
-- **Browser context** (`src/domain/staff-register/commands.ts`, `queries.ts`): Uses `repo.ts` which delegates to sql.js-based queries & commands.
-- **Node.js context** (`src/domain/staff-register/commands.drizzle.ts`, `queries.drizzle.ts`): Uses `repo.drizzle.ts` which delegates to Drizzle ORM queries & commands.
+- **Browser context** (`src/domain/work-entries/commands.ts`, `queries.ts`): Uses `repo.ts` which delegates to sql.js-based queries & commands.
+- **Node.js context** (`src/domain/work-entries/commands.drizzle.ts`, `queries.drizzle.ts`): Uses `repo.drizzle.ts` which delegates to Drizzle ORM queries & commands.
 
 The domain layer has identical logic in both contexts; only the repository implementation changes. This allows:
 1. **Type safety**: Both paths use Drizzle schema for type inference.
@@ -54,8 +54,8 @@ The domain layer has identical logic in both contexts; only the repository imple
 
 The **sync engine** orchestrates bi-directional sync between local and remote databases:
 
-- **Browser sync** (`src/sync/staff-register/adapter.ts`): Uses sql.js-based repository for sync operations in the browser.
-- **Node.js sync** (`src/sync/staff-register/adapter.drizzle.ts`): Uses Drizzle ORM repository for sync operations in Node.js contexts (backend workers, scheduled tasks).
+- **Browser sync** (`src/sync/work-entries/adapter.ts`): Uses sql.js-based repository for sync operations in the browser.
+- **Node.js sync** (`src/sync/work-entries/adapter.drizzle.ts`): Uses Drizzle ORM repository for sync operations in Node.js contexts (backend workers, scheduled tasks).
 
 Both adapters implement the same `TableSyncAdapter` interface:
 - `getUnsynced()` - Fetch outbox entries (synced=0)
@@ -83,7 +83,7 @@ Both adapters implement the same `TableSyncAdapter` interface:
 When the user changes data (e.g. creates or deletes a work entry), the flow is:
 
 1. **UI** – The Vue component (e.g. StaffRegister) handles the user action and dispatches a store action.
-2. **State** – The Pinia store (e.g. useStaffRegisterStore) runs the action and calls the domain layer.
+2. **State** – The Pinia store (e.g. useWorkEntriesStore) runs the action and calls the domain layer.
 3. **Domain** – A domain use case (e.g. createWorkEntry, deleteWorkEntry) runs the business rules and then writes through the repository.
 4. **Local persist** – The repository writes to SQLite. New or updated rows are stored with **synced = 0**, i.e. they go into the **outbox** (pending sync).
 5. **Sync trigger** – If the app is online, a **SyncTrigger** (debounced) is notified after the mutation and starts a sync.

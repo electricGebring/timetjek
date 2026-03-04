@@ -23,7 +23,7 @@ Project for Timetjek in collaboration with DevelopersShore https://drive.google.
                            ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                         STORE (Pinia)                                        │
-│  src/stores/staff-register/store.ts                                         │
+│  src/stores/work-entries/store.ts                                         │
 │  ────────────────────────────────────────────────────────────────────────   │
 │  updateWorkEntry(entry: any) {                                              │
 │    await domain.updateWorkEntry(entry)                                      │
@@ -33,7 +33,7 @@ Project for Timetjek in collaboration with DevelopersShore https://drive.google.
                            ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                         DOMAIN (Business Logic)                              │
-│  src/domain/staff-register/domain.ts                                        │
+│  src/domain/work-entries/domain.ts                                        │
 │  ────────────────────────────────────────────────────────────────────────   │
 │  export async function updateWorkEntry(entry: any) {                        │
 │    if (!entry.id) throw new Error('Cannot update entry without id')         │
@@ -86,7 +86,7 @@ Project for Timetjek in collaboration with DevelopersShore https://drive.google.
          │                                  │
          │                    ┌─────────────▼──────────┐
          │                    │  TABLE ADAPTER         │
-         │                    │ src/sync/staff-register/
+         │                    │ src/sync/work-entries/
          │                    │ adapter.ts             │
          │                    │ ──────────────────────  │
          │                    │ batchUpsert(items) {   │
@@ -102,7 +102,7 @@ Project for Timetjek in collaboration with DevelopersShore https://drive.google.
          │                                  │
          │                    ┌─────────────▼──────────┐
          │                    │  API (Mock JSON)       │
-         │                    │ src/api/staff-register.│
+         │                    │ src/api/work-entries.│
          │                    │ updateEntry(item) {    │
          │                    │   PATCH /entries/{id}  │
          │                    │ }                      │
@@ -192,7 +192,7 @@ This project uses a simple, robust migration strategy for evolving the local SQL
 
 Suppose you want to add a `notes` column to `work_entries`:
 
-In `src/db/staff-register/schema.ts`:
+In `src/db/work-entries/schema.ts`:
 
 ```typescript
 export const STAFF_REGISTER_MIGRATIONS: string[] = [
@@ -202,13 +202,13 @@ export const STAFF_REGISTER_MIGRATIONS: string[] = [
 ]
 ```
 
-In `src/db/staff-register/init.ts`:
+In `src/db/work-entries/init.ts`:
 
 ```typescript
 import { STAFF_REGISTER_SCHEMA, STAFF_REGISTER_MIGRATIONS } from './schema'
 import { runMigrations } from '../migrate'
 
-export async function initStaffRegisterDb(db: any, isNative: boolean) {
+export async function initWorkEntriesDb(db: any, isNative: boolean) {
 	if (isNative) {
 		await db.execute(STAFF_REGISTER_SCHEMA)
 		await runMigrations((sql) => db.execute(sql), STAFF_REGISTER_MIGRATIONS)
@@ -227,8 +227,8 @@ export async function initStaffRegisterDb(db: any, isNative: boolean) {
 
 ### See also
 - `src/db/migrate.ts` for the migration runner utility
-- `src/db/staff-register/schema.ts` for schema and migrations
-- `src/db/staff-register/init.ts` for initialization logic
+- `src/db/work-entries/schema.ts` for schema and migrations
+- `src/db/work-entries/init.ts` for initialization logic
 
 ---
 

@@ -1,4 +1,4 @@
-import * as staffRepo from '@/db/staff-register/repo'
+import * as staffRepo from '@/db/work-entries/repo'
 
 import { hasOpenCheckIn } from './rules'
 

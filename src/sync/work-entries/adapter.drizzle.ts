@@ -5,8 +5,8 @@
 
 import type { TableSyncAdapter } from '../table-sync-adapter.ts'
 import { TABLE_WORK_ENTRIES } from '../../constants/tables.ts'
-import * as repo from '../../db/staff-register/repo.ts'
-import { workEntryToEntry, entryToWorkEntry, type AnyWorkEntry } from '../../db/staff-register/work-entry.mapper.ts'
+import * as repo from '../../db/work-entries/repo.ts'
+import { workEntryToEntry, entryToWorkEntry, type AnyWorkEntry } from '../../db/work-entries/work-entry.mapper.ts'
 import type { Entry } from '../../views/staffRegister/types.ts'
 import type { ConflictResolutionStrategy } from '../../enums/ConflictResolutionStrategy.ts'
 
@@ -14,7 +14,7 @@ import type { ConflictResolutionStrategy } from '../../enums/ConflictResolutionS
  * Drizzle-based sync adapter for work_entries table
  * Uses Drizzle ORM queries for sync operations
  */
-export function createStaffRegisterDrizzleAdapter(): TableSyncAdapter<Entry> {
+export function createWorkEntriesDrizzleAdapter(): TableSyncAdapter<Entry> {
   return {
     tableName: TABLE_WORK_ENTRIES,
 

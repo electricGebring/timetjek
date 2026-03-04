@@ -6,14 +6,14 @@ import { WorkEntryValidationError } from './errors'
 
 import type { WorkEntry } from '@/models/work-entry.schema'
 
-import * as staffRepo from '@/db/staff-register/repo'
+import * as staffRepo from '@/db/work-entries/repo'
 
 import { TimeRegistrationStatus } from '@/enums/TimeRegistrationStatus'
 
-const logger = createLogger('StaffRegisterDomain')
+const logger = createLogger('WorkEntriesDomain')
 
 export async function createWorkEntry(entry: Partial<WorkEntry>) {
-  const { buildSafeWorkEntry } = await import('@/db/staff-register/work-entry.helpers')
+  const { buildSafeWorkEntry } = await import('@/db/work-entries/work-entry.helpers')
 
   const safeEntry = buildSafeWorkEntry(entry)
 

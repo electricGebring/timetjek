@@ -50,16 +50,16 @@ async function fetchWithRetry(url: string, options?: RequestInit, maxRetries = 3
 }
 
 /**
- * Fetches all staff register entries from the API, flat list (alla dagar sammanslagna)
+ * Fetches all work entries from the API, flat list (alla dagar sammanslagna)
  */
-export async function fetchStaffRegisterEntries(): Promise<Entry[]> {
+export async function fetchWorkEntries(): Promise<Entry[]> {
   const response = await fetchWithRetry(API_URL)
 
   return response.json()
 }
 
 export async function createEntry(item: Entry): Promise<Entry> {
-  const allEntries = await fetchStaffRegisterEntries()
+  const allEntries = await fetchWorkEntries()
 
   const maxId = Math.max(...allEntries.map((e) => e.id || 0), 0)
 

@@ -1,8 +1,8 @@
 # Service Layer Reference
 
-**File:** `src/domain/staff-register/service.ts`
+**File:** `src/domain/work-entries/service.ts`
 
-Exponerad på `window.staffRegisterService` under development för console-debugging.
+Exponerad på `window.workEntriesService` under development för console-debugging.
 
 ---
 
@@ -13,8 +13,8 @@ Exponerad på `window.staffRegisterService` under development för console-debug
 Hämta arbetshistorik, senaste N dagar (default 30).
 
 ```javascript
-await window.staffRegisterService.getWorkHistory()
-await window.staffRegisterService.getWorkHistory(7)
+await window.workEntriesService.getWorkHistory()
+await window.workEntriesService.getWorkHistory(7)
 ```
 
 Returns: `Array<WorkEntry>` sorterad nyaste först
@@ -26,7 +26,7 @@ Returns: `Array<WorkEntry>` sorterad nyaste först
 Aktuell status — instämplad eller ej, timmar idag.
 
 ```javascript
-await window.staffRegisterService.getCurrentStatus()
+await window.workEntriesService.getCurrentStatus()
 ```
 
 Returns: 
@@ -41,7 +41,7 @@ Returns:
 Alla entries för ett specifikt datum (YYYY-MM-DD).
 
 ```javascript
-await window.staffRegisterService.getEntriesForDate("2026-02-09")
+await window.workEntriesService.getEntriesForDate("2026-02-09")
 ```
 
 ---
@@ -51,7 +51,7 @@ await window.staffRegisterService.getEntriesForDate("2026-02-09")
 Vad som väntar på synk (outbox-kö).
 
 ```javascript
-await window.staffRegisterService.getPendingSyncOperations()
+await window.workEntriesService.getPendingSyncOperations()
 ```
 
 Returns:
@@ -66,7 +66,7 @@ Returns:
 ⚠️ Rensa all lokal data.
 
 ```javascript
-await window.staffRegisterService.clearAllData()
+await window.workEntriesService.clearAllData()
 
 ---
 
@@ -75,27 +75,27 @@ await window.staffRegisterService.clearAllData()
 **Test 1: Offline-status**
 ```javascript
 // Stämpla in, koppla bort internet
-const pending = await window.staffRegisterService.getPendingSyncOperations()
+const pending = await window.workEntriesService.getPendingSyncOperations()
 console.log('Väntar på synk:', pending.length, 'operationer')
 ```
 
 **Test 2: Persistence efter restart**
 ```javascript
 // Efter page reload (F5)
-const history = await window.staffRegisterService.getWorkHistory()
+const history = await window.workEntriesService.getWorkHistory()
 console.log('Data fanns kvar:', history.length, 'entries') // ✓ om >0
 ```
 
 **Test 3: Aktuell status**
 ```javascript
-const status = await window.staffRegisterService.getCurrentStatus()
+const status = await window.workEntriesService.getCurrentStatus()
 console.log('Instämplad?', status.isClockedIn)
 console.log('Timmar idag:', status.hoursToday)
 ```
 
 **Test 4: Specifikt datum**
 ```javascript
-const todayEntries = await window.staffRegisterService.getEntriesForDate("2026-02-09")
+const todayEntries = await window.workEntriesService.getEntriesForDate("2026-02-09")
 console.log('Idag skapade:', todayEntries.length, 'entries')
 ```
 
@@ -103,10 +103,10 @@ console.log('Idag skapade:', todayEntries.length, 'entries')
 
 ## Exponering på window
 
-Service-lagret är automatiskt exponerat på `window.staffRegisterService` under development:
+Service-lagret är automatiskt exponerat på `window.workEntriesService` under development:
 
 ```javascript
-window.staffRegisterService = {
+window.workEntriesService = {
   getWorkHistory,
   getCurrentStatus,
   getEntriesForDate,
@@ -117,7 +117,7 @@ window.staffRegisterService = {
 
 **Kontrollera i konsol:**
 ```javascript
-console.log(window.staffRegisterService)
+console.log(window.workEntriesService)
 // → Object { getWorkHistory: ƒ, getCurrentStatus: ƒ, ... }
 ```
 
