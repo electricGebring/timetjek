@@ -124,7 +124,7 @@ export function createWorkEntriesAdapter(): TableSyncAdapter<Entry> {
     deleteItem: async (id: string | number): Promise<void> => {
       if (whenOffline('deleteItem')) return
 
-      await deleteEntry(id)
+      await deleteEntry(String(id))
     },
     fetchAll: async (): Promise<Entry[]> => {
       try {

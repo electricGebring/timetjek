@@ -72,17 +72,16 @@ export async function fetchWorkEntries(): Promise<Entry[]> {
 }
 
 export async function createEntry(item: Entry): Promise<Entry> {
-  const allEntries = await fetchWorkEntries()
-
-  const maxId = Math.max(...allEntries.map((e) => e.id || 0), 0)
-
-  const newId = maxId + 1
-
   const now = new Date().toISOString()
+  
+  // Generate UUID-based local ID if not provided
+  const id = typeof item.id === 'string' && item.id.trim().length > 0
+    ? item.id.trim()
+    : `local-${Math.random().toString(16).slice(2)}-${Date.now()}`
 
   const entryToCreate = {
     ...item,
-    id: newId,
+    id,
     createdAt: item.createdAt ?? now,
     updatedAt: now,
     synced: item.synced ?? 0,
@@ -136,7 +135,7 @@ export async function updateEntry(item: Entry): Promise<Entry> {
 /**
  * Delete an entry on the API. Local DB cleanup is done by SyncEngine (permanentDelete) after success.
  */
-export async function deleteEntry(id: number): Promise<void> {
+export async function deleteEntry(id: string | number): Promise<void> {
   const response = await fetchWithRetry(`${API_URL}/${id}`, { method: 'DELETE' })
 
   // 404 = already deleted on server, treat as success
