@@ -1,9 +1,10 @@
 // --- Modern migration runner for native + web ---
+// Now uses Drizzle Kit for schema management - migrations in drizzle/ folder
 import { Capacitor } from '@capacitor/core'
 
 import { getDB } from './index'
 
-// Import SQL migrations at the top for Vite/web
+// Legacy manually written migrations (kept for backwards compatibility)
 import migration_001 from '../../migrations/20260128_001_create_work_entries.sql?raw'
 
 import migration_003 from '../../migrations/20260205_002_upgrade_work_entries.sql?raw'
@@ -18,8 +19,11 @@ if (typeof window === 'undefined') {
   // Node.js: use fs
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const fs = require('fs')
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const path = require('path')
 
-  migrations = [
+  // Legacy migrations (already applied in existing DBs)
+  const legacyMigrations = [
     {
       id: '20260128_001_create_work_entries',
       sql: fs.readFileSync('migrations/20260128_001_create_work_entries.sql', 'utf-8')
@@ -33,13 +37,27 @@ if (typeof window === 'undefined') {
       sql: fs.readFileSync('migrations/20260205_001_add_total_break_seconds.sql', 'utf-8')
     }
   ]
+
+  // Read Drizzle-generated migrations from drizzle/ folder (future schema changes)
+  const drizzlePath = path.join(process.cwd(), 'drizzle')
+  const drizzleFiles = fs.existsSync(drizzlePath) 
+    ? fs.readdirSync(drizzlePath).filter((f: string) => f.endsWith('.sql')).sort() 
+    : []
+  const drizzleMigrations = drizzleFiles.map((file: string) => ({
+    id: `drizzle_${file.replace('.sql', '')}`,
+    sql: fs.readFileSync(path.join(drizzlePath, file), 'utf-8')
+  }))
+
+  migrations = [...legacyMigrations, ...drizzleMigrations]
 }
  else {
   // Web/Vite: use imported SQL strings
+  // Note: New Drizzle migrations need to be manually imported here for web builds
   migrations = [
     { id: '20260128_001_create_work_entries', sql: migration_001 },
     { id: '20260205_002_upgrade_work_entries', sql: migration_003 },
     { id: '20260205_001_add_total_break_seconds', sql: migration_004 }
+    // Future Drizzle-generated migrations will be added here
   ]
 }
 
