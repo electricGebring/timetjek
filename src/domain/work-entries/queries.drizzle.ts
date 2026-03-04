@@ -3,7 +3,7 @@
  * Used in backend/sync contexts (not in browser)
  */
 
-import * as staffRepo from '../../db/staff-register/repo'
+import * as staffRepo from '../../db/work-entries/repo'
 import { hasOpenCheckIn } from './rules'
 import type { DayGroup } from './types'
 import type { WorkEntry } from '../../models/work-entry.schema'

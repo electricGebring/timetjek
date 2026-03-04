@@ -4,14 +4,14 @@
  */
 
 import { createLogger } from '../../utils/logger.ts'
-import * as staffRepo from '../../db/staff-register/repo.ts'
+import * as staffRepo from '../../db/work-entries/repo.ts'
 import type { WorkEntry } from '../../models/work-entry.schema.ts'
 import { TimeRegistrationStatus } from '../../enums/TimeRegistrationStatus.ts'
 
-const logger = createLogger('StaffRegisterDomain-Drizzle')
+const logger = createLogger('WorkEntriesDomain-Drizzle')
 
 export async function createWorkEntry(entry: Partial<WorkEntry>) {
-  const { buildSafeWorkEntry } = await import('../../db/staff-register/work-entry.helpers.ts')
+  const { buildSafeWorkEntry } = await import('../../db/work-entries/work-entry.helpers.ts')
 
   const safeEntry = buildSafeWorkEntry(entry)
 

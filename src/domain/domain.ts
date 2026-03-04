@@ -8,4 +8,4 @@ export {
   getDeletedWorkEntries,
   upsertWorkEntryFromApi,
   getWorkSchemeGrouped
-} from './staff-register/domain'
+} from './work-entries/domain'

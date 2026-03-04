@@ -7,15 +7,15 @@
  */
 
 import { initDrizzle } from './src/db/drizzle.ts'
-import { getWorkEntries } from './src/db/staff-register/work-entry.read.ts'
-import { upsertWorkEntry } from './src/db/staff-register/work-entry.upsert.ts'
-import { softDeleteWorkEntry } from './src/db/staff-register/work-entry.delete.ts'
+import { getWorkEntries } from './src/db/work-entries/work-entry.read.ts'
+import { upsertWorkEntry } from './src/db/work-entries/work-entry.upsert.ts'
+import { softDeleteWorkEntry } from './src/db/work-entries/work-entry.delete.ts'
 import {
   getUnsyncedForSync,
   getDeletedForSync,
   markEntriesAsSynced,
   deletePermanently
-} from './src/db/staff-register/work-entry.sync.ts'
+} from './src/db/work-entries/work-entry.sync.ts'
 
 console.log('🚀 Testing Drizzle setup...\n')
 

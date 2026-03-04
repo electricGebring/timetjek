@@ -1,4 +1,4 @@
-import { getWorkEntries } from '@/db/staff-register/repo'
+import { getWorkEntries } from '@/db/work-entries/repo'
 
 import { getDB } from '@/db/index'
 
@@ -256,7 +256,7 @@ export async function getPendingSyncOperations() {
 
 ;
 
-export interface StaffRegisterService {
+export interface WorkEntriesService {
   getWorkHistory: typeof getWorkHistory;
   getEntriesForDate: typeof getEntriesForDate;
   getCurrentStatus: typeof getCurrentStatus;
@@ -268,11 +268,11 @@ export interface StaffRegisterService {
 
 declare global {
   interface Window {
-    staffRegisterService: StaffRegisterService;
+    workEntriesService: WorkEntriesService;
   }
 }
 
-window.staffRegisterService = {
+window.workEntriesService = {
   getWorkHistory,
   getEntriesForDate,
   getCurrentStatus,

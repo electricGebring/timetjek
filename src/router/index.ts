@@ -11,9 +11,13 @@ const router = createRouter({
       component: StaffRegister
     },
     {
-      path: '/staff-register',
+      path: '/work-entries',
       name: 'staffRegister',
       component: StaffRegister
+    },
+    {
+      path: '/staff-register',
+      redirect: '/work-entries'
     }
   ]
 })

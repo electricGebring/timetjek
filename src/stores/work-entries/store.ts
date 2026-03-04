@@ -1,12 +1,12 @@
 import { defineStore } from 'pinia'
 
-import * as domain from '@/domain/staff-register/domain'
+import * as domain from '@/domain/work-entries/domain'
 
 import type { Entry, GroupedWorkEntries, DayGroup } from '@/views/staffRegister/types'
 
 import { TimeRegistrationStatus } from '@/enums/TimeRegistrationStatus'
 
-export const useStaffRegisterStore = defineStore('staffRegister', {
+export const useWorkEntriesStore = defineStore('staffRegister', {
   state: () => ({
     workEntries: [] as Entry[],
     groupedWorkEntries: null as GroupedWorkEntries | null,

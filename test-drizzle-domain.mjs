@@ -9,8 +9,8 @@
 import { initDrizzle } from './src/db/drizzle.ts'
 
 // Import domain layer (Drizzle version)
-import * as commands from './src/domain/staff-register/commands.drizzle.ts'
-import * as queries from './src/domain/staff-register/queries.drizzle.ts'
+import * as commands from './src/domain/work-entries/commands.drizzle.ts'
+import * as queries from './src/domain/work-entries/queries.drizzle.ts'
 
 console.log('🚀 Testing Domain Layer Integration with Drizzle ORM...\n')
 

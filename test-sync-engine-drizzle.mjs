@@ -7,9 +7,9 @@
  */
 
 import { initDrizzle } from './src/db/drizzle.ts'
-import { createStaffRegisterDrizzleAdapter } from './src/sync/staff-register/adapter.drizzle.ts'
-import * as commands from './src/domain/staff-register/commands.drizzle.ts'
-import * as queries from './src/domain/staff-register/queries.drizzle.ts'
+import { createWorkEntriesDrizzleAdapter } from './src/sync/work-entries/adapter.drizzle.ts'
+import * as commands from './src/domain/work-entries/commands.drizzle.ts'
+import * as queries from './src/domain/work-entries/queries.drizzle.ts'
 
 console.log('🚀 Testing Sync Adapter with Drizzle ORM...\n')
 
@@ -21,7 +21,7 @@ try {
 
   // Create sync adapter
   console.log('2️⃣ Creating Drizzle sync adapter...')
-  const adapter = createStaffRegisterDrizzleAdapter()
+  const adapter = createWorkEntriesDrizzleAdapter()
   console.log('✅ Sync adapter created\n')
 
   // Create some unsynced test data

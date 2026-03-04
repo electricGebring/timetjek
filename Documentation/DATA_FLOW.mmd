@@ -9,7 +9,7 @@ flowchart LR
   end
 
   subgraph State["2. State"]
-    Store["Pinia store\n(useStaffRegisterStore)"]
+    Store["Pinia store\n(useWorkEntriesStore)"]
     Component -->|dispatch action| Store
   end
 
@@ -34,13 +34,13 @@ flowchart LR
   subgraph Sync["6. Sync layer"]
     SyncMgr["SyncManager\n.syncAll()"]
     Engine["SyncEngine\n(drain outbox → deletions → pull)\nconflict strategy per table"]
-    Adapter["Table adapter\n(staff-register)"]
+    Adapter["Table adapter\n(work-entries)"]
     SyncMgr --> Engine
     Engine --> Adapter
   end
 
   subgraph API["7. API & backend"]
-    APIClient["API client\n(staff-register.ts)"]
+    APIClient["API client\n(work-entries.ts)"]
     Backend["Backend API\n/entries"]
     Adapter -->|POST/PATCH/DELETE/GET| APIClient
     APIClient --> Backend

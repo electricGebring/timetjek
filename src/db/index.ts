@@ -18,7 +18,7 @@ let sqlJsDb: Database | null = null
  * Also initializes Drizzle ORM with the appropriate database instance.
  */
 export async function initDB() {
-  const { initStaffRegisterDb } = await import('./staff-register/init')
+  const { initWorkEntriesDb } = await import('./work-entries/init')
   const { initDrizzle } = await import('./drizzle')
 
   if (Capacitor.isNativePlatform()) {
@@ -32,7 +32,7 @@ export async function initDB() {
     // Type assertion for Capacitor SQLite DB
     await (capacitorDb as { open: () => Promise<unknown> }).open()
 
-    await initStaffRegisterDb(capacitorDb, true)
+    await initWorkEntriesDb(capacitorDb, true)
 
     const { initSyncMetadataTable } = await import('./sync-metadata/repo')
 
@@ -101,7 +101,7 @@ export async function initDB() {
 
     const db = sqlJsDb
 
-    await initStaffRegisterDb(db, false)
+    await initWorkEntriesDb(db, false)
 
     const { initSyncMetadataTable } = await import('./sync-metadata/repo')
 

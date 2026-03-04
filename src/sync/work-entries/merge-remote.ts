@@ -4,8 +4,8 @@
  * (unsynced → API → save result).
  */
 
-import * as repo from '@/db/staff-register/repo'
-import { entryToWorkEntry, workEntryToEntry } from '@/db/staff-register/work-entry.mapper'
+import * as repo from '@/db/work-entries/repo'
+import { entryToWorkEntry, workEntryToEntry } from '@/db/work-entries/work-entry.mapper'
 
 import { defaultConflictResolver } from '@/sync/conflict-resolver'
 
