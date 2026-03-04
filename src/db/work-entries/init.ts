@@ -1,4 +1,4 @@
-import { STAFF_REGISTER_SCHEMA } from './schema'
+import { WORK_ENTRIES_SCHEMA } from './schema'
 
 import { runMigrations } from '../migrate'
 
@@ -9,13 +9,13 @@ import { runMigrations } from '../migrate'
 export async function initWorkEntriesDb(db: unknown, isNative: boolean) {
   if (isNative) {
     // Type assertion for db to have execute method
-    await (db as { execute: (sql: string) => Promise<unknown> }).execute(STAFF_REGISTER_SCHEMA)
+    await (db as { execute: (sql: string) => Promise<unknown> }).execute(WORK_ENTRIES_SCHEMA)
 
     await runMigrations()
   }
  else {
     // Split schema by statements and execute individually for sql.js
-    const statements = STAFF_REGISTER_SCHEMA.split(';')
+    const statements = WORK_ENTRIES_SCHEMA.split(';')
       .map((stmt) => stmt.trim())
       .filter((stmt) => stmt.length > 0)
 

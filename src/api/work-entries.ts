@@ -1,17 +1,30 @@
 import type { Entry } from '@/views/staffRegister/types'
 
-// Dynamically select API URL for browser vs iOS simulator
+// Dynamically select API URL, preferring configuration over hard-coded IPs
 function getApiUrl() {
-  // If running in browser (localhost or 127.0.0.1), use localhost
-  if (
-    typeof window !== 'undefined' &&
-    (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-  ) {
-    return 'http://localhost:3002/entries'
+  // Prefer a configured base URL if available (e.g. via Vite env)
+  const envBaseUrl =
+    (typeof import.meta !== 'undefined' &&
+      (import.meta as any).env &&
+      (import.meta as any).env.VITE_API_BASE_URL) ||
+    undefined
+  let baseUrl = envBaseUrl as string | undefined
+
+  // If no env base URL is provided, derive it from window.location when available
+  if (!baseUrl) {
+    if (typeof window !== 'undefined' && window.location) {
+      const { protocol, hostname } = window.location
+      const port = '3002'
+      baseUrl = `${protocol}//${hostname}:${port}`
+    } else {
+      // Fallback for non-browser environments
+      baseUrl = 'http://localhost:3002'
+    }
   }
 
-  // Otherwise, use your Mac's LAN IP (for iOS simulator)
-  return 'http://172.16.175.87:3002/entries'
+  // Ensure no trailing slash before appending the entries path
+  baseUrl = baseUrl.replace(/\/+$/, '')
+  return `${baseUrl}/entries`
 }
 
 const API_URL = getApiUrl()
@@ -50,7 +63,7 @@ async function fetchWithRetry(url: string, options?: RequestInit, maxRetries = 3
 }
 
 /**
- * Fetches all staff register entries from the API, flat list (alla dagar sammanslagna)
+ * Fetches all work entries from the API, returned as a flat list (alla dagar sammanslagna)
  */
 export async function fetchWorkEntries(): Promise<Entry[]> {
   const response = await fetchWithRetry(API_URL)

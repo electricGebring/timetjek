@@ -1,7 +1,10 @@
 /**
- * Staff register DB schema – initial tables and indexes.
+ * Work entries / staff register DB schema – initial tables and indexes.
  * SQL lives in work-entries.schema.sql for editing and tooling; this file re-exports for init.
  */
 import schemaSql from './work-entries.schema.sql?raw'
 
-export const STAFF_REGISTER_SCHEMA: string = schemaSql
+export const WORK_ENTRIES_SCHEMA: string = schemaSql
+
+// Backwards compatibility: prefer WORK_ENTRIES_SCHEMA in new code.
+export const STAFF_REGISTER_SCHEMA: string = WORK_ENTRIES_SCHEMA
