@@ -1,5 +1,5 @@
 export {
-  updateStoreFromDb as updateStaffRegisterStoreFromDb,
+  updateStoreFromDb as updateWorkEntriesStoreFromDb,
   getAllWorkEntries,
   canCheckIn,
   createWorkEntry,

@@ -116,7 +116,7 @@ onMounted(async () => {
   await store.loadGroupedWorkEntries()
   // prettier-ignore
   
-  ;(window as unknown as { staffRegisterData: typeof store.workEntries }).staffRegisterData = store.workEntries
+  ;(window as unknown as { workEntriesData: typeof store.workEntries }).workEntriesData = store.workEntries
   // Listen for sync-completed events and reload data
   
   window.addEventListener('sync-completed', async () => {

@@ -78,8 +78,10 @@ export async function getDeletedForSync(): Promise<WorkEntry[]> {
  * Mark multiple entries as synced after successful API push
  * Called after successfully upserting items on backend
  */
-export async function markEntriesAsSynced(ids: number[]): Promise<void> {
+export async function markEntriesAsSynced(ids: (string | number)[]): Promise<void> {
   if (ids.length === 0) return
+
+  const idValues = ids.map((id) => String(id))
 
   console.debug(`[DRIZZLE SYNC] ☑️  Marking ${ids.length} entries as synced...`)
 
@@ -91,7 +93,7 @@ export async function markEntriesAsSynced(ids: number[]): Promise<void> {
       synced: 1,
       updatedAt: now
     })
-    .where(inArray(workEntries.id, ids))
+    .where(inArray(workEntries.id, idValues))
 
   console.debug('[DRIZZLE SYNC] ✅ Sync mark complete')
 
@@ -102,14 +104,16 @@ export async function markEntriesAsSynced(ids: number[]): Promise<void> {
  * Permanently delete entries after successful delete on API
  * Called after successfully deleting items on backend
  */
-export async function deletePermanently(ids: number[]): Promise<void> {
+export async function deletePermanently(ids: (string | number)[]): Promise<void> {
   if (ids.length === 0) return
+
+  const idValues = ids.map((id) => String(id))
 
   console.debug(`[DRIZZLE SYNC] 💀 Permanently deleting ${ids.length} entries...`)
 
   await getDb()
     .delete(workEntries)
-    .where(inArray(workEntries.id, ids))
+    .where(inArray(workEntries.id, idValues))
 
   console.debug('[DRIZZLE SYNC] ✅ Permanent delete complete')
 
