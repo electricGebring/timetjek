@@ -1,4 +1,5 @@
 import type { Entry } from '@/views/staffRegister/types'
+import { createLocalWorkEntryId } from '@/db/work-entries/work-entry.helpers'
 
 // Dynamically select API URL, preferring configuration over hard-coded IPs
 function getApiUrl() {
@@ -28,6 +29,30 @@ function getApiUrl() {
 }
 
 const API_URL = getApiUrl()
+
+function normalizeEntryFromApi(raw: Entry): Entry {
+  const normalizedId =
+    typeof raw.id === 'string'
+      ? raw.id.trim().length > 0
+        ? raw.id.trim()
+        : createLocalWorkEntryId()
+      : createLocalWorkEntryId()
+
+  const normalizedRemoteId =
+    typeof raw.remote_id === 'string'
+      ? raw.remote_id.trim().length > 0
+        ? raw.remote_id.trim()
+        : null
+      : typeof raw.remote_id === 'number'
+        ? String(raw.remote_id)
+      : null
+
+  return {
+    ...raw,
+    id: normalizedId,
+    remote_id: normalizedRemoteId
+  }
+}
 
 /**
  * Fetch with exponential backoff retry for connection errors
@@ -67,8 +92,9 @@ async function fetchWithRetry(url: string, options?: RequestInit, maxRetries = 3
  */
 export async function fetchWorkEntries(): Promise<Entry[]> {
   const response = await fetchWithRetry(API_URL)
+  const payload = (await response.json()) as Entry[]
 
-  return response.json()
+  return payload.map(normalizeEntryFromApi)
 }
 
 export async function createEntry(item: Entry): Promise<Entry> {
@@ -77,7 +103,7 @@ export async function createEntry(item: Entry): Promise<Entry> {
   // Generate UUID-based local ID if not provided
   const id = typeof item.id === 'string' && item.id.trim().length > 0
     ? item.id.trim()
-    : `local-${Math.random().toString(16).slice(2)}-${Date.now()}`
+    : createLocalWorkEntryId()
 
   const entryToCreate = {
     ...item,

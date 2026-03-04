@@ -1,6 +1,5 @@
 CREATE TABLE IF NOT EXISTS work_entries (
-  id TEXT PRIMARY KEY,
-  remote_id TEXT,
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
   employee_id INTEGER,
   workplace_id INTEGER,
   cost_center_id INTEGER,
@@ -38,6 +37,3 @@ CREATE INDEX IF NOT EXISTS idx_work_entries_synced_deleted
 
 CREATE INDEX IF NOT EXISTS idx_work_entries_work_day_id
   ON work_entries (work_day_id);
-
-CREATE INDEX IF NOT EXISTS idx_work_entries_remote_id
-  ON work_entries (remote_id);

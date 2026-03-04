@@ -27,12 +27,13 @@ export async function upsertWorkEntry(entry: Partial<WorkEntry> | Partial<Drizzl
   console.debug('[DRIZZLE] 💾 Upserting work entry...')
 
   const db = getDb()
+  const trimmedId = typeof entry.id === 'string' ? entry.id.trim() : undefined
 
   const safeEntry = {
     ...entry,
     id:
-      typeof entry.id === 'string' && entry.id.trim().length > 0
-        ? entry.id
+      typeof trimmedId === 'string' && trimmedId.length > 0
+        ? trimmedId
         : createLocalWorkEntryId(),
     createdAt: entry.createdAt ?? new Date().toISOString(),
     updatedAt: entry.updatedAt ?? new Date().toISOString()

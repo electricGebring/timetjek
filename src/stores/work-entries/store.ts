@@ -67,10 +67,15 @@ export const useWorkEntriesStore = defineStore('staffRegister', {
         days: grouped.days.map((day: DayGroup) => ({
           ...day,
           entries: day.entries
-            .filter((entry) => entry.id !== null)
+            .filter((entry) => {
+              if (typeof entry.id === 'string') return entry.id.trim().length > 0
+              if (typeof entry.id === 'number') return true
+
+              return false
+            })
             .map((entry) => ({
               ...entry,
-              id: String(entry.id ?? ''),
+              id: typeof entry.id === 'string' ? entry.id.trim() : String(entry.id),
               work_day_id: entry.work_day_id !== null ? Number(entry.work_day_id) : 0
             })) as Entry[]
         }))

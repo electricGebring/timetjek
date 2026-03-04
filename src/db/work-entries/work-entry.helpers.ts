@@ -62,9 +62,18 @@ export function buildSafeWorkEntry(entry: Record<string, unknown>): SafeWorkEntr
         ? String(entry.id)
       : createLocalWorkEntryId()
 
+  const resolvedRemoteId =
+    typeof entry.remote_id === 'string'
+      ? entry.remote_id.trim().length > 0
+        ? entry.remote_id.trim()
+        : null
+      : typeof entry.remote_id === 'number'
+        ? String(entry.remote_id)
+      : null
+
   return {
     id: resolvedId,
-    remote_id: (entry.remote_id as string) ?? null,
+    remote_id: resolvedRemoteId,
     employee_id: (entry.employee_id as number) ?? 1,
     workplace_id: (entry.workplace_id as number) ?? 1,
     cost_center_id: (entry.cost_center_id as number) ?? null,

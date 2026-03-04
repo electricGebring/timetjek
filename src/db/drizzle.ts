@@ -32,7 +32,9 @@ function ensureWorkEntriesUuidSchema(sqlite: BetterSqliteDatabase) {
 
   if (idType.includes('INT')) {
     sqlite.exec(`
-      CREATE TABLE IF NOT EXISTS work_entries_uuid_tmp (
+      DROP TABLE IF EXISTS work_entries_uuid_tmp;
+
+      CREATE TABLE work_entries_uuid_tmp (
         id TEXT PRIMARY KEY,
         remote_id TEXT,
         employee_id INTEGER,
