@@ -10,6 +10,8 @@ import migration_003 from '../../migrations/20260205_002_upgrade_work_entries.sq
 
 import migration_004 from '../../migrations/20260205_001_add_total_break_seconds.sql?raw'
 
+import migration_005 from '../../migrations/20260304_001_work_entries_uuid_remote_id.sql?raw'
+
 type Migration = { id: string; sql: string }
 
 let migrations: Migration[] = []
@@ -31,6 +33,10 @@ if (typeof window === 'undefined') {
     {
       id: '20260205_001_add_total_break_seconds',
       sql: fs.readFileSync('migrations/20260205_001_add_total_break_seconds.sql', 'utf-8')
+    },
+    {
+      id: '20260304_001_work_entries_uuid_remote_id',
+      sql: fs.readFileSync('migrations/20260304_001_work_entries_uuid_remote_id.sql', 'utf-8')
     }
   ]
 }
@@ -39,7 +45,8 @@ if (typeof window === 'undefined') {
   migrations = [
     { id: '20260128_001_create_work_entries', sql: migration_001 },
     { id: '20260205_002_upgrade_work_entries', sql: migration_003 },
-    { id: '20260205_001_add_total_break_seconds', sql: migration_004 }
+    { id: '20260205_001_add_total_break_seconds', sql: migration_004 },
+    { id: '20260304_001_work_entries_uuid_remote_id', sql: migration_005 }
   ]
 }
 

@@ -3,7 +3,8 @@ import { integer, real, text, sqliteTable, index } from 'drizzle-orm/sqlite-core
 export const workEntries = sqliteTable(
   'work_entries',
   {
-    id: integer('id').primaryKey({ autoIncrement: true }),
+    id: text('id').primaryKey(),
+    remote_id: text('remote_id'),
     employee_id: integer('employee_id'),
     workplace_id: integer('workplace_id'),
     cost_center_id: integer('cost_center_id'),
@@ -42,6 +43,7 @@ export const workEntries = sqliteTable(
       table.deleted
     ),
     idx_work_entries_work_day_id: index('idx_work_entries_work_day_id').on(table.work_day_id),
+    idx_work_entries_remote_id: index('idx_work_entries_remote_id').on(table.remote_id),
   })
 )
 

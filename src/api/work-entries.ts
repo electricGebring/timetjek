@@ -1,4 +1,5 @@
 import type { Entry } from '@/views/staffRegister/types'
+import { createLocalWorkEntryId } from '@/db/work-entries/work-entry.helpers'
 
 // Dynamically select API URL, preferring configuration over hard-coded IPs
 function getApiUrl() {
@@ -28,6 +29,30 @@ function getApiUrl() {
 }
 
 const API_URL = getApiUrl()
+
+function normalizeEntryFromApi(raw: Entry): Entry {
+  const normalizedId =
+    typeof raw.id === 'string'
+      ? raw.id.trim().length > 0
+        ? raw.id.trim()
+        : createLocalWorkEntryId()
+      : createLocalWorkEntryId()
+
+  const normalizedRemoteId =
+    typeof raw.remote_id === 'string'
+      ? raw.remote_id.trim().length > 0
+        ? raw.remote_id.trim()
+        : null
+      : typeof raw.remote_id === 'number'
+        ? String(raw.remote_id)
+      : null
+
+  return {
+    ...raw,
+    id: normalizedId,
+    remote_id: normalizedRemoteId
+  }
+}
 
 /**
  * Fetch with exponential backoff retry for connection errors
@@ -67,22 +92,22 @@ async function fetchWithRetry(url: string, options?: RequestInit, maxRetries = 3
  */
 export async function fetchWorkEntries(): Promise<Entry[]> {
   const response = await fetchWithRetry(API_URL)
+  const payload = (await response.json()) as Entry[]
 
-  return response.json()
+  return payload.map(normalizeEntryFromApi)
 }
 
 export async function createEntry(item: Entry): Promise<Entry> {
-  const allEntries = await fetchWorkEntries()
-
-  const maxId = Math.max(...allEntries.map((e) => e.id || 0), 0)
-
-  const newId = maxId + 1
-
   const now = new Date().toISOString()
+  
+  // Generate UUID-based local ID if not provided
+  const id = typeof item.id === 'string' && item.id.trim().length > 0
+    ? item.id.trim()
+    : createLocalWorkEntryId()
 
   const entryToCreate = {
     ...item,
-    id: newId,
+    id,
     createdAt: item.createdAt ?? now,
     updatedAt: now,
     synced: item.synced ?? 0,
@@ -136,7 +161,7 @@ export async function updateEntry(item: Entry): Promise<Entry> {
 /**
  * Delete an entry on the API. Local DB cleanup is done by SyncEngine (permanentDelete) after success.
  */
-export async function deleteEntry(id: number): Promise<void> {
+export async function deleteEntry(id: string | number): Promise<void> {
   const response = await fetchWithRetry(`${API_URL}/${id}`, { method: 'DELETE' })
 
   // 404 = already deleted on server, treat as success

@@ -50,7 +50,7 @@ export const useWorkEntriesStore = defineStore('staffRegister', {
     async updateWorkEntry(entry: Entry) {
       await domain.updateWorkEntry(entry)
     },
-    removeWorkEntry(id: number) {
+    removeWorkEntry(id: string) {
       this.workEntries = this.workEntries.filter((e) => e.id !== id)
     },
     setLoading(val: boolean) {
@@ -62,15 +62,20 @@ export const useWorkEntriesStore = defineStore('staffRegister', {
     async loadGroupedWorkEntries() {
       const grouped = await domain.getWorkSchemeGrouped()
 
-      // Convert all entries to the correct Entry type (ensure id is number, not null)
+      // Convert all entries to the correct Entry type
       const convertedGrouped = {
         days: grouped.days.map((day: DayGroup) => ({
           ...day,
           entries: day.entries
-            .filter((entry) => entry.id !== null)
+            .filter((entry) => {
+              if (typeof entry.id === 'string') return entry.id.trim().length > 0
+              if (typeof entry.id === 'number') return true
+
+              return false
+            })
             .map((entry) => ({
               ...entry,
-              id: Number(entry.id),
+              id: typeof entry.id === 'string' ? entry.id.trim() : String(entry.id),
               work_day_id: entry.work_day_id !== null ? Number(entry.work_day_id) : 0
             })) as Entry[]
         }))
