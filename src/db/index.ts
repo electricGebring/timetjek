@@ -19,6 +19,7 @@ let sqlJsDb: Database | null = null
  */
 export async function initDB() {
   const { initWorkEntriesDb } = await import('./work-entries/init')
+
   const { initDrizzle } = await import('./drizzle')
 
   if (Capacitor.isNativePlatform()) {
@@ -40,7 +41,7 @@ export async function initDB() {
     
     // TODO: Initialize Drizzle with Capacitor SQLite
     // For now, Capacitor uses legacy queries until Drizzle Capacitor adapter is implemented
-    console.log('[DB] Capacitor SQLite initialized (Drizzle integration pending)')
+    console.debug('[DB] Capacitor SQLite initialized (Drizzle integration pending)')
   }
  else {
     let SQL: unknown
@@ -111,7 +112,8 @@ export async function initDB() {
     
     // Initialize Drizzle ORM with sql.js database
     await initDrizzle(sqlJsDb)
-    console.log('[DB] Drizzle ORM initialized with sql.js')
+
+    console.debug('[DB] Drizzle ORM initialized with sql.js')
   }
 }
 

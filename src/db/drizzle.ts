@@ -1,11 +1,38 @@
+import { Capacitor } from '@capacitor/core'
+
 import { drizzle as drizzleSqlJs } from 'drizzle-orm/sql-js'
 
 import * as schema from './schema'
 
-import type { Database as SqlJsDatabase } from 'sql.js'
+type SqlJsDatabase = import('sql.js').Database
+
+type BetterSqliteDatabase = import('better-sqlite3').Database
+
+type RawSqlite = {
+  prepare: (sql: string) => {
+    run: (...params: unknown[]) => void
+    all: (...params: unknown[]) => unknown[]
+  }
+}
+
+const isNativeRuntime = (() => {
+  try {
+    return Capacitor.isNativePlatform()
+  }
+ catch {
+    return false
+  }
+})()
+
+const isNodeRuntime =
+  !isNativeRuntime &&
+  typeof globalThis === 'object' &&
+  'process' in globalThis &&
+  typeof (globalThis as { process?: { versions?: { node?: unknown } } }).process?.versions?.node === 'string'
 
 let dbInstance: unknown = null
-let rawSqlite: unknown = null // Raw better-sqlite3 instance for Node.js
+
+let rawSqlite: RawSqlite | null = null // Raw better-sqlite3 instance for Node.js
 
 /**
  * Initialize Drizzle database instance
@@ -24,10 +51,12 @@ export async function initDrizzle(dbOrPath: string | SqlJsDatabase) {
     const { drizzle: drizzleBetterSqlite } = await import('drizzle-orm/better-sqlite3')
     
     const Database = (await import('better-sqlite3')).default
-    
-    rawSqlite = new Database(dbOrPath)
-    
-    dbInstance = drizzleBetterSqlite(rawSqlite, { schema })
+
+    const sqlite = new Database(dbOrPath) as BetterSqliteDatabase
+
+    rawSqlite = sqlite as unknown as RawSqlite
+
+    dbInstance = drizzleBetterSqlite(sqlite, { schema })
   } 
   // Otherwise assume it's a sql.js database instance (browser)
   else {
@@ -52,10 +81,27 @@ export function getDb(): ReturnType<typeof drizzleSqlJs> {
  * Get the raw sqlite3 instance (Node.js only)
  */
 export function getRawSqlite() {
-  if (!rawSqlite) {
-    throw new Error('Raw sqlite not available (only in Node.js)')
+  return rawSqlite
+}
+
+/**
+ * Get raw sqlite instance and fail fast when unavailable.
+ * Use only in Node.js execution paths.
+ */
+export function requireRawSqlite(): RawSqlite {
+  if (!isNodeRuntime) {
+    throw new Error(
+      `Raw sqlite is only available in Node.js (current runtime: ${isNativeRuntime ? 'native' : 'web'})`
+    )
   }
-  return rawSqlite as { prepare: (sql: string) => { run: (...params: unknown[]) => void, all: (...params: unknown[]) => unknown[] } }
+
+  const sqlite = getRawSqlite()
+
+  if (!sqlite) {
+    throw new Error('Raw sqlite is unavailable on this platform (expected Node.js with better-sqlite3)')
+  }
+
+  return sqlite
 }
 
 /**
@@ -63,6 +109,8 @@ export function getRawSqlite() {
  */
 export function resetDb() {
   dbInstance = null
+
+  rawSqlite = null
 }
 
 export type Database = ReturnType<typeof drizzleSqlJs>

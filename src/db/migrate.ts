@@ -3,19 +3,41 @@
 import { Capacitor } from '@capacitor/core'
 
 import { getDB } from './index'
+
 import { getRawSqlite } from './drizzle'
 
 type Migration = { id: string; sql: string }
 
+const isNativeRuntime = (() => {
+  try {
+    return Capacitor.isNativePlatform()
+  }
+ catch {
+    return false
+  }
+})()
+
+function isNodeProcessRuntime() {
+  return (
+    !isNativeRuntime &&
+    typeof globalThis === 'object' &&
+    'process' in globalThis &&
+    typeof (globalThis as { process?: { versions?: { node?: unknown } } }).process?.versions?.node === 'string'
+  )
+}
+
 let migrations: Migration[] = []
 
-if (typeof window === 'undefined') {
+if (isNodeProcessRuntime()) {
   // Node.js: use fs to read all Drizzle migrations dynamically
   const { readFileSync, readdirSync, existsSync } = await import('fs')
+
   const { join } = await import('path')
+
   const { cwd } = await import('process')
 
   const drizzlePath = join(cwd(), 'drizzle')
+
   const drizzleFiles = existsSync(drizzlePath) 
     ? readdirSync(drizzlePath).filter((f: string) => f.endsWith('.sql')).sort() 
     : []
@@ -33,6 +55,7 @@ if (typeof window === 'undefined') {
   migrations = Object.entries(drizzleModules)
     .map(([path, mod]) => {
       const fileName = path.split('/').pop()?.replace('.sql', '') || ''
+
       return {
         id: `drizzle_${fileName}`,
         sql: (mod as { default: string }).default
@@ -71,17 +94,20 @@ async function getAppliedMigrationIds(): Promise<Set<string>> {
 }
 
 async function runSql(sql: string, params: unknown[] = []) {
-  // Node.js test environment with better-sqlite3
-  if (typeof window === 'undefined') {
-    const sqlite = getRawSqlite()
-    sqlite.prepare(sql).run(...params)
-  }
-  else if (Capacitor.isNativePlatform()) {
+  if (isNativeRuntime) {
     const db = getDB() as { run: (sql: string, params?: unknown[]) => Promise<void> }
 
     await db.run(sql, params)
   }
- else {
+  else {
+    const sqlite = getRawSqlite()
+
+    if (sqlite) {
+      sqlite.prepare(sql).run(...params)
+
+      return
+    }
+
     const { sqlJsDb } = getDB() as { sqlJsDb: { run: (sql: string, params?: unknown[]) => void } }
 
     sqlJsDb.run(sql, params)
@@ -89,19 +115,7 @@ async function runSql(sql: string, params: unknown[] = []) {
 }
 
 async function queryRows(sql: string, params: unknown[] = []): Promise<unknown[][]> {
-  // Node.js test environment with better-sqlite3
-  if (typeof window === 'undefined') {
-    const sqlite = getRawSqlite()
-    const rows = sqlite.prepare(sql).all(...params)
-    // Convert from object format [{id: 'x'}] to array format [['x']] for consistency
-    return rows.map((row: unknown) => {
-      if (typeof row === 'object' && row !== null) {
-        return Object.values(row)
-      }
-      return [row]
-    })
-  }
-  else if (Capacitor.isNativePlatform()) {
+  if (isNativeRuntime) {
     const db = getDB() as { query: (sql: string, params?: unknown[]) => Promise<{ values?: unknown[][] }> }
 
     const res = await db.query(sql, params)
@@ -113,7 +127,22 @@ async function queryRows(sql: string, params: unknown[] = []): Promise<unknown[]
 
     return values as unknown[][]
   }
- else {
+  else {
+    const sqlite = getRawSqlite()
+
+    if (sqlite) {
+      const rows = sqlite.prepare(sql).all(...params)
+
+      // Convert from object format [{id: 'x'}] to array format [['x']] for consistency
+      return rows.map((row: unknown) => {
+        if (typeof row === 'object' && row !== null) {
+          return Object.values(row)
+        }
+
+        return [row]
+      })
+    }
+
     const { sqlJsDb } = getDB() as { sqlJsDb: { exec: (sql: string, params?: unknown[]) => { values: unknown[][] }[] } }
 
     const results = sqlJsDb.exec(sql, params)
@@ -125,14 +154,13 @@ async function queryRows(sql: string, params: unknown[] = []): Promise<unknown[]
 }
 
 async function saveIfWeb() {
-  if (typeof window === 'undefined') {
-    // Node.js with better-sqlite3 - no saveDatabase needed
-    return  }
-  else if (!Capacitor.isNativePlatform()) {
-    const { saveDatabase } = getDB() as { saveDatabase: () => void }
-
-    saveDatabase()
+  if (isNativeRuntime || getRawSqlite()) {
+    return
   }
+
+  const { saveDatabase } = getDB() as { saveDatabase: () => void }
+
+  saveDatabase()
 }
 
 export async function runMigrations() {
@@ -143,8 +171,7 @@ export async function runMigrations() {
   const pending = migrations.filter((m) => !applied.has(m.id))
 
   for (const m of pending) {
-    // eslint-disable-next-line no-console
-    console.log('[MIGRATIONS] Applying migration:', m.id)
+    console.debug('[MIGRATIONS] Applying migration:', m.id)
 
     try {
       // Split multiple statements and execute each individually
@@ -159,8 +186,7 @@ export async function runMigrations() {
 
       await runSql('INSERT INTO schema_migrations (id, applied_at) VALUES (?, ?)', [m.id, new Date().toISOString()])
 
-      // eslint-disable-next-line no-console
-      console.log('[MIGRATIONS] Migration applied:', m.id)
+      console.debug('[MIGRATIONS] Migration applied:', m.id)
     }
  catch (e) {
       throw new Error(`Migration failed: ${m.id} -> ${(e as Error).message}`)
@@ -168,12 +194,10 @@ export async function runMigrations() {
   }
 
   if (pending.length === 0) {
-    // eslint-disable-next-line no-console
-    console.log('[MIGRATIONS] No new migrations to apply')
+    console.debug('[MIGRATIONS] No new migrations to apply')
   }
  else {
-    // eslint-disable-next-line no-console
-    console.log('[MIGRATIONS] All migrations applied')
+    console.debug('[MIGRATIONS] All migrations applied')
   }
 
   await saveIfWeb()
