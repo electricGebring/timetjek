@@ -46,7 +46,8 @@ export function workEntryToEntry(w: AnyWorkEntry): Entry {
   const entry = w as unknown as (WorkEntry | DrizzleWorkEntry)
   
   return {
-    id: entry.id ?? 0,
+    id: entry.id ?? '',
+    remote_id: entry.remote_id ?? null,
     employee_id: entry.employee_id ?? 1,
     workplace_id: entry.workplace_id ?? 1,
     cost_center_id: entry.cost_center_id ?? null,
@@ -86,6 +87,7 @@ export function workEntryToEntry(w: AnyWorkEntry): Entry {
 export function entryToWorkEntry(e: Entry): AnyWorkEntry {
   return {
     id: e.id,
+    remote_id: e.remote_id ?? null,
     employee_id: e.employee_id,
     workplace_id: e.workplace_id,
     cost_center_id: e.cost_center_id,

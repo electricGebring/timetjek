@@ -62,7 +62,7 @@ export async function updateWorkEntry(entry: Partial<WorkEntry>) {
   await triggerSyncIfOnline('mutation')
 }
 
-export async function deleteWorkEntry(_id: number) {
+export async function deleteWorkEntry(_id: string | number) {
   await staffRepo.softDeleteWorkEntry(_id)
 
   await triggerSyncIfOnline('mutation')

@@ -12,7 +12,7 @@ function isWorkEntry(e: unknown): e is WorkEntry {
   const obj = e as Record<string, unknown>
 
   return (
-    typeof obj.id === 'number' &&
+    typeof obj.id === 'string' &&
     typeof obj.work_day_id === 'number' &&
     (typeof obj.check_in_at === 'string' || obj.check_in_at === null) &&
     (typeof obj.check_out_at === 'string' || obj.check_out_at === null) &&

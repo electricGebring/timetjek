@@ -16,6 +16,33 @@ function getApiUrl() {
 
 const API_URL = getApiUrl()
 
+function createLocalEntryId(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return `local-${crypto.randomUUID()}`
+  }
+
+  const part = () => Math.random().toString(16).slice(2, 10)
+
+  return `local-${part()}-${part()}-${part()}-${part()}`
+}
+
+function normalizeEntryFromApi(raw: Entry): Entry {
+  const rawId = (raw as unknown as { id?: string | number | null }).id
+
+  const normalizedId =
+    typeof rawId === 'string'
+      ? rawId
+      : rawId !== null && rawId !== undefined
+        ? String(rawId)
+        : createLocalEntryId()
+
+  return {
+    ...raw,
+    id: normalizedId,
+    remote_id: raw.remote_id ?? null
+  }
+}
+
 /**
  * Fetch with exponential backoff retry for connection errors
  */
@@ -55,21 +82,22 @@ async function fetchWithRetry(url: string, options?: RequestInit, maxRetries = 3
 export async function fetchStaffRegisterEntries(): Promise<Entry[]> {
   const response = await fetchWithRetry(API_URL)
 
-  return response.json()
+  const rows = (await response.json()) as Entry[]
+
+  return rows.map(normalizeEntryFromApi)
 }
 
 export async function createEntry(item: Entry): Promise<Entry> {
-  const allEntries = await fetchStaffRegisterEntries()
-
-  const maxId = Math.max(...allEntries.map((e) => e.id || 0), 0)
-
-  const newId = maxId + 1
+  const localId = typeof item.id === 'string' && item.id.trim().length > 0
+    ? item.id.trim()
+    : createLocalEntryId()
 
   const now = new Date().toISOString()
 
   const entryToCreate = {
     ...item,
-    id: newId,
+    id: localId,
+    remote_id: item.remote_id ?? null,
     createdAt: item.createdAt ?? now,
     updatedAt: now,
     synced: item.synced ?? 0,
@@ -88,15 +116,27 @@ export async function createEntry(item: Entry): Promise<Entry> {
 
   const result = await response.json()
 
-  console.debug('[9. API] ✅ Entry created in API, id:', result.id)
+  const normalized = normalizeEntryFromApi(result as Entry)
 
-  return result
+  if (normalized.id !== localId) {
+    return {
+      ...normalized,
+      id: localId,
+      remote_id: normalized.id
+    }
+  }
+
+  console.debug('[9. API] ✅ Entry created in API, id:', normalized.id)
+
+  return normalized
 }
 
 export async function updateEntry(item: Entry): Promise<Entry> {
   const now = new Date().toISOString()
 
-  const currentResponse = await fetchWithRetry(`${API_URL}/${item.id}`)
+  const remoteKey = item.remote_id ?? item.id
+
+  const currentResponse = await fetchWithRetry(`${API_URL}/${remoteKey}`)
 
   if (!currentResponse.ok) throw new Error(`Failed to fetch entry: ${currentResponse.statusText}`)
 
@@ -109,7 +149,7 @@ export async function updateEntry(item: Entry): Promise<Entry> {
     updatedAt: now
   }
 
-  const response = await fetchWithRetry(`${API_URL}/${item.id}`, {
+  const response = await fetchWithRetry(`${API_URL}/${remoteKey}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(entryToUpdate)
@@ -117,13 +157,19 @@ export async function updateEntry(item: Entry): Promise<Entry> {
 
   if (!response.ok) throw new Error(`Failed to update entry: ${response.statusText}`)
 
-  return response.json()
+  const updated = normalizeEntryFromApi((await response.json()) as Entry)
+
+  return {
+    ...updated,
+    id: item.id,
+    remote_id: item.remote_id ?? (updated.id !== item.id ? updated.id : null)
+  }
 }
 
 /**
  * Delete an entry on the API. Local DB cleanup is done by SyncEngine (permanentDelete) after success.
  */
-export async function deleteEntry(id: number): Promise<void> {
+export async function deleteEntry(id: string | number): Promise<void> {
   const response = await fetchWithRetry(`${API_URL}/${id}`, { method: 'DELETE' })
 
   // 404 = already deleted on server, treat as success

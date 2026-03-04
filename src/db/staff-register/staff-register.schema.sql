@@ -10,7 +10,8 @@ CREATE TABLE IF NOT EXISTS work_days (
 );
 
 CREATE TABLE IF NOT EXISTS work_entries (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  id TEXT PRIMARY KEY,
+  remote_id TEXT,
   employee_id INTEGER,
   workplace_id INTEGER,
   cost_center_id INTEGER,
@@ -65,3 +66,5 @@ CREATE INDEX IF NOT EXISTS idx_work_entries_check_in_at
   ON work_entries (check_in_at);
 CREATE INDEX IF NOT EXISTS idx_work_entries_status
   ON work_entries (status);
+CREATE INDEX IF NOT EXISTS idx_work_entries_remote_id
+  ON work_entries (remote_id);

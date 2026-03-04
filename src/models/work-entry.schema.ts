@@ -18,7 +18,8 @@ const defaultZero = z.union([z.number(), z.null(), z.undefined()]).transform((v)
 
 export const workEntryRowSchema = z
   .object({
-    id: nullableNumber,
+    id: nullableString,
+    remote_id: nullableString,
     employee_id: z.number(),
     workplace_id: z.number(),
     cost_center_id: nullableNumber,

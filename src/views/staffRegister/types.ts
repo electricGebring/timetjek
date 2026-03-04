@@ -10,7 +10,8 @@ export type { TimeRegistrationApplication } from '@/enums/TimeRegistrationApplic
 
 export interface Entry {
   // Identification
-  id: number
+  id: string
+  remote_id?: string | null
   employee_id: number
   workplace_id: number
   cost_center_id: number | null

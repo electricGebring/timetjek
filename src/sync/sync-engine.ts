@@ -257,14 +257,14 @@ export class SyncEngine implements SyncPort {
     // Try batch operation first (if API supports it)
     if (deletedItems.length > 1) {
       try {
-        const idsToDelete = (deletedItems as { id: number }[]).map((item) => item.id)
+        const idsToDelete = (deletedItems as { id: string | number }[]).map((item) => item.id)
 
         await this.adapter.batchDelete(idsToDelete)
         // this.logger.log(`[SyncEngine] Batch deleted ${idsToDelete.length} items from ${this.tableName}`)
 
         // Permanently delete all locally after successful API batch delete
         for (const item of deletedItems) {
-          await this.adapter.permanentDelete((item as { id: number }).id)
+          await this.adapter.permanentDelete((item as { id: string | number }).id)
         }
 
         return // Success - exit early
@@ -278,7 +278,7 @@ export class SyncEngine implements SyncPort {
     // Fallback: Individual operations (or if only one item)
     for (const item of deletedItems) {
       try {
-        const typedItem = item as { id: number }
+        const typedItem = item as { id: string | number }
 
         await this.adapter.deleteItem(typedItem.id)
 
@@ -296,7 +296,7 @@ export class SyncEngine implements SyncPort {
           typeof e === 'object' && e !== null && 'status' in e && typeof (e as { status: unknown }).status === 'number';
 
         if ((hasMessage(error) && error.message.includes('404')) || (hasStatus(error) && error.status === 404)) {
-          await this.adapter.permanentDelete((item as { id: number }).id)
+          await this.adapter.permanentDelete((item as { id: string | number }).id)
           // this.logger.log(`[SyncEngine] Item ${item.id} from ${this.tableName} not found in API, 
           // deleted locally`)
         }
@@ -304,7 +304,7 @@ export class SyncEngine implements SyncPort {
           this.logger.error(
             'Failed to delete item from API',
             this.tableName,
-            (item as { id: number }).id,
+            (item as { id: string | number }).id,
             error
           )
           // Continue with other deletions even if one fails
