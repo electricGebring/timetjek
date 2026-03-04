@@ -6,7 +6,7 @@ import { runMigrations } from '../migrate'
  * Initializes the staff-register tables and runs migrations for both native and web.
  * Pass in the db instance and a function to execute SQL.
  */
-export async function initStaffRegisterDb(db: unknown, isNative: boolean) {
+export async function initWorkEntriesDb(db: unknown, isNative: boolean) {
   if (isNative) {
     // Type assertion for db to have execute method
     await (db as { execute: (sql: string) => Promise<unknown> }).execute(STAFF_REGISTER_SCHEMA)

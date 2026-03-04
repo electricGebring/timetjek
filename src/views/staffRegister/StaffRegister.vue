@@ -6,9 +6,9 @@ import HeaderBar from '@/components/HeaderBar.vue'
 import DebugPanel from '@/components/DebugPanel.vue'
 
 // import { fetchWorkSchemeData } from '@/api/workscheme'
-import { useStaffRegisterStore } from '@/stores/staff-register/store'
+import { useWorkEntriesStore } from '@/stores/work-entries/store'
 
-import { workEntryStatus } from '@/stores/staff-register/constants'
+import { workEntryStatus } from '@/stores/work-entries/constants'
 
 import type { TimeRegistrationStatus } from '@/enums/TimeRegistrationStatus'
 
@@ -17,7 +17,7 @@ import WorkEntryTable from '@/components/WorkEntryTable.vue'
 
 import StaffRegisterActions from '@/components/StaffRegisterActions.vue'
 
-const store = useStaffRegisterStore()
+const store = useWorkEntriesStore()
 
 // import { debugSyncNow } from './debug-sync'
 import { formatTime, formatWorkTime, formatBreak } from '@/utils/timeFormatters'
@@ -116,7 +116,7 @@ onMounted(async () => {
   await store.loadGroupedWorkEntries()
   // prettier-ignore
   
-  ;(window as unknown as { staffRegisterData: typeof store.workEntries }).staffRegisterData = store.workEntries
+  ;(window as unknown as { workEntriesData: typeof store.workEntries }).workEntriesData = store.workEntries
   // Listen for sync-completed events and reload data
   
   window.addEventListener('sync-completed', async () => {
@@ -225,7 +225,7 @@ const handleBreak = async () => {
 }
 
 // Debug functions
-import type { StaffRegisterService } from '@/domain/staff-register/service'
+import type { WorkEntriesService } from '@/domain/work-entries/service'
 
 const runDebugFunction = async (functionName: string) => {
   debugLoading.value = true
@@ -235,10 +235,10 @@ const runDebugFunction = async (functionName: string) => {
   debugStatus.value = `Kör ${functionName}...`
 
   try {
-    const service = (window as unknown as { staffRegisterService: StaffRegisterService }).staffRegisterService
+    const service = (window as unknown as { workEntriesService: WorkEntriesService }).workEntriesService
 
     if (!service) {
-      throw new Error('Service inte tillgänglig på window.staffRegisterService')
+      throw new Error('Service inte tillgänglig på window.workEntriesService')
     }
 
     let result: unknown = null

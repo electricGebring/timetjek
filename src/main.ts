@@ -37,10 +37,10 @@ import { TABLE_WORK_ENTRIES } from '@/constants/tables'
 
 import { registerTableAdapter } from '@/sync/table-sync-adapter'
 
-import { createStaffRegisterAdapter } from '@/sync/staff-register/adapter'
+import { createWorkEntriesAdapter } from '@/sync/work-entries/adapter'
 
 // Import service layer (exposes on window for debugging)
-import '@/domain/staff-register/service'
+import '@/domain/work-entries/service'
 
 // Main bootstrap function for app startup
 async function bootstrap() {
@@ -51,7 +51,7 @@ async function bootstrap() {
   await runMigrations()
 
   // Register sync adapters for each entity/table
-  registerTableAdapter(TABLE_WORK_ENTRIES, createStaffRegisterAdapter)
+  registerTableAdapter(TABLE_WORK_ENTRIES, createWorkEntriesAdapter)
 
   // Create and mount Vue app
   const app = createApp(App)

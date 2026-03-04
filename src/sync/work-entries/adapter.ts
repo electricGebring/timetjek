@@ -4,9 +4,9 @@ import { TABLE_WORK_ENTRIES } from '@/constants/tables'
 
 import { assertOnline, whenOffline } from '@/utils/connectivity'
 
-import * as repo from '@/db/staff-register/repo'
+import * as repo from '@/db/work-entries/repo'
 
-import { fetchStaffRegisterEntries, deleteEntry } from '@/api/staff-register'
+import { fetchWorkEntries, deleteEntry } from '@/api/work-entries'
 
 import type { Entry } from '@/views/staffRegister/types'
 
@@ -14,9 +14,9 @@ import type { ConflictResolutionStrategy as ConflictStrategyType } from '@/enums
 
 import { mergeRemoteWorkEntry } from './merge-remote'
 
-export function createStaffRegisterAdapter(): TableSyncAdapter<Entry> {
-  const fetchEntriesOrThrow = async (api: typeof import('@/api/staff-register')) => {
-    return await api.fetchStaffRegisterEntries()
+export function createWorkEntriesAdapter(): TableSyncAdapter<Entry> {
+  const fetchEntriesOrThrow = async (api: typeof import('@/api/work-entries')) => {
+    return await api.fetchWorkEntries()
   }
 
   return {
@@ -37,7 +37,7 @@ export function createStaffRegisterAdapter(): TableSyncAdapter<Entry> {
     batchUpsert: async (items: Entry[]): Promise<Entry[]> => {
       assertOnline('batchUpsert')
 
-      const api = await import('@/api/staff-register')
+      const api = await import('@/api/work-entries')
 
       const allEntries = await fetchEntriesOrThrow(api)
 
@@ -102,7 +102,7 @@ export function createStaffRegisterAdapter(): TableSyncAdapter<Entry> {
 
       const entry = item as Entry
 
-      const api = await import('@/api/staff-register')
+      const api = await import('@/api/work-entries')
 
       const allEntries = await fetchEntriesOrThrow(api)
 
@@ -128,7 +128,7 @@ export function createStaffRegisterAdapter(): TableSyncAdapter<Entry> {
     },
     fetchAll: async (): Promise<Entry[]> => {
       try {
-        return await fetchStaffRegisterEntries()
+        return await fetchWorkEntries()
       }
  catch {
         return []
@@ -136,7 +136,7 @@ export function createStaffRegisterAdapter(): TableSyncAdapter<Entry> {
     },
     fetchSince: async (): Promise<Entry[]> => {
       try {
-        return await fetchStaffRegisterEntries()
+        return await fetchWorkEntries()
       }
  catch {
         return []
@@ -144,7 +144,7 @@ export function createStaffRegisterAdapter(): TableSyncAdapter<Entry> {
     },
     mergeRemote: (remoteItem: Entry, strategy?: ConflictStrategyType) => mergeRemoteWorkEntry(remoteItem, strategy),
     updateStore: async (entries?: Entry[]): Promise<void> => {
-      const domain = await import('@/domain/staff-register/domain')
+      const domain = await import('@/domain/work-entries/domain')
 
       if (entries && Array.isArray(entries)) {
         await domain.updateStoreFromEntries(entries)

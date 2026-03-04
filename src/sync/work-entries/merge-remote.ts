@@ -4,8 +4,8 @@
  * (unsynced → API → save result).
  */
 
-import * as repo from '@/db/staff-register/repo'
-import { entryToWorkEntry, workEntryToEntry } from '@/db/staff-register/work-entry.mapper'
+import * as repo from '@/db/work-entries/repo'
+import { entryToWorkEntry, workEntryToEntry } from '@/db/work-entries/work-entry.mapper'
 
 import { defaultConflictResolver } from '@/sync/conflict-resolver'
 
@@ -50,19 +50,19 @@ export async function mergeRemoteWorkEntry(
   strategy: StrategyType = ConflictResolutionStrategy.LAST_WRITE_WINS
 ): Promise<{ resolved: Entry; conflictDetected: boolean }> {
   if (!remote.id) {
-    // Return a dummy Entry with id 0 to satisfy type
-    return { resolved: { ...remote, id: 0 }, conflictDetected: true }
+    // Return a dummy Entry with empty id to satisfy type
+    return { resolved: { ...remote, id: '' }, conflictDetected: true }
   }
 
   const locals = await repo.getWorkEntries()
 
-  const local = locals.find((e) => (e.id ?? 0) === (remote.id ?? 0))
+  const local = locals.find((e) => (e.id ?? '') === (remote.id ?? ''))
 
   if (!local) {
     // No local entry: persist remote to DB as synced
     const safeRemote = {
       ...remote,
-      id: remote.id ?? 0,
+      id: remote.id ?? '',
       work_day_id: remote.work_day_id ?? 0,
       check_in_at: remote.check_in_at ?? '',
       check_out_at: remote.check_out_at ?? '',
@@ -104,7 +104,7 @@ export async function mergeRemoteWorkEntry(
   // Ensure id and work_day_id are never null for Entry
   const safeToPersist: Entry = {
     ...toPersist,
-    id: toPersist.id ?? 0,
+    id: toPersist.id ?? '',
     work_day_id: toPersist.work_day_id ?? 0,
     status: (toPersist.status ?? 'OPEN') as TimeRegistrationStatus,
     check_in_at: toPersist.check_in_at ?? '',
@@ -138,7 +138,7 @@ export async function mergeRemoteWorkEntry(
   // Ensure local has non-null id and required fields for comparison
   const safeLocal: Entry = {
     ...local,
-    id: local.id ?? 0,
+    id: local.id ?? '',
     work_day_id: local.work_day_id ?? 0,
     status: (local.status ?? 'OPEN') as TimeRegistrationStatus,
     check_in_at: local.check_in_at ?? '',

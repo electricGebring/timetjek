@@ -388,7 +388,7 @@ export class SyncEngine implements SyncPort {
 
       const unsyncedItems = await this.adapter.getUnsynced();
 
-      const byId = new Map<number, Entry>();
+      const byId = new Map<string | number, Entry>();
 
       for (const item of resolvedItems as Entry[]) {
         if ((item as Entry)?.id !== null) {

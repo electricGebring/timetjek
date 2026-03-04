@@ -79,7 +79,7 @@ async function fetchWithRetry(url: string, options?: RequestInit, maxRetries = 3
 /**
  * Fetches all staff register entries from the API, flat list (alla dagar sammanslagna)
  */
-export async function fetchStaffRegisterEntries(): Promise<Entry[]> {
+export async function fetchWorkEntries(): Promise<Entry[]> {
   const response = await fetchWithRetry(API_URL)
 
   const rows = (await response.json()) as Entry[]
