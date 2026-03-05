@@ -4,4 +4,4 @@
  */
 export type { WorkEntry, WorkEntryColumn } from '@/models/work-entry.schema'
 
-export { workEntryRowSchema, WORK_ENTRY_COLUMNS, parseWorkEntryRow } from '@/models/work-entry.schema'
+export { WORK_ENTRY_COLUMNS, parseWorkEntryRow } from '@/models/work-entry.schema'
