@@ -81,7 +81,7 @@ export const WORK_ENTRY_COLUMNS = [
   'deleted_at',
   'synced',
   'deleted'
-] as const
+] as const satisfies readonly (keyof WorkEntry)[]
 
 export type WorkEntryColumn = (typeof WORK_ENTRY_COLUMNS)[number]
 
@@ -107,11 +107,18 @@ export function parseWorkEntryRow(raw: Record<string, unknown>): WorkEntry {
     return false
   }
 
+  const requireNumber = (v: unknown, fieldName: string): number => {
+    if (typeof v === 'number') {
+      return v
+    }
+    throw new Error(`Invalid WorkEntry: ${fieldName} is required and must be a number`)
+  }
+
   return {
     id: coerceString(raw.id),
     remote_id: coerceString(raw.remote_id),
-    employee_id: typeof raw.employee_id === 'number' ? raw.employee_id : 1,
-    workplace_id: typeof raw.workplace_id === 'number' ? raw.workplace_id : 1,
+    employee_id: requireNumber(raw.employee_id, 'employee_id'),
+    workplace_id: requireNumber(raw.workplace_id, 'workplace_id'),
     cost_center_id: coerceNumber(raw.cost_center_id),
     work_day_id: coerceNumber(raw.work_day_id),
     status: typeof raw.status === 'string' ? raw.status : '',
