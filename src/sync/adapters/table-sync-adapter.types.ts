@@ -14,7 +14,7 @@ export type TableSyncAdapter<T = unknown> = {
   tableName: string
   getUnsynced: () => Promise<T[]>
   getDeleted: () => Promise<T[]>
-  markAsSynced: (id: string | number) => Promise<void>
+  markAsSynced: (id: string) => Promise<void>
   permanentDelete: (id: string) => Promise<void>
   batchUpsert: (items: T[]) => Promise<T[]>
   batchDelete: (ids: string[]) => Promise<void>

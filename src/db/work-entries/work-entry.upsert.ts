@@ -1,9 +1,12 @@
 import { getDb } from '@/db/drizzle'
 import { workEntries, type WorkEntry as DrizzleWorkEntry } from '@/db/schema'
 import type { WorkEntry } from '@/models/work-entry.schema'
+import { createLogger } from '@/utils/logger'
 import { eq } from 'drizzle-orm'
 import { Capacitor } from '@capacitor/core'
 import { createLocalWorkEntryId } from './work-entry.helpers'
+
+const logger = createLogger('WorkEntriesRepo')
 
 /**
  * Save database to localStorage (web only)
@@ -24,7 +27,7 @@ function saveDatabase() {
  * Accepts both Drizzle WorkEntry and Zod WorkEntry formats
  */
 export async function upsertWorkEntry(entry: Partial<WorkEntry> | Partial<DrizzleWorkEntry> | Record<string, unknown>) {
-  console.debug('[DRIZZLE] 💾 Upserting work entry...')
+  logger.log('[4. PERSIST][DRIZZLE] 💾 Upserting work entry...')
 
   const db = getDb()
   const trimmedId = typeof entry.id === 'string' ? entry.id.trim() : undefined
@@ -46,8 +49,7 @@ export async function upsertWorkEntry(entry: Partial<WorkEntry> | Partial<Drizzl
     .where(eq(workEntries.id, safeEntry.id))
 
   if (existing.length > 0) {
-    // Update existing
-    console.debug(`[DRIZZLE] 🔄 Updating entry ${safeEntry.id}...`)
+    logger.log(`[4. PERSIST][DRIZZLE] 🔄 Updating entry ${safeEntry.id}...`)
 
     await db
       .update(workEntries)
@@ -57,15 +59,14 @@ export async function upsertWorkEntry(entry: Partial<WorkEntry> | Partial<Drizzl
       })
       .where(eq(workEntries.id, safeEntry.id))
   } else {
-    // Insert with UUID ID
-    console.debug(`[DRIZZLE] ➕ Inserting entry with ID ${safeEntry.id}...`)
+    logger.log(`[4. PERSIST][DRIZZLE] ➕ Inserting entry with ID ${safeEntry.id}...`)
 
     await db.insert(workEntries).values({
       ...safeEntry
     } as unknown as DrizzleWorkEntry)
   }
 
-  console.debug('[DRIZZLE] ✅ Upsert complete')
+  logger.log('[4. PERSIST][DRIZZLE] ✅ Upsert complete')
 
   // Save to localStorage after write (web only)
   saveDatabase()

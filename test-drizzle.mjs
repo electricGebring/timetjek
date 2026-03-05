@@ -7,6 +7,7 @@
  */
 
 import { initDrizzle } from './src/db/drizzle.ts'
+import { runMigrations } from './src/db/migrate.ts'
 import { getWorkEntries } from './src/db/work-entries/work-entry.read.ts'
 import { upsertWorkEntry } from './src/db/work-entries/work-entry.upsert.ts'
 import { softDeleteWorkEntry } from './src/db/work-entries/work-entry.delete.ts'
@@ -23,7 +24,12 @@ try {
   // Initialize Drizzle
   console.log('1️⃣ Initializing Drizzle with better-sqlite3...')
   await initDrizzle('./app.db')
-  console.log('✅ Drizzle initialized\n')
+  console.log('✅ Drizzle initialized')
+  
+  // Run migrations
+  console.log('🔄 Running migrations...')
+  await runMigrations()
+  console.log('✅ Migrations complete\n')
 
   // Test READ: getWorkEntries
   console.log('2️⃣ Testing getWorkEntries()...')
