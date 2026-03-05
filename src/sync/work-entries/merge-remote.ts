@@ -75,6 +75,8 @@ export async function mergeRemoteWorkEntry(
       check_out_longitude: remote.check_out_longitude ?? 0,
       check_in_application: (remote.check_in_application ?? 'APP') as TimeRegistrationApplication,
       check_out_application: (remote.check_out_application ?? null) as TimeRegistrationApplication | null,
+      deleted: remote.deleted ?? 0,
+      deleted_at: remote.deleted_at ?? null,
     }
 
     await repo.upsertWorkEntry(entryToWorkEntry({ ...safeRemote, synced: 1 }))
@@ -90,8 +92,11 @@ export async function mergeRemoteWorkEntry(
     return { resolved: resolvedLocal, conflictDetected: false }
   }
 
+  // Convert local WorkEntry to Entry format before conflict resolution
+  const localEntry = workEntryToEntry(local)
+
   // Conflict resolution, persist result to DB only if changed (avoid unnecessary writes)
-  const result = defaultConflictResolver.resolve(toResolverFormat(local), toResolverFormat(remote), strategy)
+  const result = defaultConflictResolver.resolve(toResolverFormat(localEntry), toResolverFormat(remote), strategy)
 
   const toPersist = fromResolverFormat(result.resolved as ResolverEntry)
 
@@ -99,7 +104,6 @@ export async function mergeRemoteWorkEntry(
   function entriesAreEqual(a: Entry, b: Entry): boolean {
     return a.id === b.id && a.updatedAt === b.updatedAt && a.status === b.status
   }
-
 
   // Ensure id and work_day_id are never null for Entry
   const safeToPersist: Entry = {
@@ -135,41 +139,9 @@ export async function mergeRemoteWorkEntry(
     cost_center_id: toPersist.cost_center_id ?? 0,
   }
 
-  // Ensure local has non-null id and required fields for comparison
-  const safeLocal: Entry = {
-    ...local,
-    id: local.id ?? '',
-    work_day_id: local.work_day_id ?? 0,
-    status: (local.status ?? 'OPEN') as TimeRegistrationStatus,
-    check_in_at: local.check_in_at ?? '',
-    check_in_time_at: local.check_in_time_at ?? '',
-    check_in_latitude: local.check_in_latitude ?? 0,
-    check_in_longitude: local.check_in_longitude ?? 0,
-    check_in_application: (local.check_in_application ?? 'APP') as TimeRegistrationApplication,
-    check_out_at: local.check_out_at ?? null,
-    check_out_time_at: local.check_out_time_at ?? null,
-    check_out_latitude: local.check_out_latitude ?? null,
-    check_out_longitude: local.check_out_longitude ?? null,
-    check_out_application: (local.check_out_application ?? null) as TimeRegistrationApplication | null,
-    break: local.break ?? null,
-    meal_benefit_has_breakfast: !!local.meal_benefit_has_breakfast,
-    meal_benefit_has_lunch: !!local.meal_benefit_has_lunch,
-    name: local.name ?? '',
-    type: local.type ?? '',
-    personalNumber: local.personalNumber ?? '',
-    administrator_comment: local.administrator_comment ?? null,
-    total_working_seconds: local.total_working_seconds ?? null,
-    createdAt: local.createdAt ?? new Date().toISOString(),
-    updatedAt: local.updatedAt ?? new Date().toISOString(),
-    deleted_at: local.deleted_at ?? null,
-    synced: local.synced ?? 1,
-    deleted: local.deleted ?? 0,
-    employee_id: local.employee_id ?? 0,
-    workplace_id: local.workplace_id ?? 0,
-    cost_center_id: local.cost_center_id ?? 0,
-  }
+  const shouldUpsert = !entriesAreEqual(localEntry, safeToPersist)
 
-  if (!entriesAreEqual(safeLocal, safeToPersist)) {
+  if (shouldUpsert) {
     await repo.upsertWorkEntry(entryToWorkEntry({ ...safeToPersist, synced: 1 }))
   }
 

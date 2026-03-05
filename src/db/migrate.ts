@@ -48,16 +48,17 @@ if (isNodeProcessRuntime()) {
     ? readdirSync(migrationsPath).filter((f: string) => f.endsWith('.sql')).sort()
     : []
   
+  // Combine and sort: drizzle/ files must run first (prefix 0), then migrations/ (prefix 1)
   migrations = [
     ...drizzleFiles.map((file: string) => ({
-      id: `drizzle_${file.replace('.sql', '')}`,
+      id: `0_drizzle_${file.replace('.sql', '')}`,
       sql: readFileSync(join(drizzlePath, file), 'utf-8')
     })),
     ...migrationFiles.map((file: string) => ({
-      id: `custom_${file.replace('.sql', '')}`,
+      id: `1_custom_${file.replace('.sql', '')}`,
       sql: readFileSync(join(migrationsPath, file), 'utf-8')
     }))
-  ]
+  ].sort((a, b) => a.id.localeCompare(b.id))
 }
  else {
   // Web/Vite: use dynamic imports for SQL files (Vite supports ?raw)
@@ -68,14 +69,20 @@ if (isNodeProcessRuntime()) {
   
   const allModules = { ...drizzleModules, ...customModules }
   
+  // Sort: drizzle migrations (0000_...) must run before custom migrations (20260304...)
+  // We use numeric prefix to ensure correct ordering
   migrations = Object.entries(allModules)
     .map(([path, mod]) => {
       const fileName = path.split('/').pop()?.replace('.sql', '') || ''
 
       const isDrizzle = path.includes('/drizzle/')
 
+      // Use prefix '0' for drizzle, '1' for custom to ensure drizzle runs first
+      const sortPrefix = isDrizzle ? '0' : '1'
+      const id = `${sortPrefix}_${isDrizzle ? 'drizzle' : 'custom'}_${fileName}`
+
       return {
-        id: isDrizzle ? `drizzle_${fileName}` : `custom_${fileName}`,
+        id,
         sql: (mod as { default: string }).default
       }
     })

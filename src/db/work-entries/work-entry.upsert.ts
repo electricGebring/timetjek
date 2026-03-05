@@ -54,8 +54,7 @@ export async function upsertWorkEntry(entry: Partial<WorkEntry> | Partial<Drizzl
     await db
       .update(workEntries)
       .set({
-        ...safeEntry,
-        updatedAt: new Date().toISOString()
+        ...safeEntry
       })
       .where(eq(workEntries.id, safeEntry.id))
   } else {
