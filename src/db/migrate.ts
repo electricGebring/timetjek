@@ -38,26 +38,44 @@ if (isNodeProcessRuntime()) {
 
   const drizzlePath = join(cwd(), 'drizzle')
 
+  const migrationsPath = join(cwd(), 'migrations')
+
   const drizzleFiles = existsSync(drizzlePath) 
     ? readdirSync(drizzlePath).filter((f: string) => f.endsWith('.sql')).sort() 
     : []
   
-  migrations = drizzleFiles.map((file: string) => ({
-    id: `drizzle_${file.replace('.sql', '')}`,
-    sql: readFileSync(join(drizzlePath, file), 'utf-8')
-  }))
+  const migrationFiles = existsSync(migrationsPath)
+    ? readdirSync(migrationsPath).filter((f: string) => f.endsWith('.sql')).sort()
+    : []
+  
+  migrations = [
+    ...drizzleFiles.map((file: string) => ({
+      id: `drizzle_${file.replace('.sql', '')}`,
+      sql: readFileSync(join(drizzlePath, file), 'utf-8')
+    })),
+    ...migrationFiles.map((file: string) => ({
+      id: `custom_${file.replace('.sql', '')}`,
+      sql: readFileSync(join(migrationsPath, file), 'utf-8')
+    }))
+  ]
 }
  else {
   // Web/Vite: use dynamic imports for SQL files (Vite supports ?raw)
   // This will be populated at build time by Vite's static analysis
   const drizzleModules = import.meta.glob('../../drizzle/*.sql', { query: '?raw', eager: true })
+
+  const customModules = import.meta.glob('../../migrations/*.sql', { query: '?raw', eager: true })
   
-  migrations = Object.entries(drizzleModules)
+  const allModules = { ...drizzleModules, ...customModules }
+  
+  migrations = Object.entries(allModules)
     .map(([path, mod]) => {
       const fileName = path.split('/').pop()?.replace('.sql', '') || ''
 
+      const isDrizzle = path.includes('/drizzle/')
+
       return {
-        id: `drizzle_${fileName}`,
+        id: isDrizzle ? `drizzle_${fileName}` : `custom_${fileName}`,
         sql: (mod as { default: string }).default
       }
     })
