@@ -264,7 +264,7 @@ export class SyncEngine implements SyncPort {
 
         // Permanently delete all locally after successful API batch delete
         for (const item of deletedItems) {
-          await this.adapter.permanentDelete((item as { id: string | number }).id)
+          await this.adapter.permanentDelete((item as { id: string }).id)
         }
 
         return // Success - exit early
@@ -278,7 +278,7 @@ export class SyncEngine implements SyncPort {
     // Fallback: Individual operations (or if only one item)
     for (const item of deletedItems) {
       try {
-        const typedItem = item as { id: string | number }
+        const typedItem = item as { id: string }
 
         await this.adapter.deleteItem(typedItem.id)
 
@@ -296,7 +296,7 @@ export class SyncEngine implements SyncPort {
           typeof e === 'object' && e !== null && 'status' in e && typeof (e as { status: unknown }).status === 'number';
 
         if ((hasMessage(error) && error.message.includes('404')) || (hasStatus(error) && error.status === 404)) {
-          await this.adapter.permanentDelete((item as { id: string | number }).id)
+          await this.adapter.permanentDelete((item as { id: string }).id)
           // this.logger.log(`[SyncEngine] Item ${item.id} from ${this.tableName} not found in API, 
           // deleted locally`)
         }
@@ -304,7 +304,7 @@ export class SyncEngine implements SyncPort {
           this.logger.error(
             'Failed to delete item from API',
             this.tableName,
-            (item as { id: string | number }).id,
+            (item as { id: string }).id,
             error
           )
           // Continue with other deletions even if one fails
@@ -388,7 +388,7 @@ export class SyncEngine implements SyncPort {
 
       const unsyncedItems = await this.adapter.getUnsynced();
 
-      const byId = new Map<string | number, Entry>();
+      const byId = new Map<string, Entry>();
 
       for (const item of resolvedItems as Entry[]) {
         if ((item as Entry)?.id !== null) {

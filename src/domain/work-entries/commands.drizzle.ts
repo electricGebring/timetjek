@@ -59,7 +59,7 @@ export async function updateWorkEntry(entry: Partial<WorkEntry>) {
   logger.log('[DRIZZLE] ✅ Work entry updated')
 }
 
-export async function deleteWorkEntry(id: string | number) {
+export async function deleteWorkEntry(id: string) {
   logger.log('[DRIZZLE] 🗑️ Soft deleting work entry...', { id })
 
   await staffRepo.softDeleteWorkEntry(id)
@@ -67,7 +67,7 @@ export async function deleteWorkEntry(id: string | number) {
   logger.log('[DRIZZLE] ✅ Work entry soft deleted')
 }
 
-export async function hardDeleteWorkEntry(id: string | number) {
+export async function hardDeleteWorkEntry(id: string) {
   logger.log('[DRIZZLE] 🔥 Hard deleting work entry...', { id })
 
   await staffRepo.permanentDeleteWorkEntry(id)
@@ -75,7 +75,7 @@ export async function hardDeleteWorkEntry(id: string | number) {
   logger.log('[DRIZZLE] ✅ Work entry hard deleted')
 }
 
-export async function restoreWorkEntry(id: string | number) {
+export async function restoreWorkEntry(id: string) {
   logger.log('[DRIZZLE] ↩️ Restoring work entry...', { id })
 
   await staffRepo.restoreWorkEntry(id)
