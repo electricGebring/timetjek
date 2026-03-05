@@ -43,8 +43,7 @@
     "sql.js": "^1.13.0",
     "vue": "^3.5.24",
     "vue-i18n": "^11.2.8",
-    "vue-router": "^4.6.4",
-    "zod": "^4.3.6"
+    "vue-router": "^4.6.4"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.18",
