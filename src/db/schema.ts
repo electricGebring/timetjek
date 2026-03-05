@@ -50,31 +50,3 @@ export const workEntries = sqliteTable(
 export type WorkEntry = typeof workEntries.$inferSelect
 
 export type NewWorkEntry = typeof workEntries.$inferInsert
-
-// Work Entry Breaks table
-export const workEntryBreaks = sqliteTable(
-  'work_entry_breaks',
-  {
-    id: integer('id').primaryKey({ autoIncrement: true }),
-    work_entry_id: text('work_entry_id')
-      .notNull()
-      .references(() => workEntries.id, {
-        onDelete: 'cascade', // Delete breaks when work entry is deleted
-        onUpdate: 'cascade', // Update work_entry_id if work entry id changes
-      }),
-    start_at: text('start_at'), // ISO timestamp
-    end_at: text('end_at'), // ISO timestamp
-    start_exact_at: text('start_exact_at'), // ISO timestamp (exact time from API)
-    end_exact_at: text('end_exact_at'), // ISO timestamp (exact time from API)
-    created_at: text('created_at').notNull().default('CURRENT_TIMESTAMP'),
-  },
-  (table) => ({
-    idx_work_entry_breaks_work_entry_id: index('idx_work_entry_breaks_work_entry_id').on(
-      table.work_entry_id
-    ),
-  })
-)
-
-export type WorkEntryBreak = typeof workEntryBreaks.$inferSelect
-
-export type NewWorkEntryBreak = typeof workEntryBreaks.$inferInsert
