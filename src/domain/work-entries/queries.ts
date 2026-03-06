@@ -115,3 +115,25 @@ export async function getWorkSchemeGrouped(): Promise<{ days: DayGroup[] }> {
 
   return { days: Object.values(daysMap).sort((a, b) => a.date.localeCompare(b.date)) }
 }
+
+/**
+ * Group already-loaded entries by date (without re-reading from DB)
+ * Used to avoid double-loading data on page initialization
+ */
+export function groupWorkEntriesByDate(entries: WorkEntry[]): { days: DayGroup[] } {
+  const daysMap: Record<string, DayGroup> = {}
+
+  for (const entry of entries) {
+    const date = (entry as { createdAt?: string }).createdAt?.slice(0, 10) ?? ''
+
+    if (!date) continue
+
+    if (!daysMap[date]) {
+      daysMap[date] = { date, dateLabel: date, entries: [] }
+    }
+
+    daysMap[date].entries.push(entry)
+  }
+
+  return { days: Object.values(daysMap).sort((a, b) => a.date.localeCompare(b.date)) }
+}

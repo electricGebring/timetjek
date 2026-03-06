@@ -85,6 +85,42 @@ export const useWorkEntriesStore = defineStore('staffRegister', {
     },
 
     /**
+     * Group already-loaded entries by date without re-reading from DB.
+     * Used on page initialization to avoid double-loading data.
+     */
+    setGroupedEntriesFromLoaded(entries: Entry[]) {
+      const grouped = domain.groupWorkEntriesByDate(
+        entries.map((e) => ({
+          ...e,
+          createdAt: e.createdAt ?? '',
+          updatedAt: e.updatedAt ?? '',
+          work_day_id: e.work_day_id ?? 0
+        })) as any
+      )
+
+      // Convert all entries to the correct Entry type
+      const convertedGrouped = {
+        days: grouped.days.map((day: DayGroup) => ({
+          ...day,
+          entries: day.entries
+            .filter((entry) => {
+              if (typeof entry.id === 'string') return entry.id.trim().length > 0
+              if (typeof entry.id === 'number') return true
+
+              return false
+            })
+            .map((entry) => ({
+              ...entry,
+              id: typeof entry.id === 'string' ? entry.id.trim() : String(entry.id),
+              work_day_id: entry.work_day_id !== null ? Number(entry.work_day_id) : 0
+            })) as Entry[]
+        }))
+      }
+
+      this.setGroupedWorkEntries(convertedGrouped)
+    },
+
+    /**
      * Loads all work entries from domain (local DB).
      */
     async loadWorkEntries() {
