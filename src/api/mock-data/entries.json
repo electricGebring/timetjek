@@ -1,6 +1,6 @@
 [
   {
-    "id": "local-entry-00000001",
+    "id": "5716845c-ebde-4468-9b93-3e1669ca3495",
     "employee_id": 1,
     "workplace_id": 1,
     "cost_center_id": null,
@@ -32,7 +32,7 @@
     "remote_id": null
   },
   {
-    "id": "local-entry-00000002",
+    "id": "60833634-46d9-4f46-a4d9-fb1a43f000b5",
     "employee_id": 1,
     "workplace_id": 1,
     "cost_center_id": null,
@@ -64,7 +64,7 @@
     "remote_id": null
   },
   {
-    "id": "local-entry-00000003",
+    "id": "c0c9bafe-dba1-4205-9973-d253a24697a3",
     "employee_id": 1,
     "workplace_id": 1,
     "cost_center_id": null,
@@ -96,7 +96,7 @@
     "remote_id": null
   },
   {
-    "id": "local-entry-00000004",
+    "id": "a803c7e7-56cc-48b7-8e1b-87c29e2b0dc6",
     "employee_id": 1,
     "workplace_id": 1,
     "cost_center_id": null,
@@ -128,7 +128,7 @@
     "remote_id": null
   },
   {
-    "id": "local-entry-00000005",
+    "id": "e77b7e22-a0d7-4e09-9874-bee540dc898b",
     "employee_id": 1,
     "workplace_id": 1,
     "cost_center_id": null,
@@ -160,7 +160,7 @@
     "remote_id": null
   },
   {
-    "id": "local-entry-00000006",
+    "id": "53263801-58ea-4447-bb24-96916bdde721",
     "employee_id": 1,
     "workplace_id": 1,
     "cost_center_id": null,
@@ -192,7 +192,7 @@
     "remote_id": null
   },
   {
-    "id": "local-entry-00000007",
+    "id": "2239997d-49ad-488f-beff-2dbf48e1cb10",
     "employee_id": 1,
     "workplace_id": 1,
     "cost_center_id": null,
@@ -224,7 +224,7 @@
     "remote_id": null
   },
   {
-    "id": "local-36ccccab-c415-4ea9-a483-475fb343befe",
+    "id": "1296647c-8be8-4929-b84b-4015ac1db61a",
     "remote_id": null,
     "employee_id": 1,
     "workplace_id": 1,
@@ -256,7 +256,7 @@
     "deleted": 0
   },
   {
-    "id": "local-62ff9c20-ccdf-42a4-96fc-41fcf1acf5a6",
+    "id": "01542ea6-2889-41a6-902f-f72b465e1e52",
     "remote_id": null,
     "employee_id": 1,
     "workplace_id": 1,
@@ -288,7 +288,7 @@
     "deleted": 0
   },
   {
-    "id": "local-6ed68ae6-7bb8-4e77-9372-fd8ed67a7268",
+    "id": "c402c057-729a-4a88-b3f4-b16a13557b06",
     "remote_id": null,
     "employee_id": 1,
     "workplace_id": 1,

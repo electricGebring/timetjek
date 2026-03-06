@@ -1,7 +1,7 @@
 [
   {
-    "id": 1,
-    "work_entry_id": "local-entry-00000001",
+    "id": "22e52f5e-c700-41e4-ab5b-07789b35d53e",
+    "work_entry_id": "5716845c-ebde-4468-9b93-3e1669ca3495",
     "start_at": "2025-02-11T12:20:00Z",
     "end_at": "2025-02-11T12:30:00Z",
     "start_exact_at": "2025-02-11T12:20:13Z",
@@ -9,8 +9,8 @@
     "created_at": "2025-02-11T12:20:13Z"
   },
   {
-    "id": 2,
-    "work_entry_id": "local-entry-00000003",
+    "id": "7e74eb7d-9ab7-4af9-bc8c-6d3d3c9ba3bf",
+    "work_entry_id": "c0c9bafe-dba1-4205-9973-d253a24697a3",
     "start_at": "2025-02-11T11:00:00Z",
     "end_at": "2025-02-11T11:30:00Z",
     "start_exact_at": null,
