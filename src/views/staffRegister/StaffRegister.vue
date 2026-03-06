@@ -111,9 +111,11 @@ onMounted(async () => {
     }
   }
   
+  // Load entries once from DB
   await store.loadWorkEntries()
   
-  await store.loadGroupedWorkEntries()
+  // Group already-loaded entries without re-reading from DB
+  store.setGroupedEntriesFromLoaded(store.workEntries)
   // prettier-ignore
   
   ;(window as unknown as { workEntriesData: typeof store.workEntries }).workEntriesData = store.workEntries

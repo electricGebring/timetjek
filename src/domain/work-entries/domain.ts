@@ -7,6 +7,7 @@ export {
   getUnsyncedWorkEntries,
   getDeletedWorkEntries,
   getWorkSchemeGrouped,
+  groupWorkEntriesByDate,
   upsertWorkEntryFromApi,
   canCheckIn,
   canCheckOut
