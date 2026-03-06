@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "api:work": "json-server src/api/mock-work-schem.json --port 3002 --host 0.0.0.0 --watch",
+    "api:work": "json-server src/api/mock-work-schem.cjs --port 3002 --host 0.0.0.0 --watch",
     "build": "vue-tsc -b && vite build",
     "lintBuild": "npm run lint && vue-tsc -b && vite build",
     "preview": "vite preview",
