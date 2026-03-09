@@ -108,7 +108,7 @@ async function bootstrap() {
   const logger = createLogger('Bootstrap')
 
   // Run initial sync to populate database with API data
-  try {
+  /*try {
     logger.log('[Bootstrap] Running initial sync...')
 
     await syncAdapter.start('manual')
@@ -116,7 +116,7 @@ async function bootstrap() {
     logger.log('[Bootstrap] Initial sync completed')
   } catch (error) {
     console.error('[Bootstrap] Initial sync failed:', error)
-  }
+  }*/
 
   // Run initial cleanup of expired data based on configured policies
   try {

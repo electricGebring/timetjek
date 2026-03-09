@@ -3,11 +3,21 @@ import { defineStore } from 'pinia'
 import * as domain from '@/domain/work-entries/domain'
 import * as breakRepo from '@/db/work-entry-breaks/repo'
 
+import { WORK_ENTRY_STORE_ERRORS } from './constants'
+
 import type { Entry, GroupedWorkEntries, DayGroup } from '@/views/staffRegister/types'
 
 import { TimeRegistrationStatus } from '@/enums/TimeRegistrationStatus'
 
 import type { WorkEntryBreak } from '@/models/work-entry-break.schema'
+
+/** Parse ISO string to local time HH:mm:ss (respects timezone) */
+function isoToLocalTimeString(iso: string | null): string | null {
+  if (!iso) return null
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return null
+  return [d.getHours(), d.getMinutes(), d.getSeconds()].map((n) => String(n).padStart(2, '0')).join(':')
+}
 
 function buildBreakDisplayString(entry: Entry, breaks: WorkEntryBreak[]): string | null {
   if (!breaks.length) return entry.break ?? null
@@ -15,18 +25,14 @@ function buildBreakDisplayString(entry: Entry, breaks: WorkEntryBreak[]): string
   const openBreak = breaks.find((b) => !b.end_at)
   if (openBreak && !entry.check_out_at) {
     const start = openBreak.start_exact_at ?? openBreak.start_at
-    if (!start) return null
-    const timePart = start.includes('T') ? (start.split('T')[1]?.slice(0, 8) ?? '') : start.slice(11, 19)
+    const timePart = isoToLocalTimeString(start)
     return timePart ? `${timePart}-` : null
   }
 
   const first = breaks.find((b) => b.start_at && b.end_at)
   if (!first) return entry.break ?? null
-  const start = first.start_exact_at ?? first.start_at
-  const end = first.end_exact_at ?? first.end_at
-  if (!start || !end) return entry.break ?? null
-  const startTime = start.includes('T') ? (start.split('T')[1]?.slice(0, 8) ?? '') : start.slice(11, 19)
-  const endTime = end.includes('T') ? (end.split('T')[1]?.slice(0, 8) ?? '') : end.slice(11, 19)
+  const startTime = isoToLocalTimeString(first.start_exact_at ?? first.start_at)
+  const endTime = isoToLocalTimeString(first.end_exact_at ?? first.end_at)
   return startTime && endTime ? `${startTime}-${endTime}` : (entry.break ?? null)
 }
 
@@ -167,11 +173,7 @@ export const useWorkEntriesStore = defineStore('staffRegister', {
 
         this.setError(null)
       } catch (e: unknown) {
-        if (e && typeof e === 'object' && 'message' in e && typeof (e as { message?: string }).message === 'string') {
-          this.setError((e as { message: string }).message)
-        } else {
-          this.setError('Failed to load work entries')
-        }
+        this.setError((e as Error)?.message ?? 'Failed to load work entries')
       } finally {
         this.setLoading(false)
       }
@@ -204,7 +206,15 @@ export const useWorkEntriesStore = defineStore('staffRegister', {
           return
         }
 
-        throw new Error('Du är redan instämplad. Stämpla ut först.')
+        throw new Error(WORK_ENTRY_STORE_ERRORS.ALREADY_CLOCKED_IN)
+      }
+
+      // Defensive re-fetch before create to avoid duplicate same-day entries (read-your-writes)
+      const freshAll = await domain.getAllWorkEntries()
+      const freshTodays = freshAll.filter((e) => e.work_day_id === work_day_id)
+      const freshOpen = freshTodays.find((e) => e.check_in_at && !e.check_out_at)
+      if (freshOpen?.id) {
+        throw new Error(WORK_ENTRY_STORE_ERRORS.ALREADY_CLOCKED_IN)
       }
 
       const now = new Date().toISOString()
@@ -250,7 +260,7 @@ export const useWorkEntriesStore = defineStore('staffRegister', {
       const openEntry = entries.find((e) => e.work_day_id === work_day_id && e.check_in_at && !e.check_out_at)
 
       if (!openEntry?.id) {
-        throw new Error('Ingen öppen instämpling hittades')
+        throw new Error(WORK_ENTRY_STORE_ERRORS.NO_OPEN_CHECK_IN)
       }
 
       const now = new Date().toISOString()
@@ -320,14 +330,14 @@ export const useWorkEntriesStore = defineStore('staffRegister', {
       const openEntry = todaysEntries.find((e) => e.check_in_at && !e.check_out_at)
 
       if (!openEntry?.id) {
-        throw new Error('Ingen öppen instämpling hittades')
+        throw new Error(WORK_ENTRY_STORE_ERRORS.NO_OPEN_CHECK_IN)
       }
 
       const existingBreaks = await breakRepo.getBreaksByWorkEntryId(openEntry.id)
       const hasOpenBreak = existingBreaks.some((b) => b.end_at === null)
 
       if (hasOpenBreak) {
-        throw new Error('Du är redan på rast')
+        throw new Error(WORK_ENTRY_STORE_ERRORS.ALREADY_ON_BREAK)
       }
 
       const now = new Date().toISOString()

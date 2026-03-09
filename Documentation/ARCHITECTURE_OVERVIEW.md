@@ -43,7 +43,7 @@ We use **Drizzle ORM** for type-safe database operations. The approach is **hybr
 The **domain layer** (business logic) is decoupled from database implementation via the **repository pattern**:
 
 - **Browser context** (`src/domain/work-entries/commands.ts`, `queries.ts`): Uses `repo.ts` which delegates to sql.js-based queries & commands.
-- **Node.js context** (`src/domain/work-entries/commands.drizzle.ts`, `queries.drizzle.ts`): Uses `repo.drizzle.ts` which delegates to Drizzle ORM queries & commands.
+- **Node.js context** (`src/domain/work-entries/work-entries.drizzle.ts`): Uses Drizzle ORM via the same repository for queries and commands in backend/sync/test contexts.
 
 The domain layer has identical logic in both contexts; only the repository implementation changes. This allows:
 1. **Type safety**: Both paths use Drizzle schema for type inference.

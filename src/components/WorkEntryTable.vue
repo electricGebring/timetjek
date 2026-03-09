@@ -98,10 +98,16 @@
               </td>
               <td class="hidden px-3 py-3 sm:px-5 sm:py-4 md:table-cell">
                 <div
-                  v-if="entry.break"
+                  v-if="entry.break?.endsWith('-')"
                   class="flex items-center gap-2 font-semibold text-orange-600"
                 >
-                  {{ entry.check_out_at ? 'Rast' : 'På rast' }}
+                  På rast
+                </div>
+                <div
+                  v-else-if="entry.break && entry.check_out_at"
+                  class="flex items-center gap-2 font-semibold text-orange-600"
+                >
+                  Rast
                 </div>
                 <div
                   v-else-if="getWorkEntryStatus(entry.status)"

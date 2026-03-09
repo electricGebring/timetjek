@@ -9,8 +9,7 @@
 import { initDrizzle } from './src/db/drizzle.ts'
 
 // Import domain layer (Drizzle version)
-import * as commands from './src/domain/work-entries/commands.drizzle.ts'
-import * as queries from './src/domain/work-entries/queries.drizzle.ts'
+import * as domain from './src/domain/work-entries/work-entries.drizzle.ts'
 
 console.log('🚀 Testing Domain Layer Integration with Drizzle ORM...\n')
 
@@ -22,7 +21,7 @@ try {
 
   // Test 2: Query all work entries
   console.log('2️⃣ Testing queries.getAllWorkEntries()...')
-  const allEntries = await queries.getAllWorkEntries()
+  const allEntries = await domain.getAllWorkEntries()
   console.log(`✅ Got ${allEntries.length} total entries\n`)
 
   // Test 3: Create a new work entry via domain
@@ -42,12 +41,12 @@ try {
     deleted: 0
   }
 
-  await commands.createWorkEntry(newEntry)
+  await domain.createWorkEntry(newEntry)
   console.log('✅ Successfully created work entry via domain\n')
 
   // Test 4: Query unsynced entries
   console.log('4️⃣ Testing queries.getUnsyncedWorkEntries()...')
-  const unsyncedEntries = await queries.getUnsyncedWorkEntries()
+  const unsyncedEntries = await domain.getUnsyncedWorkEntries()
   console.log(`✅ Found ${unsyncedEntries.length} unsynced entries`)
   if (unsyncedEntries.length > 0) {
     console.log(`   IDs: ${unsyncedEntries.map(e => e.id).join(', ')}\n`)
@@ -64,7 +63,7 @@ try {
       status: 'CLOSED'
     }
 
-    await commands.updateWorkEntry(updated)
+    await domain.updateWorkEntry(updated)
     console.log(`✅ Successfully updated entry ${entryToUpdate.id}\n`)
   }
 
@@ -73,13 +72,13 @@ try {
     console.log('6️⃣ Testing domain commands.deleteWorkEntry()...')
     const entryToDelete = unsyncedEntries[1]
     
-    await commands.deleteWorkEntry(entryToDelete.id)
+    await domain.deleteWorkEntry(entryToDelete.id)
     console.log(`✅ Successfully soft-deleted entry ${entryToDelete.id}\n`)
   }
 
   // Test 7: Query deleted entries
   console.log('7️⃣ Testing queries.getDeletedWorkEntries()...')
-  const deletedEntries = await queries.getDeletedWorkEntries()
+  const deletedEntries = await domain.getDeletedWorkEntries()
   console.log(`✅ Found ${deletedEntries.length} deleted entries`)
   if (deletedEntries.length > 0) {
     console.log(`   IDs: ${deletedEntries.map(e => e.id).join(', ')}\n`)
@@ -87,9 +86,9 @@ try {
 
   // Test 8: Verify final state
   console.log('8️⃣ Final verification...')
-  const finalAll = await queries.getAllWorkEntries()
-  const finalUnsynced = await queries.getUnsyncedWorkEntries()
-  const finalDeleted = await queries.getDeletedWorkEntries()
+  const finalAll = await domain.getAllWorkEntries()
+  const finalUnsynced = await domain.getUnsyncedWorkEntries()
+  const finalDeleted = await domain.getDeletedWorkEntries()
 
   console.log(`✅ Final state:`)
   console.log(`   Total entries: ${finalAll.length}`)

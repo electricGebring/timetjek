@@ -22,3 +22,12 @@ export const workEntryStatus: Record<TimeRegistrationStatus, { text: string; ico
     class: 'text-orange-700'
   }
 }
+
+/** Centralized error messages for work-entry store actions */
+export const WORK_ENTRY_STORE_ERRORS = {
+  ALREADY_CLOCKED_IN: 'Du är redan instämplad. Stämpla ut först.',
+  NO_OPEN_CHECK_IN: 'Ingen öppen instämpling hittades',
+  ALREADY_ON_BREAK: 'Du är redan på rast'
+} as const
+
+export type WorkEntryStoreErrorKey = keyof typeof WORK_ENTRY_STORE_ERRORS

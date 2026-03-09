@@ -21,9 +21,9 @@ export async function createWorkEntry(entry: Partial<WorkEntry>) {
 
   await staffRepo.upsertWorkEntry(safeEntry)
 
+  // Trigger sync only after upsert completes so insert is visible before sync runs
   logger.log('[5. DOMAIN] 🔄 Triggering sync...')
-
-  await triggerSyncIfOnline('mutation')
+  triggerSyncIfOnline('mutation')
 }
 
 export async function updateWorkEntry(entry: Partial<WorkEntry>) {
@@ -59,11 +59,12 @@ export async function updateWorkEntry(entry: Partial<WorkEntry>) {
 
   await staffRepo.upsertWorkEntry(entry)
 
-  await triggerSyncIfOnline('mutation')
+  // Trigger sync only after upsert completes
+  triggerSyncIfOnline('mutation')
 }
 
 export async function deleteWorkEntry(_id: string) {
   await staffRepo.softDeleteWorkEntry(_id)
 
-  await triggerSyncIfOnline('mutation')
+  triggerSyncIfOnline('mutation')
 }

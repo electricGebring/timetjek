@@ -8,8 +8,7 @@
 
 import { initDrizzle } from './src/db/drizzle.ts'
 import { createWorkEntriesDrizzleAdapter } from './src/sync/work-entries/adapter.drizzle.ts'
-import * as commands from './src/domain/work-entries/commands.drizzle.ts'
-import * as queries from './src/domain/work-entries/queries.drizzle.ts'
+import * as domain from './src/domain/work-entries/work-entries.drizzle.ts'
 
 console.log('🚀 Testing Sync Adapter with Drizzle ORM...\n')
 
@@ -57,8 +56,8 @@ try {
     deleted: 0
   }
 
-  await commands.createWorkEntry(testEntry1)
-  await commands.createWorkEntry(testEntry2)
+  await domain.createWorkEntry(testEntry1)
+  await domain.createWorkEntry(testEntry2)
   console.log('✅ Created 2 unsynced work entries\n')
 
   // Verify entries in outbox using adapter
@@ -104,14 +103,14 @@ try {
     deleted: 0
   }
 
-  await commands.createWorkEntry(testEntry3)
+  await domain.createWorkEntry(testEntry3)
   
   // Get the ID of the created entry
-  const allEntries = await queries.getAllWorkEntries()
+  const allEntries = await domain.getAllWorkEntries()
   const entry3 = allEntries.find(e => e.personalNumber === '3333333333')
   
   if (entry3) {
-    await commands.deleteWorkEntry(entry3.id)
+    await domain.deleteWorkEntry(entry3.id)
     console.log(`✅ Soft-deleted entry ${entry3.id}\n`)
   }
 
@@ -135,9 +134,9 @@ try {
 
   // Final summary
   console.log('✅ Final verification...')
-  const finalAll = await queries.getAllWorkEntries()
-  const finalUnsynced = await queries.getUnsyncedWorkEntries()
-  const finalDeleted = await queries.getDeletedWorkEntries()
+  const finalAll = await domain.getAllWorkEntries()
+  const finalUnsynced = await domain.getUnsyncedWorkEntries()
+  const finalDeleted = await domain.getDeletedWorkEntries()
 
   console.log(`✅ Final state:`)
   console.log(`   Total entries: ${finalAll.length}`)
