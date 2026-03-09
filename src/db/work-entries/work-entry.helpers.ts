@@ -50,7 +50,7 @@ const uuidLike = (): string => {
 }
 
 export function createLocalWorkEntryId(): string {
-  return `local-${uuidLike()}`
+  return uuidLike()
 }
 
 /** Normalize a partial entry into a SafeWorkEntry for parameterized SQL. */
@@ -60,7 +60,7 @@ export function buildSafeWorkEntry(entry: Record<string, unknown>): SafeWorkEntr
       ? entry.id.trim()
       : typeof entry.id === 'number'
         ? String(entry.id)
-      : createLocalWorkEntryId()
+        : createLocalWorkEntryId()
 
   const resolvedRemoteId =
     typeof entry.remote_id === 'string'
@@ -69,7 +69,7 @@ export function buildSafeWorkEntry(entry: Record<string, unknown>): SafeWorkEntr
         : null
       : typeof entry.remote_id === 'number'
         ? String(entry.remote_id)
-      : null
+        : null
 
   return {
     id: resolvedId,

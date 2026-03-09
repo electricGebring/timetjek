@@ -1,4 +1,4 @@
-import { TABLE_WORK_ENTRIES } from '@/constants/tables'
+import { TABLE_WORK_ENTRIES, WORK_ENTRIES_AGGREGATE } from '@/constants/tables'
 
 import { ConflictResolutionStrategy } from '@/enums/ConflictResolutionStrategy'
 
@@ -19,12 +19,44 @@ export type DataRetentionPolicy = {
   customCleanup?: (tableName: string) => Promise<number>
 }
 
+/** Child table in an aggregation (FK to root) */
+export type AggregationChildTable = {
+  table: string
+  fkColumn: string
+}
+
+/** Aggregation policy: root table + child tables synced as one unit */
+export type AggregationPolicy = {
+  aggregationName: string
+  rootTable: string
+  childTables: AggregationChildTable[]
+  syncMode: SyncMode
+  retentionDays?: number
+  softDeleteOnly?: boolean
+  autoSync?: boolean
+  conflictStrategy?: ConflictResolutionStrategy
+}
+
 // Default data policies configuration
 // Register your data types here with their retention policies
 
 export const DATA_POLICIES: Record<string, DataRetentionPolicy> = {
   [TABLE_WORK_ENTRIES]: {
     tableName: TABLE_WORK_ENTRIES,
+    syncMode: SyncMode.OFFLINE_FIRST,
+    retentionDays: 30,
+    softDeleteOnly: true,
+    autoSync: true,
+    conflictStrategy: ConflictResolutionStrategy.LAST_WRITE_WINS
+  }
+}
+
+/** Aggregation policies: parent + children synced together */
+export const AGGREGATION_POLICIES: Record<string, AggregationPolicy> = {
+  [WORK_ENTRIES_AGGREGATE]: {
+    aggregationName: WORK_ENTRIES_AGGREGATE,
+    rootTable: TABLE_WORK_ENTRIES,
+    childTables: [{ table: 'work_entry_breaks', fkColumn: 'work_entry_id' }],
     syncMode: SyncMode.OFFLINE_FIRST,
     retentionDays: 30,
     softDeleteOnly: true,
@@ -83,12 +115,15 @@ export function shouldSoftDeleteOnly(tableName: string): boolean {
 }
 
 /**
- * Get conflict resolution strategy for a table (used during pull/merge).
+ * Get conflict resolution strategy for a table or aggregation (used during pull/merge).
  * Default: LAST_WRITE_WINS. Use LOCAL_WINS for draft-like data, REMOTE_WINS for server-authoritative.
  */
-export function getConflictStrategy(tableName: string): ConflictResolutionStrategy {
-  const policy = getDataPolicy(tableName)
-
+export function getConflictStrategy(tableOrAggregationKey: string): ConflictResolutionStrategy {
+  const aggregation = AGGREGATION_POLICIES[tableOrAggregationKey]
+  if (aggregation?.conflictStrategy) {
+    return aggregation.conflictStrategy
+  }
+  const policy = getDataPolicy(tableOrAggregationKey)
   return policy?.conflictStrategy ?? ConflictResolutionStrategy.LAST_WRITE_WINS
 }
 
@@ -112,8 +147,37 @@ export function getPoliciesNeedingCleanup(): DataRetentionPolicy[] {
 }
 
 /**
- * Get all policies that should be synced
+ * Get all policies that should be synced (table-based, for backward compatibility)
  */
 export function getPoliciesForSync(): DataRetentionPolicy[] {
   return (Object.values(DATA_POLICIES) as DataRetentionPolicy[]).filter((policy) => shouldSyncTable(policy.tableName))
+}
+
+/**
+ * Check if an aggregation should be synced
+ */
+function shouldSyncAggregation(aggregation: AggregationPolicy): boolean {
+  if (aggregation.syncMode === SyncMode.ONLINE_ONLY) return false
+  return aggregation.autoSync !== false
+}
+
+/**
+ * Get all aggregation policies that should be synced
+ */
+export function getAggregationPoliciesForSync(): AggregationPolicy[] {
+  return (Object.values(AGGREGATION_POLICIES) as AggregationPolicy[]).filter(shouldSyncAggregation)
+}
+
+/**
+ * Get sync units for SyncManager: aggregations take precedence over their root tables.
+ * Returns sync keys (aggregation names or table names) to sync.
+ * When an aggregation exists for a table, we sync the aggregation instead of the table alone.
+ */
+export function getSyncUnitsForSync(): string[] {
+  const aggregationPolicies = getAggregationPoliciesForSync()
+  const rootTablesInAggregations = new Set(aggregationPolicies.map((ap) => ap.rootTable))
+  const aggregationKeys = aggregationPolicies.map((ap) => ap.aggregationName)
+  const tablePolicies = getPoliciesForSync()
+  const tableKeys = tablePolicies.map((p) => p.tableName).filter((table) => !rootTablesInAggregations.has(table))
+  return [...aggregationKeys, ...tableKeys]
 }

@@ -6,7 +6,7 @@ import type { SyncReason } from '../domain/ports/sync.port'
 
 import { createLogger } from '@/utils/logger'
 
-import { getPoliciesForSync, shouldSyncTable } from '../domain/config/data-policies'
+import { getSyncUnitsForSync, getAggregationPoliciesForSync, getDataPolicy } from '../domain/config/data-policies'
 
 import { SyncEngine } from './sync-engine'
 
@@ -31,32 +31,35 @@ export class SyncManager {
   }
 
   /**
-   * Get or create sync engine for a table (public for debug/timing)
+   * Get or create sync engine for a sync unit (aggregation or table)
+   * Public for debug/timing
    */
-  public getSyncEngine(tableName: string): SyncEngine | null {
-    if (!shouldSyncTable(tableName)) {
+  public getSyncEngine(syncKey: string): SyncEngine | null {
+    const isAggregation = getAggregationPoliciesForSync().some((ap) => ap.aggregationName === syncKey)
+    const isTable = getDataPolicy(syncKey) !== undefined
+
+    if (!isAggregation && !isTable) {
       return null
     }
 
-    if (!this.syncEngines.has(tableName)) {
-      const adapter = getTableAdapter(tableName)
+    if (!this.syncEngines.has(syncKey)) {
+      const adapter = getTableAdapter(syncKey)
 
       if (!adapter) {
-        // NOTE: Missing adapter means this table is intentionally not synced.
         return null
       }
 
       this.syncEngines.set(
-        tableName,
+        syncKey,
         new SyncEngine({
           logger: createLogger('SyncEngine'),
-          tableName,
+          tableName: syncKey,
           adapter
         })
       )
     }
 
-    return this.syncEngines.get(tableName)!
+    return this.syncEngines.get(syncKey)!
   }
 
   /**
@@ -80,19 +83,18 @@ export class SyncManager {
     this.syncInProgress = true
 
     try {
-      const policies = getPoliciesForSync()
+      const syncUnits = getSyncUnitsForSync()
 
       const results = await Promise.allSettled(
-        policies.map(async (policy) => {
-          const engine = this.getSyncEngine(policy.tableName)
+        syncUnits.map(async (syncKey) => {
+          const engine = this.getSyncEngine(syncKey)
 
           if (!engine) return
 
           try {
             await engine.start(reason)
-          }
- catch (error) {
-            this.logger.error(`[SyncManager] Failed to sync ${policy.tableName}:`, error)
+          } catch (error) {
+            this.logger.error(`[SyncManager] Failed to sync ${syncKey}:`, error)
 
             throw error
           }
@@ -104,26 +106,27 @@ export class SyncManager {
       if (failed.length > 0) {
         this.logger.warn(`[SyncManager] ${failed.length} tables failed to sync`)
       }
-    }
- finally {
+    } finally {
       this.syncInProgress = false
     }
   }
 
   /**
-   * Sync a specific table
+   * Sync a specific table or aggregation
    */
-  async syncTable(tableName: string, reason: SyncReason): Promise<void> {
-    if (!shouldSyncTable(tableName)) {
-      this.logger.warn(`[SyncManager] Table ${tableName} is not configured for sync`)
+  async syncTable(syncKey: string, reason: SyncReason): Promise<void> {
+    const syncUnits = getSyncUnitsForSync()
+
+    if (!syncUnits.includes(syncKey)) {
+      this.logger.warn(`[SyncManager] Sync unit ${syncKey} is not configured for sync`)
 
       return
     }
 
-    const engine = this.getSyncEngine(tableName)
+    const engine = this.getSyncEngine(syncKey)
 
     if (!engine) {
-      throw new Error(`No sync engine available for ${tableName}`)
+      throw new Error(`No sync engine available for ${syncKey}`)
     }
 
     await engine.start(reason)

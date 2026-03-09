@@ -1,32 +1,41 @@
 import { getDb } from '@/db/drizzle'
 import { workEntryBreaks } from '@/db/schema'
-import { eq } from 'drizzle-orm'
 import type { WorkEntryBreak } from '@/models/work-entry-break.schema'
 import { createLogger } from '@/utils/logger'
+import { eq } from 'drizzle-orm'
+import { markParentEntryDirty } from '@/db/work-entries/repo'
 
 const logger = createLogger('WorkEntryBreaksRepo')
 
+export type UpdateBreakInput = Partial<Pick<WorkEntryBreak, 'start_at' | 'end_at' | 'start_exact_at' | 'end_exact_at'>>
+
 /**
- * Update a break record
+ * Update a break by ID.
+ * Marks the parent work entry as dirty for aggregation sync.
  */
-export async function updateBreak(
-  breakId: number,
-  updates: Partial<Pick<WorkEntryBreak, 'start_at' | 'end_at' | 'start_exact_at' | 'end_exact_at'>>
-): Promise<WorkEntryBreak> {
-  logger.log('[UPDATE] Updating break:', breakId, updates)
+export async function updateBreak(id: number, changes: UpdateBreakInput): Promise<WorkEntryBreak | null> {
+  logger.log('[UPDATE] Updating break:', id)
 
   const db = getDb()
 
-  const result = await db
+  const results = await db
     .update(workEntryBreaks)
-    .set(updates)
-    .where(eq(workEntryBreaks.id, breakId))
+    .set({
+      ...changes,
+      start_at: changes.start_at ?? undefined,
+      end_at: changes.end_at ?? undefined,
+      start_exact_at: changes.start_exact_at ?? undefined,
+      end_exact_at: changes.end_exact_at ?? undefined
+    })
+    .where(eq(workEntryBreaks.id, id))
     .returning()
 
-  if (!result[0]) {
-    throw new Error(`Break with id ${breakId} not found`)
+  const updated = results[0] as WorkEntryBreak | undefined
+
+  if (updated?.work_entry_id) {
+    await markParentEntryDirty(updated.work_entry_id)
   }
 
-  logger.log('[UPDATE] Break updated:', result[0])
-  return result[0] as WorkEntryBreak
+  logger.log('[UPDATE] Break updated')
+  return updated ?? null
 }

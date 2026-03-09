@@ -33,7 +33,7 @@ import { createLogger } from '@/utils/logger'
 import { FontAwesomeIcon } from './fontawesome/icons'
 
 // Import generic sync adapter registration and table adapters
-import { TABLE_WORK_ENTRIES } from '@/constants/tables'
+import { WORK_ENTRIES_AGGREGATE } from '@/constants/tables'
 
 import { registerTableAdapter } from '@/sync/table-sync-adapter'
 
@@ -50,8 +50,8 @@ async function bootstrap() {
   // Run database migrations after database is initialized
   await runMigrations()
 
-  // Register sync adapters for each entity/table
-  registerTableAdapter(TABLE_WORK_ENTRIES, createWorkEntriesAdapter)
+  // Register sync adapters: aggregation adapters use aggregation name as key
+  registerTableAdapter(WORK_ENTRIES_AGGREGATE, createWorkEntriesAdapter)
 
   // Create and mount Vue app
   const app = createApp(App)
@@ -71,9 +71,9 @@ async function bootstrap() {
 
   // Create SyncManager to handle all registered tables (central logging)
   const syncManager = new SyncManager({ logger: createLogger('SyncManager') })
-    // Expose syncManager globally for debug/timing access
+  // Expose syncManager globally for debug/timing access
 
-    ; (window as unknown as { syncManager: SyncManager }).syncManager = syncManager
+  ;(window as unknown as { syncManager: SyncManager }).syncManager = syncManager
 
   // Create a SyncPort adapter that wraps SyncManager
   const syncAdapter: SyncPort = {
@@ -114,8 +114,7 @@ async function bootstrap() {
     await syncAdapter.start('manual')
 
     logger.log('[Bootstrap] Initial sync completed')
-  }
-  catch (error) {
+  } catch (error) {
     console.error('[Bootstrap] Initial sync failed:', error)
   }
 
@@ -128,8 +127,7 @@ async function bootstrap() {
     if (totalCleaned > 0) {
       logger.log(`[Bootstrap] Cleaned up expired data:`, results)
     }
-  }
-  catch (error) {
+  } catch (error) {
     logger.error('[Bootstrap] Initial cleanup failed:', error)
   }
 
@@ -153,8 +151,7 @@ function scheduleDailyCleanup(logger: LoggerLike = console) {
       if (totalCleaned > 0) {
         logger.log(`[Cleanup] Cleaned up expired data:`, results)
       }
-    }
-    catch (error) {
+    } catch (error) {
       logger.error('[Cleanup] Scheduled cleanup failed:', error)
     }
   }

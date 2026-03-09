@@ -2,16 +2,14 @@ import { getDb } from '@/db/drizzle'
 import { workEntryBreaks } from '@/db/schema'
 import type { WorkEntryBreak, CreateWorkEntryBreakInput } from '@/models/work-entry-break.schema'
 import { createLogger } from '@/utils/logger'
+import { markParentEntryDirty } from '@/db/work-entries/repo'
 
 const logger = createLogger('WorkEntryBreaksRepo')
 
 /**
  * Insert a single break for a work entry
  */
-export async function insertBreak(
-  workEntryId: string,
-  breakData: CreateWorkEntryBreakInput
-): Promise<WorkEntryBreak> {
+export async function insertBreak(workEntryId: string, breakData: CreateWorkEntryBreakInput): Promise<WorkEntryBreak> {
   logger.log('[CREATE] Inserting break for work entry:', workEntryId)
 
   const db = getDb()
@@ -24,11 +22,14 @@ export async function insertBreak(
       end_at: breakData.end_at ?? null,
       start_exact_at: breakData.start_exact_at ?? null,
       end_exact_at: breakData.end_exact_at ?? null,
-      created_at: new Date().toISOString(),
+      created_at: new Date().toISOString()
     })
     .returning()
 
   logger.log('[CREATE] Break inserted:', result[0])
+
+  await markParentEntryDirty(workEntryId)
+
   return result[0] as WorkEntryBreak
 }
 
@@ -51,9 +52,14 @@ export async function insertManyBreaks(
       end_at: b.end_at ?? null,
       start_exact_at: b.start_exact_at ?? null,
       end_exact_at: b.end_exact_at ?? null,
-      created_at: new Date().toISOString(),
+      created_at: new Date().toISOString()
     }))
   )
+
+  const workEntryIds = [...new Set(breaks.map((b) => b.work_entry_id))]
+  for (const workEntryId of workEntryIds) {
+    await markParentEntryDirty(workEntryId)
+  }
 
   logger.log('[CREATE] Breaks inserted successfully')
 }

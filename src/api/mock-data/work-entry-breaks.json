@@ -7,32 +7,5 @@
     "start_exact_at": "2025-02-11T12:20:13Z",
     "end_exact_at": "2025-02-11T12:30:03Z",
     "created_at": "2025-02-11T12:20:13Z"
-  },
-  {
-    "id": "7e74eb7d-9ab7-4af9-bc8c-6d3d3c9ba3bf",
-    "work_entry_id": "c0c9bafe-dba1-4205-9973-d253a24697a3",
-    "start_at": "2025-02-11T11:00:00Z",
-    "end_at": "2025-02-11T11:30:00Z",
-    "start_exact_at": null,
-    "end_exact_at": null,
-    "created_at": "2025-02-11T11:00:00Z"
-  },
-  {
-    "work_entry_id": "local-32b58f9e-d2ab-4446-824b-b7a06c37c564",
-    "start_at": "2026-03-09T16:16:15.309Z",
-    "end_at": null,
-    "start_exact_at": "2026-03-09T16:16:15.309Z",
-    "end_exact_at": null,
-    "created_at": "2026-03-09T16:16:15.456Z",
-    "id": "break-1773072975462"
-  },
-  {
-    "work_entry_id": "local-ef634c9e-f6de-45d0-bea7-12e8cdd1b31b",
-    "start_at": "2026-03-09T16:16:54.003Z",
-    "end_at": null,
-    "start_exact_at": "2026-03-09T16:16:54.003Z",
-    "end_exact_at": null,
-    "created_at": "2026-03-09T16:16:54.145Z",
-    "id": "break-1773073014149"
   }
 ]

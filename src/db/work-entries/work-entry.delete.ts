@@ -58,6 +58,26 @@ export async function restoreWorkEntry(id: string) {
 }
 
 /**
+ * Mark a work entry as dirty (unsynced) when a child (e.g. break) changes.
+ * Used for aggregation sync: child mutations propagate to parent so the
+ * aggregate is re-pushed on next sync.
+ */
+export async function markParentEntryDirty(workEntryId: string) {
+  console.debug(`[DRIZZLE] 📝 Marking parent entry ${workEntryId} as dirty (unsynced)...`)
+
+  await getDb()
+    .update(workEntries)
+    .set({
+      synced: 0,
+      updatedAt: new Date().toISOString()
+    })
+    .where(eq(workEntries.id, workEntryId))
+
+  console.debug('[DRIZZLE] ✅ Parent marked dirty')
+  saveDatabase()
+}
+
+/**
  * Mark a work entry as synced with backend
  */
 export async function markWorkEntryAsSynced(id: string) {

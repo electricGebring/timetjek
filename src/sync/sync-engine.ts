@@ -57,104 +57,95 @@ export class SyncEngine implements SyncPort {
   public lastSyncTimings: Record<string, number> = {}
 
   async start(reason: SyncReason): Promise<void> {
-
     if (this.running) {
-      this.logger.log('[SyncEngine] ⏩ Already running, skipping start', reason);
+      this.logger.log('[SyncEngine] ⏩ Already running, skipping start', reason)
 
-      return;
+      return
     }
 
-    this.running = true;
+    this.running = true
 
-    this.abortController = new AbortController();
+    this.abortController = new AbortController()
 
-    const signal = this.abortController.signal;
+    const signal = this.abortController.signal
 
-    const timings: Record<string, number> = {};
+    const timings: Record<string, number> = {}
 
     try {
+      const t0 = performance.now()
 
-      const t0 = performance.now();
+      await syncMetadata.setSyncState(this.tableName, 'syncing')
 
-      await syncMetadata.setSyncState(this.tableName, 'syncing');
-
-      timings.setSyncState = performance.now() - t0;
-
+      timings.setSyncState = performance.now() - t0
 
       if (signal.aborted) {
-        this.lastSyncTimings = timings;
+        this.lastSyncTimings = timings
 
-        return;
+        return
       }
 
-      const t1 = performance.now();
+      const t1 = performance.now()
 
-      await this.drainOutbox(signal);
+      await this.drainOutbox(signal)
 
-      timings.drainOutbox = performance.now() - t1;
+      timings.drainOutbox = performance.now() - t1
 
       if (signal.aborted) {
-        this.lastSyncTimings = timings;
+        this.lastSyncTimings = timings
 
-        return;
+        return
       }
 
-      const t2 = performance.now();
+      const t2 = performance.now()
 
-      await this.drainDeletions(signal);
+      await this.drainDeletions(signal)
 
-      timings.drainDeletions = performance.now() - t2;
+      timings.drainDeletions = performance.now() - t2
 
       if (signal.aborted) {
-        this.lastSyncTimings = timings;
+        this.lastSyncTimings = timings
 
-        return;
+        return
       }
 
-      const t3 = performance.now();
+      const t3 = performance.now()
 
-      await this.pullRemoteChanges(signal);
+      await this.pullRemoteChanges(signal)
 
-      timings.pullRemoteChanges = performance.now() - t3;
+      timings.pullRemoteChanges = performance.now() - t3
 
       if (signal.aborted) {
-        this.lastSyncTimings = timings;
+        this.lastSyncTimings = timings
 
-        return;
+        return
       }
 
-      const t4 = performance.now();
+      const t4 = performance.now()
 
-      await syncMetadata.markSyncSuccess(this.tableName);
+      await syncMetadata.markSyncSuccess(this.tableName)
 
-      timings.markSyncSuccess = performance.now() - t4;
+      timings.markSyncSuccess = performance.now() - t4
+    } catch (err: unknown) {
+      this.logger.error('Sync failed for', this.tableName, err)
 
-    }
-    catch (err: unknown) {
-      this.logger.error('Sync failed for', this.tableName, err);
+      timings.error = 1
 
-      timings.error = 1;
+      await syncMetadata.markSyncError(this.tableName, (err as Error)?.message || 'Unknown error')
+    } finally {
+      this.lastSyncTimings = timings
 
-      await syncMetadata.markSyncError(
-        this.tableName,
-        (err as Error)?.message || 'Unknown error'
-      );
-    }
-    finally {
-      this.lastSyncTimings = timings;
+      this.running = false
 
-      this.running = false;
-
-      this.abortController = null;
+      this.abortController = null
     }
   }
 
   async stop(): Promise<void> {
     if (!this.abortController) {
-      return;
+      return
     }
 
-    this.abortController.abort();
+    this.abortController.abort()
     // running is cleared in start()'s finally when the run exits at next step boundary
   }
 
@@ -164,18 +155,19 @@ export class SyncEngine implements SyncPort {
    */
   private async drainOutbox(signal?: AbortSignal): Promise<void> {
     if (signal?.aborted) {
-      return;
+      return
     }
 
-    const unsyncedItems = await this.adapter.getUnsynced() as Entry[];
+    const unsyncedItems = (await this.adapter.getUnsynced()) as Entry[]
 
     if (unsyncedItems.length === 0) {
-      return;
+      return
     }
 
     this.logger.log(`[6. SYNC] 📤 Draining outbox for ${this.tableName}, found ${unsyncedItems.length} unsynced items`)
 
     // Try batch operation first (if API supports it)
+    // Retry transient failures so we avoid partial remote state (e.g. entry pushed but breaks not)
     if (unsyncedItems.length > 1) {
       try {
         const now = Math.floor(Date.now() / 1000)
@@ -185,36 +177,38 @@ export class SyncEngine implements SyncPort {
           updatedAt: item.updatedAt ?? now
         }))
 
-        this.logger.log(`[7a. SYNC] 🔌 Calling API adapter.batchUpsert for ${itemsToBatch.length} items`)
+        this.logger.log(`[7a. SYNC] Calling API adapter.batchUpsert for ${itemsToBatch.length} items`)
 
-        this.logger.log('[DEBUG] sync-engine: anropar adapter.batchUpsert', itemsToBatch)
-
-        const batchResult = await this.adapter.batchUpsert(itemsToBatch)
+        const batchResult = await retryWithBackoff(() => this.adapter.batchUpsert(itemsToBatch), {
+          maxRetries: 3,
+          initialDelay: 1000,
+          retryableErrors: ['NetworkError', 'Failed to fetch', 'timeout', 'ECONNRESET', 'ETIMEDOUT']
+        })
 
         this.logger.log(
-          `[7b. SYNC] ✅ Batch pushed ${batchResult.length} items, ids:`,
+          `[7b. SYNC] Batch pushed ${batchResult.length} items, ids:`,
           batchResult.map((r) => (r as Entry).id)
         )
 
-        // Mark all as synced
+        // Mark as synced only after full aggregate success (entry + children)
         for (const item of unsyncedItems) {
           await this.adapter.markAsSynced(item.id)
         }
 
-        return // Success - exit early
-      }
-      catch (error: unknown) {
-        // If batch fails, fall back to individual operations
+        return
+      } catch (error: unknown) {
         this.logger.warn('Batch operation failed for', this.tableName, 'falling back to individual operations', error)
       }
     }
 
-    // Fallback: Individual operations (or if only one item)
+    // Fallback: Individual operations (per-aggregate logical block)
+    const succeeded: string[] = []
+    const failed: { id: string; error: unknown }[] = []
+
     for (const item of unsyncedItems) {
       try {
         const now = Math.floor(Date.now() / 1000)
 
-        // Retry with exponential backoff for network errors
         await retryWithBackoff(
           async () => {
             await this.adapter.createItem({ ...item, updatedAt: now })
@@ -222,20 +216,26 @@ export class SyncEngine implements SyncPort {
           {
             maxRetries: 3,
             initialDelay: 1000,
-            retryableErrors: ['NetworkError', 'Failed to fetch', 'timeout']
+            retryableErrors: ['NetworkError', 'Failed to fetch', 'timeout', 'ECONNRESET', 'ETIMEDOUT']
           }
         )
 
-        await this.adapter.markAsSynced(item.id)
-
-        this.logger.log(`[7c. SYNC] 📤 Pushed item from ${this.tableName}: id ${item.id}`)
-      }
-      catch (error) {
-        // Only log error if it's not retryable (retryable errors are already logged by retryWithBackoff)
+        succeeded.push(item.id)
+        this.logger.log(`[7c. SYNC] Pushed item from ${this.tableName}: id ${item.id}`)
+      } catch (error) {
+        failed.push({ id: item.id, error })
         if (!isRetryableError(error)) {
           this.logger.error('Failed to push item from', this.tableName, 'id', item.id, error)
         }
       }
+    }
+
+    for (const id of succeeded) {
+      await this.adapter.markAsSynced(id)
+    }
+
+    if (failed.length > 0) {
+      this.logger.warn(`[SyncEngine] ${failed.length} aggregate(s) failed for ${this.tableName}, will retry next sync`)
     }
   }
 
@@ -245,13 +245,13 @@ export class SyncEngine implements SyncPort {
    */
   private async drainDeletions(signal?: AbortSignal): Promise<void> {
     if (signal?.aborted) {
-      return;
+      return
     }
 
-    const deletedItems = await this.adapter.getDeleted();
+    const deletedItems = await this.adapter.getDeleted()
 
     if (deletedItems.length === 0) {
-      return;
+      return
     }
 
     // Try batch operation first (if API supports it)
@@ -268,48 +268,43 @@ export class SyncEngine implements SyncPort {
         }
 
         return // Success - exit early
-      }
-      catch (error: unknown) {
+      } catch (error: unknown) {
         // If batch fails, fall back to individual operations
         this.logger.warn('Batch delete failed for', this.tableName, 'falling back to individual operations', error)
       }
     }
 
-    // Fallback: Individual operations (or if only one item)
+    // Fallback: Individual operations (per-aggregate logical block)
+    const succeeded: string[] = []
+    const failed: { id: string; error: unknown }[] = []
+
+    const hasMessage = (e: unknown): e is { message: string } =>
+      typeof e === 'object' && e !== null && 'message' in e && typeof (e as { message: unknown }).message === 'string'
+
+    const hasStatus = (e: unknown): e is { status: number } =>
+      typeof e === 'object' && e !== null && 'status' in e && typeof (e as { status: unknown }).status === 'number'
+
     for (const item of deletedItems) {
+      const typedItem = item as { id: string }
       try {
-        const typedItem = item as { id: string }
-
         await this.adapter.deleteItem(typedItem.id)
-
-        // Permanently delete locally after successful API delete
-        await this.adapter.permanentDelete(typedItem.id)
-        // this.logger.log(`[SyncEngine] Deleted item from API (${this.tableName}): ${item.id}`)
-      }
-      catch (error: unknown) {
-        // If 404, the item doesn't exist in API - safe to delete locally
-        const hasMessage = (e: unknown): e is { message: string } =>
-          typeof e === 'object' && e !== null && 'message' in e &&
-          typeof (e as { message: unknown }).message === 'string';
-
-        const hasStatus = (e: unknown): e is { status: number } =>
-          typeof e === 'object' && e !== null && 'status' in e && typeof (e as { status: unknown }).status === 'number';
-
+        succeeded.push(typedItem.id)
+      } catch (error: unknown) {
         if ((hasMessage(error) && error.message.includes('404')) || (hasStatus(error) && error.status === 404)) {
-          await this.adapter.permanentDelete((item as { id: string }).id)
-          // this.logger.log(`[SyncEngine] Item ${item.id} from ${this.tableName} not found in API, 
-          // deleted locally`)
-        }
-        else {
-          this.logger.error(
-            'Failed to delete item from API',
-            this.tableName,
-            (item as { id: string }).id,
-            error
-          )
-          // Continue with other deletions even if one fails
+          succeeded.push(typedItem.id)
+        } else {
+          failed.push({ id: typedItem.id, error })
+          this.logger.error('Failed to delete item from API', this.tableName, typedItem.id, error)
         }
       }
+    }
+
+    for (const id of succeeded) {
+      await this.adapter.permanentDelete(id)
+    }
+
+    if (failed.length > 0) {
+      this.logger.warn(`[SyncEngine] ${failed.length} delete(s) failed for ${this.tableName}, will retry next sync`)
     }
   }
 
@@ -317,32 +312,30 @@ export class SyncEngine implements SyncPort {
    * Fetch items from API: incremental när vi har lastSyncTimestamp, annars full; faller tillbaka till full vid fel.
    */
   private async fetchRemoteItems(): Promise<{ apiItems: Entry[]; isIncremental: boolean }> {
+    const metadata = await syncMetadata.getSyncMetadata(this.tableName)
 
-    const metadata = await syncMetadata.getSyncMetadata(this.tableName);
-
-    const since = metadata?.lastSyncTimestamp ?? 0;
+    const since = metadata?.lastSyncTimestamp ?? 0
 
     if (since === 0) {
-      const apiItems = await this.adapter.fetchAll() as Entry[];
+      const apiItems = (await this.adapter.fetchAll()) as Entry[]
 
-      return { apiItems, isIncremental: false };
+      return { apiItems, isIncremental: false }
     }
 
     try {
-      const apiItems = await retryWithBackoff(async () => this.adapter.fetchSince(since), {
+      const apiItems = (await retryWithBackoff(async () => this.adapter.fetchSince(since), {
         maxRetries: 2,
         initialDelay: 1000
-      }) as Entry[]
+      })) as Entry[]
 
       return { apiItems, isIncremental: true }
-    }
-    catch (error: unknown) {
+    } catch (error: unknown) {
       this.logger.warn('Incremental sync failed for', this.tableName, 'falling back to full sync', error)
 
-      const apiItems = await retryWithBackoff(async () => this.adapter.fetchAll(), {
+      const apiItems = (await retryWithBackoff(async () => this.adapter.fetchAll(), {
         maxRetries: 3,
         initialDelay: 1000
-      }) as Entry[]
+      })) as Entry[]
 
       return { apiItems, isIncremental: false }
     }
@@ -354,67 +347,65 @@ export class SyncEngine implements SyncPort {
    * DB is written only when pushing (drainOutbox: unsynced → API → save result).
    */
   private async pullRemoteChanges(signal?: AbortSignal): Promise<void> {
-    this.logger.log('[6. SYNC] 📥 Pulling remote changes for', this.tableName);
+    this.logger.log('[6. SYNC] 📥 Pulling remote changes for', this.tableName)
 
     if (signal?.aborted) {
-      return;
+      return
     }
 
     try {
-      const { apiItems, isIncremental } = await this.fetchRemoteItems();
+      const { apiItems, isIncremental } = await this.fetchRemoteItems()
 
       if (signal?.aborted) {
-        return;
+        return
       }
 
       // Om API är offline, fetch misslyckas, ELLER apiItems är tom array, ladda från DB istället
       if (!apiItems || !Array.isArray(apiItems) || apiItems.length === 0) {
-        this.logger.warn('[SYNC] API offline, fetch misslyckades eller tom lista – laddar entries från lokal DB');
+        this.logger.warn('[SYNC] API offline, fetch misslyckades eller tom lista – laddar entries från lokal DB')
 
-        await this.adapter.updateStore();
+        await this.adapter.updateStore()
 
-        return;
+        return
       }
 
-      const { conflictCount, mergeErrors, resolvedItems } = await this.mergeItemsInMemory(apiItems, signal);
+      const { conflictCount, mergeErrors, resolvedItems } = await this.mergeItemsInMemory(apiItems, signal)
 
       if (signal?.aborted) {
-        return;
+        return
       }
 
       if (mergeErrors > 0) {
-        this.logger.warn(mergeErrors, 'item(s) failed to merge for', this.tableName);
+        this.logger.warn(mergeErrors, 'item(s) failed to merge for', this.tableName)
       }
 
-      const unsyncedItems = await this.adapter.getUnsynced();
+      const unsyncedItems = await this.adapter.getUnsynced()
 
-      const byId = new Map<string, Entry>();
+      const byId = new Map<string, Entry>()
 
       for (const item of resolvedItems as Entry[]) {
         if ((item as Entry)?.id !== null) {
-          byId.set((item as Entry).id, item as Entry);
+          byId.set((item as Entry).id, item as Entry)
         }
       }
 
       for (const item of unsyncedItems as Entry[]) {
         if ((item as Entry)?.id !== null) {
-          byId.set((item as Entry).id, item as Entry);
+          byId.set((item as Entry).id, item as Entry)
         }
       }
 
-      const combined = Array.from(byId.values());
+      const combined = Array.from(byId.values())
 
-      await this.adapter.updateStore(combined);
+      await this.adapter.updateStore(combined)
 
-      this.logPullResult(apiItems.length, isIncremental, conflictCount, mergeErrors);
-    }
-    catch (error) {
-      this.logger.error('Failed to pull remote changes for', this.tableName, error);
+      this.logPullResult(apiItems.length, isIncremental, conflictCount, mergeErrors)
+    } catch (error) {
+      this.logger.error('Failed to pull remote changes for', this.tableName, error)
 
       // If sync with API fails, restore store from local DB
-      await this.adapter.updateStore();
+      await this.adapter.updateStore()
     }
-
   }
 
   /** Resolve each API item with local in memory (no DB write); returns resolved list for store update. */
@@ -432,7 +423,7 @@ export class SyncEngine implements SyncPort {
 
     for (const item of apiItems) {
       if (signal?.aborted) {
-        break;
+        break
       }
 
       try {
@@ -443,9 +434,8 @@ export class SyncEngine implements SyncPort {
         if (result.resolved && typeof result.resolved === 'object' && 'id' in result.resolved) {
           resolvedItems.push(result.resolved as Entry)
         }
-      }
-      catch (err: unknown) {
-        mergeErrors++;
+      } catch (err: unknown) {
+        mergeErrors++
 
         this.logger.error(
           'mergeRemote failed for',
@@ -453,11 +443,11 @@ export class SyncEngine implements SyncPort {
           'item',
           item && typeof item === 'object' && 'id' in item ? (item as Entry).id : undefined,
           err
-        );
+        )
       }
     }
 
-    return { conflictCount, mergeErrors, resolvedItems };
+    return { conflictCount, mergeErrors, resolvedItems }
   }
 
   private logPullResult(itemCount: number, isIncremental: boolean, conflictCount: number, mergeErrors: number): void {
@@ -467,16 +457,16 @@ export class SyncEngine implements SyncPort {
       'items from API for',
       this.tableName,
       isIncremental ? '(incremental)' : '(full)'
-    ];
+    ]
 
     if (conflictCount > 0) {
-      parts.push(`resolved ${conflictCount} conflicts`);
+      parts.push(`resolved ${conflictCount} conflicts`)
     }
 
     if (mergeErrors > 0) {
-      parts.push(`${mergeErrors} merge error(s)`);
+      parts.push(`${mergeErrors} merge error(s)`)
     }
 
-    this.logger.log(...parts);
+    this.logger.log(...parts)
   }
 }
