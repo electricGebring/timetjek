@@ -13,8 +13,6 @@ import router from './router'
 
 import i18n from './i18n'
 
-import { runMigrations } from '@/db/migrate'
-
 // Import sync and connectivity dependencies
 import { CapacitorConnectivityAdapter } from './sync/capacitor-connectivity.adapter'
 
@@ -47,9 +45,6 @@ async function bootstrap() {
   // Initialize database (tables, migrations, etc)
   await initDB()
 
-  // Run database migrations after database is initialized
-  await runMigrations()
-
   // Register sync adapters: aggregation adapters use aggregation name as key
   registerTableAdapter(WORK_ENTRIES_AGGREGATE, createWorkEntriesAdapter)
 
@@ -69,9 +64,7 @@ async function bootstrap() {
   // Setup connectivity and sync dependencies
   const connectivity = new CapacitorConnectivityAdapter()
 
-  // Create SyncManager to handle all registered tables (central logging)
   const syncManager = new SyncManager({ logger: createLogger('SyncManager') })
-  // Expose syncManager globally for debug/timing access
 
   ;(window as unknown as { syncManager: SyncManager }).syncManager = syncManager
 

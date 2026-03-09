@@ -4,7 +4,6 @@
   /* Tailwind 4 theme configuration */
 }
 
-
 body {
   font-family:
     system-ui,
@@ -16,5 +15,4 @@ body {
 
 #app {
   min-height: 100vh;
-  padding: 2rem;
 }

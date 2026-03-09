@@ -14,7 +14,7 @@ Drizzle är nu installerat och konfigurerat för ditt projekt!
 # Generera migrations baserat på schema-ändringar
 npm run db:generate
 
-# Exekvera migrations
+# Exekvera migrations (endast lokalt mot app.db; appen använder migrate.ts vid körning)
 npm run db:migrate
 
 # Push schema till databasen (utveckling)
@@ -143,14 +143,15 @@ Din setup använder **tre helt olika databaskontexter**:
 **Arbetsgång:**
 
 1. **Schema-ändringar**: Redigera bara `src/db/schema.ts` (gäller alla miljöer!)
-2. **Generera migrations**: `npm run db:generate` → skapar SQL i `drizzle/`
-3. **Lokal development**:
+2. **Generera migrations**: `npm run db:generate` → skapar SQL i `drizzle/` (enda migrationsmappen)
+3. **Körning**: Appen applicerar migrations från `drizzle/` vid startup via `src/db/migrate.ts`
+4. **Lokal development**:
    - Använd Drizzle direkt: `await db.select().from(workEntries)`
    - better-sqlite3 förstår Drizzle-commands
-4. **Web-versionen**:
+5. **Web-versionen**:
    - Du kan inte använda Drizzle-queries direkt (sql.js körs i browser)
    - Lösning: Exportera Drizzle SQL-strängarna eller skriv raw SQL
-5. **Native-versionen**:
+6. **Native-versionen**:
    - Fortsätt med Capacitor SQLite API
    - Se de genererade SQL-filerna i `drizzle/` för schema
    - Körs på iOS/Android, tillgång bara till raw SQL

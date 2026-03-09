@@ -34,10 +34,6 @@ export async function initDB() {
 
     await runMigrations()
 
-    const { initSyncMetadataTable } = await import('./sync-metadata/repo')
-
-    await initSyncMetadataTable()
-
     // TODO: Initialize Drizzle with Capacitor SQLite
     // For now, Capacitor uses legacy queries until Drizzle Capacitor adapter is implemented
     console.debug('[DB] Capacitor SQLite initialized (Drizzle integration pending)')
@@ -96,10 +92,6 @@ export async function initDB() {
     }
 
     await runMigrations()
-
-    const { initSyncMetadataTable } = await import('./sync-metadata/repo')
-
-    await initSyncMetadataTable()
 
     saveDatabase()
 

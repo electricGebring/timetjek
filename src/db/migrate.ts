@@ -37,54 +37,26 @@ if (isNodeProcessRuntime()) {
 
   const drizzlePath = join(cwd(), 'drizzle')
 
-  const migrationsPath = join(cwd(), 'migrations')
-
   const drizzleFiles = existsSync(drizzlePath)
     ? readdirSync(drizzlePath)
         .filter((f: string) => f.endsWith('.sql'))
         .sort()
     : []
 
-  const migrationFiles = existsSync(migrationsPath)
-    ? readdirSync(migrationsPath)
-        .filter((f: string) => f.endsWith('.sql'))
-        .sort()
-    : []
-
-  // Combine and sort: drizzle/ files must run first (prefix 0), then migrations/ (prefix 1)
-  migrations = [
-    ...drizzleFiles.map((file: string) => ({
-      id: `0_drizzle_${file.replace('.sql', '')}`,
-      sql: readFileSync(join(drizzlePath, file), 'utf-8')
-    })),
-    ...migrationFiles.map((file: string) => ({
-      id: `1_custom_${file.replace('.sql', '')}`,
-      sql: readFileSync(join(migrationsPath, file), 'utf-8')
-    }))
-  ].sort((a, b) => a.id.localeCompare(b.id))
+  migrations = drizzleFiles.map((file: string) => ({
+    id: `0_drizzle_${file.replace('.sql', '')}`,
+    sql: readFileSync(join(drizzlePath, file), 'utf-8')
+  }))
 } else {
   // Web/Vite: use dynamic imports for SQL files (Vite supports ?raw)
   // This will be populated at build time by Vite's static analysis
   const drizzleModules = import.meta.glob('../../drizzle/*.sql', { query: '?raw', eager: true })
 
-  const customModules = import.meta.glob('../../migrations/*.sql', { query: '?raw', eager: true })
-
-  const allModules = { ...drizzleModules, ...customModules }
-
-  // Sort: drizzle migrations (0000_...) must run before custom migrations (20260304...)
-  // We use numeric prefix to ensure correct ordering
-  migrations = Object.entries(allModules)
+  migrations = Object.entries(drizzleModules)
     .map(([path, mod]) => {
       const fileName = path.split('/').pop()?.replace('.sql', '') || ''
-
-      const isDrizzle = path.includes('/drizzle/')
-
-      // Use prefix '0' for drizzle, '1' for custom to ensure drizzle runs first
-      const sortPrefix = isDrizzle ? '0' : '1'
-      const id = `${sortPrefix}_${isDrizzle ? 'drizzle' : 'custom'}_${fileName}`
-
       return {
-        id,
+        id: `0_drizzle_${fileName}`,
         sql: (mod as { default: string }).default
       }
     })
@@ -198,8 +170,9 @@ export async function runMigrations() {
     console.debug('[MIGRATIONS] Applying migration:', m.id)
 
     try {
-      // Split multiple statements and execute each individually
+      // Split multiple statements (Drizzle uses --> statement-breakpoint or ;)
       const statements = m.sql
+        .replace(/--> statement-breakpoint/g, ';')
         .split(';')
         .map((stmt) => stmt.trim())
         .filter((stmt) => stmt.length > 0)

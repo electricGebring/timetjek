@@ -73,3 +73,16 @@ export const workEntryBreaks = sqliteTable(
 export type WorkEntryBreak = typeof workEntryBreaks.$inferSelect
 
 export type NewWorkEntryBreak = typeof workEntryBreaks.$inferInsert
+
+export const syncMetadata = sqliteTable('sync_metadata', {
+  table_name: text('table_name').primaryKey(),
+  last_sync_timestamp: integer('last_sync_timestamp'),
+  sync_token: text('sync_token'),
+  last_successful_sync: integer('last_successful_sync'),
+  sync_state: text('sync_state').default('idle'),
+  error_message: text('error_message')
+})
+
+export type SyncMetadata = typeof syncMetadata.$inferSelect
+
+export type NewSyncMetadata = typeof syncMetadata.$inferInsert
