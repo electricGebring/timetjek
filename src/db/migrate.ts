@@ -11,8 +11,7 @@ type Migration = { id: string; sql: string }
 const isNativeRuntime = (() => {
   try {
     return Capacitor.isNativePlatform()
-  }
- catch {
+  } catch {
     return false
   }
 })()
@@ -40,14 +39,18 @@ if (isNodeProcessRuntime()) {
 
   const migrationsPath = join(cwd(), 'migrations')
 
-  const drizzleFiles = existsSync(drizzlePath) 
-    ? readdirSync(drizzlePath).filter((f: string) => f.endsWith('.sql')).sort() 
+  const drizzleFiles = existsSync(drizzlePath)
+    ? readdirSync(drizzlePath)
+        .filter((f: string) => f.endsWith('.sql'))
+        .sort()
     : []
-  
+
   const migrationFiles = existsSync(migrationsPath)
-    ? readdirSync(migrationsPath).filter((f: string) => f.endsWith('.sql')).sort()
+    ? readdirSync(migrationsPath)
+        .filter((f: string) => f.endsWith('.sql'))
+        .sort()
     : []
-  
+
   // Combine and sort: drizzle/ files must run first (prefix 0), then migrations/ (prefix 1)
   migrations = [
     ...drizzleFiles.map((file: string) => ({
@@ -59,16 +62,15 @@ if (isNodeProcessRuntime()) {
       sql: readFileSync(join(migrationsPath, file), 'utf-8')
     }))
   ].sort((a, b) => a.id.localeCompare(b.id))
-}
- else {
+} else {
   // Web/Vite: use dynamic imports for SQL files (Vite supports ?raw)
   // This will be populated at build time by Vite's static analysis
   const drizzleModules = import.meta.glob('../../drizzle/*.sql', { query: '?raw', eager: true })
 
   const customModules = import.meta.glob('../../migrations/*.sql', { query: '?raw', eager: true })
-  
+
   const allModules = { ...drizzleModules, ...customModules }
-  
+
   // Sort: drizzle migrations (0000_...) must run before custom migrations (20260304...)
   // We use numeric prefix to ensure correct ordering
   migrations = Object.entries(allModules)
@@ -108,8 +110,7 @@ async function getAppliedMigrationIds(): Promise<Set<string>> {
     rows.map((r) => {
       if (Array.isArray(r)) {
         return String(r[0])
-      }
- else if (typeof r === 'object' && r !== null) {
+      } else if (typeof r === 'object' && r !== null) {
         return String((r as unknown as { id: string }).id)
       }
 
@@ -123,8 +124,7 @@ async function runSql(sql: string, params: unknown[] = []) {
     const db = getDB() as { run: (sql: string, params?: unknown[]) => Promise<void> }
 
     await db.run(sql, params)
-  }
-  else {
+  } else {
     const sqlite = getRawSqlite()
 
     if (sqlite) {
@@ -151,8 +151,7 @@ async function queryRows(sql: string, params: unknown[] = []): Promise<unknown[]
     })
 
     return values as unknown[][]
-  }
-  else {
+  } else {
     const sqlite = getRawSqlite()
 
     if (sqlite) {
@@ -212,16 +211,14 @@ export async function runMigrations() {
       await runSql('INSERT INTO schema_migrations (id, applied_at) VALUES (?, ?)', [m.id, new Date().toISOString()])
 
       console.debug('[MIGRATIONS] Migration applied:', m.id)
-    }
- catch (e) {
+    } catch (e) {
       throw new Error(`Migration failed: ${m.id} -> ${(e as Error).message}`)
     }
   }
 
   if (pending.length === 0) {
     console.debug('[MIGRATIONS] No new migrations to apply')
-  }
- else {
+  } else {
     console.debug('[MIGRATIONS] All migrations applied')
   }
 

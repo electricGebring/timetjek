@@ -1,4 +1,5 @@
 const jsonServer = require('json-server')
+const crypto = require('crypto')
 const fs = require('fs')
 const path = require('path')
 
@@ -60,7 +61,7 @@ function syncBreakFromEntry(entry) {
   }
 
   const newBreak = {
-    id: `break-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+    id: crypto.randomUUID(),
     work_entry_id: entry.id,
     start_at: startAt,
     end_at: endAt,
@@ -190,7 +191,7 @@ server.post('/work_entry_breaks', (req, res) => {
     return res.status(201).json(breakEntry)
   }
   
-  const newBreak = { ...breakEntry, id: `break-${Date.now()}` }
+  const newBreak = { ...breakEntry, id: crypto.randomUUID() }
   db.work_entry_breaks.push(newBreak)
   saveData()
   return res.status(201).json(newBreak)

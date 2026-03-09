@@ -54,10 +54,10 @@ The domain layer has identical logic in both contexts; only the repository imple
 
 The **sync engine** orchestrates bi-directional sync between local and remote databases:
 
-- **Browser sync** (`src/sync/work-entries/adapter.ts`): Uses sql.js-based repository for sync operations in the browser.
-- **Node.js sync** (`src/sync/work-entries/adapter.drizzle.ts`): Uses Drizzle ORM repository for sync operations in Node.js contexts (backend workers, scheduled tasks).
+- **Production adapter** (`src/sync/work-entries/adapter.ts`): Implements full sync with real API calls, aggregate support (work_entry + work_entry_breaks), conflict resolution, connectivity checks, and retry. Used by the app in browser/Capacitor.
+- **Test mock** (`src/sync/work-entries/adapter.test-mock.ts`): Simulates API for Node.js sync tests (no HTTP). Uses the same repo; `fetchAll`/`fetchSince` return local data, `batchUpsert`/`batchDelete` update local state only. Do not use in production.
 
-Both adapters implement the same `TableSyncAdapter` interface:
+Both implement the same `TableSyncAdapter` interface:
 - `getUnsynced()` - Fetch outbox entries (synced=0)
 - `getDeleted()` - Fetch soft-deleted entries pending API deletion
 - `batchUpsert(items)` - Push entries to API and mark as synced
@@ -74,7 +74,7 @@ Both adapters implement the same `TableSyncAdapter` interface:
 
 **Testing:**
 - `npm run test:drizzle-domain` - Tests domain commands/queries with Drizzle
-- `npm run test:sync-engine` - Tests sync adapter operations with Drizzle
+- `npm run test:sync-engine` - Tests sync adapter operations using the mock adapter (simulated API)
 
 ---
 

@@ -91,9 +91,9 @@ async function bootstrap() {
   const coordinator = new OnlineOfflineCoordinator({
     connectivity,
     sync: syncAdapter,
-    logger: createLogger('Coordinator'),
+    logger: createLogger('Coordinator')
     // Optional: Enable periodic sync for always-online apps
-    syncIntervalMs: 30 * 1000 // 30 seconds
+    //syncIntervalMs: 30 * 1000 // 30 seconds
   })
 
   // Initialize sync trigger for immediate sync on mutations (optional)
