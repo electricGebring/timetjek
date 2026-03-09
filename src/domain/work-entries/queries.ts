@@ -5,7 +5,7 @@ import { hasOpenCheckIn } from './rules'
 
 import type { DayGroup } from './types'
 
-import type { WorkEntry } from '@/models/work-entry.schema'
+import type { WorkEntry } from '@/db/schema'
 
 function isWorkEntry(e: unknown): e is WorkEntry {
   if (typeof e !== 'object' || e === null) return false

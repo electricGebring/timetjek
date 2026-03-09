@@ -1,6 +1,6 @@
 import { getDb } from '@/db/drizzle'
 import { workEntries } from '@/db/schema'
-import { eq } from 'drizzle-orm'
+import { eq, inArray } from 'drizzle-orm'
 import { Capacitor } from '@capacitor/core'
 
 /**
@@ -104,5 +104,29 @@ export async function permanentDeleteWorkEntry(id: string) {
   await getDb().delete(workEntries).where(eq(workEntries.id, id))
 
   console.debug('[DRIZZLE] ✅ Permanent delete complete')
+  saveDatabase()
+}
+
+/**
+ * Mark multiple entries as synced after successful API push
+ */
+export async function markEntriesAsSynced(ids: string[]): Promise<void> {
+  if (ids.length === 0) return
+
+  const now = new Date().toISOString()
+
+  await getDb().update(workEntries).set({ synced: 1, updatedAt: now }).where(inArray(workEntries.id, ids))
+
+  saveDatabase()
+}
+
+/**
+ * Permanently delete multiple entries after successful delete on API
+ */
+export async function deletePermanently(ids: string[]): Promise<void> {
+  if (ids.length === 0) return
+
+  await getDb().delete(workEntries).where(inArray(workEntries.id, ids))
+
   saveDatabase()
 }

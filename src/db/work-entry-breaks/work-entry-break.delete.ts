@@ -10,7 +10,7 @@ const logger = createLogger('WorkEntryBreaksRepo')
 /**
  * Delete a single break by its ID
  */
-export async function deleteBreak(id: number): Promise<void> {
+export async function deleteBreak(id: string): Promise<void> {
   logger.log('[DELETE] Deleting break:', id)
 
   const breakRecord = await getBreakById(id)

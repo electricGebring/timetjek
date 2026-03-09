@@ -10,10 +10,7 @@ import { eq } from 'drizzle-orm'
 export async function getBreaksByWorkEntryId(workEntryId: string): Promise<WorkEntryBreak[]> {
   const db = getDb()
 
-  const results = await db
-    .select()
-    .from(workEntryBreaks)
-    .where(eq(workEntryBreaks.work_entry_id, workEntryId))
+  const results = await db.select().from(workEntryBreaks).where(eq(workEntryBreaks.work_entry_id, workEntryId))
 
   return results.map((row) => parseWorkEntryBreakRow(row as Record<string, unknown>))
 }
@@ -21,7 +18,7 @@ export async function getBreaksByWorkEntryId(workEntryId: string): Promise<WorkE
 /**
  * Get a single break by its ID
  */
-export async function getBreakById(id: number): Promise<WorkEntryBreak | null> {
+export async function getBreakById(id: string): Promise<WorkEntryBreak | null> {
   const db = getDb()
 
   const results = await db.select().from(workEntryBreaks).where(eq(workEntryBreaks.id, id))

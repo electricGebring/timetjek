@@ -2,9 +2,7 @@ import type { WorkEntryBreak, CreateWorkEntryBreakInput } from '@/models/work-en
 
 function getBreaksApiUrl() {
   const envBaseUrl =
-    (typeof import.meta !== 'undefined' &&
-      (import.meta as any).env &&
-      (import.meta as any).env.VITE_API_BASE_URL) ||
+    (typeof import.meta !== 'undefined' && (import.meta as any).env && (import.meta as any).env.VITE_API_BASE_URL) ||
     undefined
   let baseUrl = envBaseUrl as string | undefined
 
@@ -66,13 +64,13 @@ export async function createWorkEntryBreak(
     end_at: breakData.end_at ?? null,
     start_exact_at: breakData.start_exact_at ?? null,
     end_exact_at: breakData.end_exact_at ?? null,
-    created_at: new Date().toISOString(),
+    created_at: new Date().toISOString()
   }
 
   const response = await fetchWithRetry(BREAKS_API_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
+    body: JSON.stringify(payload)
   })
 
   if (!response.ok) throw new Error(`Failed to create work entry break: ${response.statusText}`)
@@ -86,14 +84,14 @@ export async function updateWorkEntryBreak(
   const response = await fetchWithRetry(`${BREAKS_API_URL}/${id}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(changes),
+    body: JSON.stringify(changes)
   })
 
   if (!response.ok) throw new Error(`Failed to update work entry break ${id}: ${response.statusText}`)
   return (await response.json()) as WorkEntryBreak
 }
 
-export async function deleteWorkEntryBreak(id: number): Promise<void> {
+export async function deleteWorkEntryBreak(id: string): Promise<void> {
   const response = await fetchWithRetry(`${BREAKS_API_URL}/${id}`, { method: 'DELETE' })
   if (!response.ok && response.status !== 404) {
     throw new Error(`Failed to delete work entry break ${id}: ${response.statusText}`)

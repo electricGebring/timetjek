@@ -1,6 +1,5 @@
 import { getDb } from '@/db/drizzle'
-import { workEntries, type WorkEntry as DrizzleWorkEntry } from '@/db/schema'
-import type { WorkEntry } from '@/models/work-entry.schema'
+import { workEntries, type WorkEntry } from '@/db/schema'
 import { createLogger } from '@/utils/logger'
 import { eq } from 'drizzle-orm'
 import { Capacitor } from '@capacitor/core'
@@ -23,30 +22,42 @@ function saveDatabase() {
 }
 
 /**
- * Insert or update a work entry using Drizzle ORM
- * Accepts both Drizzle WorkEntry and Zod WorkEntry formats
+ * Insert or update a work entry using Drizzle ORM.
+ * Accepts WorkEntry (DB), Entry (view with boolean meal fields), or Record.
+ * Coerces meal_benefit booleans to 0|1 for DB.
  */
-export async function upsertWorkEntry(entry: Partial<WorkEntry> | Partial<DrizzleWorkEntry> | Record<string, unknown>) {
+export async function upsertWorkEntry(entry: Partial<WorkEntry> | Record<string, unknown>) {
   logger.log('[4. PERSIST][DRIZZLE] 💾 Upserting work entry...')
 
   const db = getDb()
-  const trimmedId = typeof entry.id === 'string' ? entry.id.trim() : undefined
+  const raw = entry as Record<string, unknown>
+  const trimmedId = typeof raw.id === 'string' ? raw.id.trim() : undefined
 
+  const mealBreakfast: number =
+    typeof raw.meal_benefit_has_breakfast === 'boolean'
+      ? raw.meal_benefit_has_breakfast
+        ? 1
+        : 0
+      : Number(raw.meal_benefit_has_breakfast) || 0
+  const mealLunch: number =
+    typeof raw.meal_benefit_has_lunch === 'boolean'
+      ? raw.meal_benefit_has_lunch
+        ? 1
+        : 0
+      : Number(raw.meal_benefit_has_lunch) || 0
+
+  const now = new Date().toISOString()
   const safeEntry = {
-    ...entry,
-    id:
-      typeof trimmedId === 'string' && trimmedId.length > 0
-        ? trimmedId
-        : createLocalWorkEntryId(),
-    createdAt: entry.createdAt ?? new Date().toISOString(),
-    updatedAt: entry.updatedAt ?? new Date().toISOString()
+    ...raw,
+    id: typeof trimmedId === 'string' && trimmedId.length > 0 ? trimmedId : createLocalWorkEntryId(),
+    meal_benefit_has_breakfast: mealBreakfast,
+    meal_benefit_has_lunch: mealLunch,
+    createdAt: (typeof raw.createdAt === 'string' ? raw.createdAt : null) ?? now,
+    updatedAt: (typeof raw.updatedAt === 'string' ? raw.updatedAt : null) ?? now
   } as Record<string, unknown> & { id: string; createdAt: string; updatedAt: string }
 
   // Check if row exists
-  const existing = await db
-    .select()
-    .from(workEntries)
-    .where(eq(workEntries.id, safeEntry.id))
+  const existing = await db.select().from(workEntries).where(eq(workEntries.id, safeEntry.id))
 
   if (existing.length > 0) {
     logger.log(`[4. PERSIST][DRIZZLE] 🔄 Updating entry ${safeEntry.id}...`)
@@ -62,7 +73,7 @@ export async function upsertWorkEntry(entry: Partial<WorkEntry> | Partial<Drizzl
 
     await db.insert(workEntries).values({
       ...safeEntry
-    } as unknown as DrizzleWorkEntry)
+    } as unknown as WorkEntry)
   }
 
   logger.log('[4. PERSIST][DRIZZLE] ✅ Upsert complete')

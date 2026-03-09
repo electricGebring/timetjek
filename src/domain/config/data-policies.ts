@@ -38,20 +38,17 @@ export type AggregationPolicy = {
 }
 
 // Default data policies configuration
-// Register your data types here with their retention policies
+// Register your data types here with their retention policies.
+// Tables that are roots of aggregations should NOT be in DATA_POLICIES;
+// use AGGREGATION_POLICIES instead (single source of truth for sync + cleanup).
 
 export const DATA_POLICIES: Record<string, DataRetentionPolicy> = {
-  [TABLE_WORK_ENTRIES]: {
-    tableName: TABLE_WORK_ENTRIES,
-    syncMode: SyncMode.OFFLINE_FIRST,
-    retentionDays: 30,
-    softDeleteOnly: true,
-    autoSync: true,
-    conflictStrategy: ConflictResolutionStrategy.LAST_WRITE_WINS
-  }
+  // work_entries is root of WORK_ENTRIES_AGGREGATE - config lives in AGGREGATION_POLICIES
 }
 
-/** Aggregation policies: parent + children synced together */
+/** Aggregation policies: parent + children synced together.
+ * childTables is the canonical list of child tables (FK to root).
+ * Used for sync orchestration; adapters may hardcode today but this drives cleanup and future policy-driven adapters. */
 export const AGGREGATION_POLICIES: Record<string, AggregationPolicy> = {
   [WORK_ENTRIES_AGGREGATE]: {
     aggregationName: WORK_ENTRIES_AGGREGATE,
@@ -66,10 +63,37 @@ export const AGGREGATION_POLICIES: Record<string, AggregationPolicy> = {
 }
 
 /**
- * Get policy for a table
+ * Get aggregation policy by sync key (e.g. work_entries_aggregate)
+ */
+export function getAggregationPolicy(syncKey: string): AggregationPolicy | undefined {
+  return AGGREGATION_POLICIES[syncKey]
+}
+
+/**
+ * Get aggregation policy for a root table (e.g. work_entries)
+ */
+export function getAggregationPolicyForRootTable(rootTable: string): AggregationPolicy | undefined {
+  return (Object.values(AGGREGATION_POLICIES) as AggregationPolicy[]).find((ap) => ap.rootTable === rootTable)
+}
+
+/**
+ * Get policy for a table. For root tables of aggregations, returns a derived policy from AGGREGATION_POLICIES.
  */
 export function getDataPolicy(tableName: string): DataRetentionPolicy | undefined {
-  return DATA_POLICIES[tableName]
+  const tablePolicy = DATA_POLICIES[tableName]
+  if (tablePolicy) return tablePolicy
+  const agg = getAggregationPolicyForRootTable(tableName)
+  if (agg) {
+    return {
+      tableName: agg.rootTable,
+      syncMode: agg.syncMode,
+      retentionDays: agg.retentionDays,
+      softDeleteOnly: agg.softDeleteOnly,
+      autoSync: agg.autoSync,
+      conflictStrategy: agg.conflictStrategy
+    }
+  }
+  return undefined
 }
 
 /**
@@ -135,15 +159,35 @@ export function registerDataPolicy(policy: DataRetentionPolicy): void {
 }
 
 /**
- * Get all policies that need cleanup
+ * Get all policies that need cleanup.
+ * Uses AGGREGATION_POLICIES for root tables (single source of truth); DATA_POLICIES for standalone tables.
  */
 export function getPoliciesNeedingCleanup(): DataRetentionPolicy[] {
-  return (Object.values(DATA_POLICIES) as DataRetentionPolicy[]).filter(
+  const rootTablesInAggregations = new Set(
+    (Object.values(AGGREGATION_POLICIES) as AggregationPolicy[]).map((ap) => ap.rootTable)
+  )
+  const fromDataPolicies = (Object.values(DATA_POLICIES) as DataRetentionPolicy[]).filter(
     (policy) =>
+      !rootTablesInAggregations.has(policy.tableName) &&
       (policy.syncMode === SyncMode.OFFLINE_FIRST || policy.syncMode === SyncMode.CACHE_ONLY) &&
       policy.retentionDays !== undefined &&
       policy.retentionDays > 0
   )
+  const fromAggregations = (Object.values(AGGREGATION_POLICIES) as AggregationPolicy[]).filter(
+    (agg) =>
+      (agg.syncMode === SyncMode.OFFLINE_FIRST || agg.syncMode === SyncMode.CACHE_ONLY) &&
+      agg.retentionDays !== undefined &&
+      agg.retentionDays > 0
+  )
+  const aggregationCleanupPolicies: DataRetentionPolicy[] = fromAggregations.map((agg) => ({
+    tableName: agg.rootTable,
+    syncMode: agg.syncMode,
+    retentionDays: agg.retentionDays!,
+    softDeleteOnly: agg.softDeleteOnly,
+    autoSync: agg.autoSync,
+    conflictStrategy: agg.conflictStrategy
+  }))
+  return [...fromDataPolicies, ...aggregationCleanupPolicies]
 }
 
 /**

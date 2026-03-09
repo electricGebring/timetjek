@@ -77,8 +77,7 @@ export async function getAllEntries() {
 
         return timeB - timeA // newest first
       })
-  }
- catch (e) {
+  } catch (e) {
     console.warn('Failed to fetch all entries:', e)
 
     return []
@@ -106,7 +105,7 @@ export async function getDatabaseInfo() {
 
     if (Capacitor.isNativePlatform()) {
       interface NativeDb {
-        query: (sql: string) => Promise<{ values?: Array<{ count: number }> }>;
+        query: (sql: string) => Promise<{ values?: Array<{ count: number }> }>
       }
 
       const nativeDb = db as NativeDb
@@ -130,8 +129,7 @@ export async function getDatabaseInfo() {
       const deleted = await nativeDb.query('SELECT COUNT(*) as count FROM work_entries WHERE deleted = 1')
 
       deletedCount = deleted.values?.[0]?.count || 0
-    }
- else {
+    } else {
       const { sqlJsDb } = db as { sqlJsDb: { exec: (sql: string) => Array<{ values: unknown[][] }> } }
 
       const total = sqlJsDb.exec('SELECT COUNT(*) as count FROM work_entries WHERE deleted_at IS NULL')
@@ -161,8 +159,7 @@ export async function getDatabaseInfo() {
       platform: Capacitor.isNativePlatform() ? 'native' : 'web',
       databaseType: Capacitor.isNativePlatform() ? 'Capacitor SQLite' : 'sql.js (IndexedDB)'
     }
-  }
- catch (e) {
+  } catch (e) {
     console.warn('Failed to fetch database info:', e)
 
     return {
@@ -190,16 +187,15 @@ export async function clearAllData() {
     if (Capacitor.isNativePlatform()) {
       // Native: use db.run()
       interface NativeDb {
-        run: (sql: string) => Promise<void>;
+        run: (sql: string) => Promise<void>
       }
 
       const nativeDb = db as NativeDb
 
       await nativeDb.run('DELETE FROM work_entries')
-    }
- else {
+    } else {
       // Web: use sqlJsDb.run()
-      const { sqlJsDb, saveDatabase } = db as { sqlJsDb: { run: (sql: string) => void }, saveDatabase: () => void }
+      const { sqlJsDb, saveDatabase } = db as { sqlJsDb: { run: (sql: string) => void }; saveDatabase: () => void }
 
       sqlJsDb.run('DELETE FROM work_entries')
 
@@ -207,8 +203,7 @@ export async function clearAllData() {
     }
 
     console.warn('✓ All local data cleared')
-  }
- catch (e) {
+  } catch (e) {
     console.error('Failed to clear data:', e)
   }
 }
@@ -242,8 +237,7 @@ export async function getPendingSyncOperations() {
 
         return timeB - timeA // newest first
       })
-  }
- catch (e) {
+  } catch (e) {
     console.warn('Failed to fetch pending sync operations:', e)
 
     return []
@@ -254,21 +248,19 @@ export async function getPendingSyncOperations() {
 // Export for debugging
 // ─────────────────────────────────────────────────────────
 
-;
-
 export interface WorkEntriesService {
-  getWorkHistory: typeof getWorkHistory;
-  getEntriesForDate: typeof getEntriesForDate;
-  getCurrentStatus: typeof getCurrentStatus;
-  getAllEntries: typeof getAllEntries;
-  getDatabaseInfo: typeof getDatabaseInfo;
-  clearAllData: typeof clearAllData;
-  getPendingSyncOperations: typeof getPendingSyncOperations;
+  getWorkHistory: typeof getWorkHistory
+  getEntriesForDate: typeof getEntriesForDate
+  getCurrentStatus: typeof getCurrentStatus
+  getAllEntries: typeof getAllEntries
+  getDatabaseInfo: typeof getDatabaseInfo
+  clearAllData: typeof clearAllData
+  getPendingSyncOperations: typeof getPendingSyncOperations
 }
 
 declare global {
   interface Window {
-    workEntriesService: WorkEntriesService;
+    workEntriesService: WorkEntriesService
   }
 }
 

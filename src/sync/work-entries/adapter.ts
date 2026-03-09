@@ -74,6 +74,7 @@ export function createWorkEntriesAdapter(): TableSyncAdapter<Entry> {
     if (remoteBreaks.length > 0) {
       await breakRepo.insertManyBreaks(
         remoteBreaks.map((item) => ({
+          id: item.id,
           work_entry_id: workEntryId,
           start_at: item.start_at,
           end_at: item.end_at,

@@ -13,7 +13,7 @@ export type UpdateBreakInput = Partial<Pick<WorkEntryBreak, 'start_at' | 'end_at
  * Update a break by ID.
  * Marks the parent work entry as dirty for aggregation sync.
  */
-export async function updateBreak(id: number, changes: UpdateBreakInput): Promise<WorkEntryBreak | null> {
+export async function updateBreak(id: string, changes: UpdateBreakInput): Promise<WorkEntryBreak | null> {
   logger.log('[UPDATE] Updating break:', id)
 
   const db = getDb()

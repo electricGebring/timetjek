@@ -92,7 +92,6 @@ export const useWorkEntriesStore = defineStore('staffRegister', {
     async loadGroupedWorkEntries() {
       const grouped = await domain.getWorkSchemeGrouped()
 
-      // Convert all entries to the correct Entry type
       const convertedGrouped = {
         days: grouped.days.map((day: DayGroup) => ({
           ...day,
@@ -103,11 +102,7 @@ export const useWorkEntriesStore = defineStore('staffRegister', {
 
               return false
             })
-            .map((entry) => ({
-              ...entry,
-              id: typeof entry.id === 'string' ? entry.id.trim() : String(entry.id),
-              work_day_id: entry.work_day_id !== null ? Number(entry.work_day_id) : 0
-            })) as Entry[]
+            .map((e) => domain.workEntryToEntry(e))
         }))
       }
 
@@ -128,7 +123,6 @@ export const useWorkEntriesStore = defineStore('staffRegister', {
         })) as any
       )
 
-      // Convert all entries to the correct Entry type
       const convertedGrouped = {
         days: grouped.days.map((day: DayGroup) => ({
           ...day,
@@ -139,11 +133,7 @@ export const useWorkEntriesStore = defineStore('staffRegister', {
 
               return false
             })
-            .map((entry) => ({
-              ...entry,
-              id: typeof entry.id === 'string' ? entry.id.trim() : String(entry.id),
-              work_day_id: entry.work_day_id !== null ? Number(entry.work_day_id) : 0
-            })) as Entry[]
+            .map((e) => domain.workEntryToEntry(e))
         }))
       }
 

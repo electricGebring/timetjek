@@ -94,13 +94,15 @@ export async function createWorkEntryNative(data: NewWorkEntry) {
   )
 }
 
-// Men hämta typer från Drizzle
+// Rekommendation: Använd Drizzle select() för typsäkra resultat:
+// const entries = await getDb().select().from(workEntries).where(eq(workEntries.deleted, 0))
+// På native där raw SQL krävs, casta resultat till WorkEntry[]:
+import type { WorkEntry } from '@/db/schema'
+
 export async function getWorkDetailsNative(): Promise<WorkEntry[]> {
   const db = getDB() as { query: (sql: string) => Promise<{ values: unknown[][] }> }
   const result = await db.query(`SELECT * FROM work_entries WHERE deleted = 0`)
-  
-  // Din mapper omvandlar till WorkEntry (från Drizzle schema)
-  return result.values.map(mapRowToWorkEntry)
+  return result.values as unknown as WorkEntry[]
 }
 ```
 

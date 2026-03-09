@@ -12,17 +12,10 @@ export {
   restoreWorkEntry,
   markWorkEntryAsSynced,
   markParentEntryDirty,
-  permanentDeleteWorkEntry
-} from './work-entry.delete'
-
-// Sync-specific queries
-export {
-  getUnsyncedForSync,
-  getDeletedForSync,
+  permanentDeleteWorkEntry,
   markEntriesAsSynced,
-  deletePermanently,
-  mergeRemoteEntries
-} from './work-entry.sync'
+  deletePermanently
+} from './work-entry.delete'
 
 export { workEntryToEntry, entryToWorkEntry } from './work-entry.mapper'
 

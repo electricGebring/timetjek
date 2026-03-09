@@ -1,7 +1,8 @@
 import { integer, real, text, sqliteTable, index } from 'drizzle-orm/sqlite-core'
+import { TABLE_WORK_ENTRIES, TABLE_WORK_ENTRY_BREAKS } from '../constants/tables'
 
 export const workEntries = sqliteTable(
-  'work_entries',
+  TABLE_WORK_ENTRIES,
   {
     id: text('id').primaryKey(),
     remote_id: text('remote_id'),
@@ -35,15 +36,12 @@ export const workEntries = sqliteTable(
     updatedAt: text('updatedAt'),
     deleted_at: text('deleted_at'),
     synced: integer('synced').default(0),
-    deleted: integer('deleted').default(0),
+    deleted: integer('deleted').default(0)
   },
   (table) => ({
-    idx_work_entries_synced_deleted: index('idx_work_entries_synced_deleted').on(
-      table.synced,
-      table.deleted
-    ),
+    idx_work_entries_synced_deleted: index('idx_work_entries_synced_deleted').on(table.synced, table.deleted),
     idx_work_entries_work_day_id: index('idx_work_entries_work_day_id').on(table.work_day_id),
-    idx_work_entries_remote_id: index('idx_work_entries_remote_id').on(table.remote_id),
+    idx_work_entries_remote_id: index('idx_work_entries_remote_id').on(table.remote_id)
   })
 )
 
@@ -51,27 +49,24 @@ export type WorkEntry = typeof workEntries.$inferSelect
 
 export type NewWorkEntry = typeof workEntries.$inferInsert
 
-// Work Entry Breaks table
 export const workEntryBreaks = sqliteTable(
-  'work_entry_breaks',
+  TABLE_WORK_ENTRY_BREAKS,
   {
-    id: integer('id').primaryKey({ autoIncrement: true }),
+    id: text('id').primaryKey(),
     work_entry_id: text('work_entry_id')
       .notNull()
       .references(() => workEntries.id, {
-        onDelete: 'cascade', // Delete breaks when work entry is deleted
-        onUpdate: 'cascade', // Update work_entry_id if work entry id changes
+        onDelete: 'cascade',
+        onUpdate: 'cascade'
       }),
-    start_at: text('start_at'), // ISO timestamp
-    end_at: text('end_at'), // ISO timestamp
-    start_exact_at: text('start_exact_at'), // ISO timestamp (exact time from API)
-    end_exact_at: text('end_exact_at'), // ISO timestamp (exact time from API)
-    created_at: text('created_at').notNull().default('CURRENT_TIMESTAMP'),
+    start_at: text('start_at'),
+    end_at: text('end_at'),
+    start_exact_at: text('start_exact_at'),
+    end_exact_at: text('end_exact_at'),
+    created_at: text('created_at').notNull().default('CURRENT_TIMESTAMP')
   },
   (table) => ({
-    idx_work_entry_breaks_work_entry_id: index('idx_work_entry_breaks_work_entry_id').on(
-      table.work_entry_id
-    ),
+    idx_work_entry_breaks_work_entry_id: index('idx_work_entry_breaks_work_entry_id').on(table.work_entry_id)
   })
 )
 

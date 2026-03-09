@@ -9,7 +9,7 @@ import * as breakRepo from '../../db/work-entry-breaks/repo'
 import { hasOpenCheckIn } from './rules'
 import { TimeRegistrationStatus } from '../../enums/TimeRegistrationStatus'
 import type { DayGroup } from './types'
-import type { WorkEntry } from '../../models/work-entry.schema'
+import type { WorkEntry } from '@/db/schema'
 import type { WorkEntry as DrizzleWorkEntry } from '../../db/schema'
 
 const logger = createLogger('WorkEntriesDomain-Drizzle')
