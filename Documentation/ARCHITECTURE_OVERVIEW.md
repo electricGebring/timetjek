@@ -24,18 +24,18 @@ So: **User → Vue → Pinia → Domain → Repositories → SQLite**, and when 
 
 We use **Drizzle ORM** for type-safe database operations. The approach is **hybrid**:
 
-- **Browser (web)**: Uses `sql.js` as the SQL execution engine. Drizzle schema provides TypeScript types for type-safety, but execution is sql.js-powered.
-- **Node.js (backend, scripts, sync engines)**: Uses `better-sqlite3` as the SQL execution engine with Drizzle ORM for query building and type-safety.
+- **Browser (web)**: Uses `sql.js` as the SQL execution engine with Drizzle ORM for query building and type-safety.
+- **Native (iOS/Android)**: Uses Capacitor SQLite with raw SQL (Drizzle integration pending).
 - **Future backend API**: Will use Drizzle ORM with a production SQL database (PostgreSQL, MySQL, etc.).
 
 **Why hybrid?**
 - `sql.js` is the only viable in-browser SQL engine for offline-first apps (no network dependencies).
-- Drizzle lets us write type-safe queries that work across both environments.
+- Drizzle lets us write type-safe queries for the web path.
 - Gradual adoption: We can expand Drizzle usage as the backend grows without refactoring app code.
 
 **Current state:**
-- Browser code uses sql.js-based repositories (e.g. `work-entry.read.ts`, `work-entry.upsert.ts`).
-- Node.js scripts and future server logic use Drizzle ORM (e.g. `work-entry.read.drizzle.ts`, `work-entry.upsert.drizzle.ts`).
+- Browser code uses sql.js with Drizzle ORM (e.g. `work-entry.read.ts`, `work-entry.upsert.ts`).
+- Native code uses Capacitor SQLite with raw SQL.
 - All code is type-safe via Drizzle schema (`src/db/schema.ts`).
 
 ### Domain & Repository Integration

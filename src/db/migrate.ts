@@ -4,8 +4,6 @@ import { Capacitor } from '@capacitor/core'
 
 import { getDB } from './index'
 
-import { getRawSqlite } from './drizzle'
-
 type Migration = { id: string; sql: string }
 
 const isNativeRuntime = (() => {
@@ -97,14 +95,6 @@ async function runSql(sql: string, params: unknown[] = []) {
 
     await db.run(sql, params)
   } else {
-    const sqlite = getRawSqlite()
-
-    if (sqlite) {
-      sqlite.prepare(sql).run(...params)
-
-      return
-    }
-
     const { sqlJsDb } = getDB() as { sqlJsDb: { run: (sql: string, params?: unknown[]) => void } }
 
     sqlJsDb.run(sql, params)
@@ -124,21 +114,6 @@ async function queryRows(sql: string, params: unknown[] = []): Promise<unknown[]
 
     return values as unknown[][]
   } else {
-    const sqlite = getRawSqlite()
-
-    if (sqlite) {
-      const rows = sqlite.prepare(sql).all(...params)
-
-      // Convert from object format [{id: 'x'}] to array format [['x']] for consistency
-      return rows.map((row: unknown) => {
-        if (typeof row === 'object' && row !== null) {
-          return Object.values(row)
-        }
-
-        return [row]
-      })
-    }
-
     const { sqlJsDb } = getDB() as { sqlJsDb: { exec: (sql: string, params?: unknown[]) => { values: unknown[][] }[] } }
 
     const results = sqlJsDb.exec(sql, params)
@@ -150,7 +125,7 @@ async function queryRows(sql: string, params: unknown[] = []): Promise<unknown[]
 }
 
 async function saveIfWeb() {
-  if (isNativeRuntime || getRawSqlite()) {
+  if (isNativeRuntime) {
     return
   }
 

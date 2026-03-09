@@ -1,6 +1,6 @@
 /**
  * Repository layer using Drizzle ORM
- * Works with both sql.js (browser) and better-sqlite3 (tests/Node.js)
+ * Works with sql.js (browser) and Capacitor SQLite (native)
  */
 
 export { getWorkEntries, getUnsyncedWorkEntries, getDeletedWorkEntries } from './work-entry.read'

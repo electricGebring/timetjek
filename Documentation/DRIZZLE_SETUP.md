@@ -110,13 +110,12 @@ export async function getWorkDetailsNative(): Promise<WorkEntry[]> {
 
 ### Capacitor SQLite Integration - Hybrid Approach ✅
 
-Din setup använder **tre helt olika databaskontexter**:
+Din setup använder **två databaskontexter**:
 
 | Miljö | Teknik | Runtime | Drizzle Support |
 |-------|--------|---------|-----------------|
-| **Lokal dev** | better-sqlite3 | Node.js | ✅ **Full** - Kan köra Drizzle-queries direkt |
-| **Web (browser)** | sql.js | JavaScript VM | ⚠️ **Partiell** - Kör SQL men inte Drizzle ORM |
-| **Native (iOS/Android)** | Capacitor SQLite | iOS/Android VM | ❌ **Ingen** - Körs helt separerat från Node.js |
+| **Web (browser)** | sql.js | JavaScript VM | ✅ Drizzle ORM med sql.js |
+| **Native (iOS/Android)** | Capacitor SQLite | iOS/Android VM | ❌ Raw SQL via Capacitor API (Drizzle integration pending) |
 
 **Rekommenderad strategi:**
 
@@ -129,29 +128,24 @@ Din setup använder **tre helt olika databaskontexter**:
     ┌─────────────────────────┐
     │  npm run db:generate    │  Generera SQL-migrationer
     └─────────────────────────┘
-         ↓          ↓          ↓
-    Dev           Web         Native
-  (Drizzle)   (Raw SQL)    (Raw SQL)
-  directly     från SQL.js  från Capacitor
+              ↓          ↓
+          Web         Native
+       (Drizzle +   (Raw SQL via
+        sql.js)     Capacitor)
 ```
 
 **Viktigt att förstå:**
-- **Lokal dev**: Du kan skriva `await db.select()...` direktmot better-sqlite3 ✅
-- **Web**: Du måste köra raw SQL (sql.js kan inte köra Drizzle-queries)
-- **Native**: Du måste köra raw SQL (Capacitor SQLite kör på iOS/Android, inte Node.js)
+- **Web**: Drizzle ORM med sql.js – `getDb().select()...` fungerar direkt ✅
+- **Native**: Raw SQL via Capacitor API (Drizzle integration pending)
 
 **Arbetsgång:**
 
 1. **Schema-ändringar**: Redigera bara `src/db/schema.ts` (gäller alla miljöer!)
 2. **Generera migrations**: `npm run db:generate` → skapar SQL i `drizzle/` (enda migrationsmappen)
 3. **Körning**: Appen applicerar migrations från `drizzle/` vid startup via `src/db/migrate.ts`
-4. **Lokal development**:
-   - Använd Drizzle direkt: `await db.select().from(workEntries)`
-   - better-sqlite3 förstår Drizzle-commands
-5. **Web-versionen**:
-   - Du kan inte använda Drizzle-queries direkt (sql.js körs i browser)
-   - Lösning: Exportera Drizzle SQL-strängarna eller skriv raw SQL
-6. **Native-versionen**:
+4. **Web-versionen**:
+   - Drizzle ORM med sql.js: `await getDb().select().from(workEntries)`
+5. **Native-versionen**:
    - Fortsätt med Capacitor SQLite API
    - Se de genererade SQL-filerna i `drizzle/` för schema
    - Körs på iOS/Android, tillgång bara till raw SQL
@@ -165,27 +159,17 @@ Din setup använder **tre helt olika databaskontexter**:
 - ✅ **Ingen lock-in**: Inte beroende av experimentell kod
 ### 💡 Praktiska exempel för alla miljöer
 
-**Lokal development (Node.js + better-sqlite3 + Drizzle):**
+**Web (Browser + sql.js + Drizzle):**
 ```typescript
 import { getDb } from '@/db/drizzle'
 import { workEntries } from '@/db/schema'
 import { eq } from 'drizzle-orm'
 
-// ✅ Drizzle-queries fungerar direkt!
+// ✅ Drizzle-queries fungerar direkt med sql.js!
 const entries = await getDb()
   .select()
   .from(workEntries)
   .where(eq(workEntries.deleted, 0))
-```
-
-**Web (Browser + sql.js):**
-```typescript
-import { sqlJsDb } from '@/db/index'
-
-// ❌ Kan INTE köra Drizzle-queries
-// ✅ Använd raw SQL istället:
-const sql = `SELECT * FROM work_entries WHERE deleted = 0`
-const result = sqlJsDb.exec(sql)
 ```
 
 **Native (iOS/Android + Capacitor SQLite):**
