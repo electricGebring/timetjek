@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 
 import * as domain from '@/domain/work-entries/domain'
+import * as breakRepo from '@/db/work-entry-breaks/repo'
 
 import type { Entry, GroupedWorkEntries, DayGroup } from '@/views/staffRegister/types'
 
@@ -156,36 +157,59 @@ export const useWorkEntriesStore = defineStore('staffRegister', {
 
       const todays = all.filter((e) => e.work_day_id === work_day_id)
 
-      // Check if there's an open break entry (has break field and is still open)
-      const breakEntry = todays.find((e) => e.check_in_at && !e.check_out_at && e.break)
+      const openWorkEntry = todays.find((e) => e.check_in_at && !e.check_out_at)
 
-      if (breakEntry) {
-        // Close the break entry and update break time with actual end time
-        const now = new Date().toISOString()
+      // If there is an open work entry, treat check-in as "return from break" when needed.
+      if (openWorkEntry?.id) {
+        const breaks = await breakRepo.getBreaksByWorkEntryId(openWorkEntry.id)
+        const openBreak = breaks.find((b) => b.end_at === null)
 
-        const breakStart = breakEntry.break?.split('-')[0] || '00:00:00'
+        if (openBreak) {
+          const now = new Date().toISOString()
 
-        const breakEnd = now.split('T')[1]?.split('.')[0] || '00:00:00'
+          // Close the open break
+          await breakRepo.updateBreak(openBreak.id, {
+            end_at: now,
+            end_exact_at: now
+          })
 
-        await domain.updateWorkEntry({
-          ...breakEntry,
-          work_day_id: breakEntry.work_day_id ?? 0,
-          createdAt: breakEntry.createdAt ?? '',
-          updatedAt: breakEntry.updatedAt ?? '',
-          check_out_at: now,
-          break: `${breakStart}-${breakEnd}`
-        })
+          // Create a new entry (work segment after break)
+          await domain.createWorkEntry({
+            work_day_id: work_day_id ?? 0,
+            employee_id: 1,
+            workplace_id: 1,
+            cost_center_id: null,
+            status: 'OPEN',
+            check_in_at: now,
+            check_in_time_at: now.split('T')[1]?.split('.')[0] || '',
+            check_in_latitude: 0,
+            check_in_longitude: 0,
+            check_in_application: 'APP',
+            check_out_at: null,
+            check_out_time_at: null,
+            check_out_latitude: null,
+            check_out_longitude: null,
+            check_out_application: null,
+            break: null,
+            meal_benefit_has_breakfast: false,
+            meal_benefit_has_lunch: false,
+            name: 'Anna Svensson',
+            type: 'A',
+            personalNumber: '19800101-1234',
+            administrator_comment: null,
+            total_working_seconds: null,
+            createdAt: now,
+            updatedAt: now,
+            deleted_at: null,
+            synced: 0,
+            deleted: 0
+          })
 
-        // After closing break entry, reload to get updated data
-        await this.loadWorkEntries()
-      }
- else {
-        // Check if there's already an open work entry
-        const hasOpen = todays.some((e) => e.check_in_at && !e.check_out_at)
-
-        if (hasOpen) {
-          throw new Error('Du är redan instämplad. Stämpla ut först.')
+          await this.loadWorkEntries()
+          return
         }
+
+        throw new Error('Du är redan instämplad. Stämpla ut först.')
       }
 
       const now = new Date().toISOString()
@@ -227,21 +251,69 @@ export const useWorkEntriesStore = defineStore('staffRegister', {
     async checkOut(work_day_id: number) {
       const entries = await domain.getAllWorkEntries()
 
-      // Find open work entry (not a break entry)
+      // Find open work entry
       const openEntry = entries.find(
-        (e) => e.work_day_id === work_day_id && e.check_in_at && !e.check_out_at && !e.break
+        (e) => e.work_day_id === work_day_id && e.check_in_at && !e.check_out_at
       )
 
-      if (!openEntry) {
+      if (!openEntry?.id) {
         throw new Error('Ingen öppen instämpling hittades')
       }
 
+      const now = new Date().toISOString()
+
+      // Get all breaks for this work entry
+      const breaks = await breakRepo.getBreaksByWorkEntryId(openEntry.id)
+
+      // Close any open break before checking out
+      const openBreak = breaks.find((b) => b.end_at === null)
+
+      if (openBreak) {
+        // Close the open break
+        await breakRepo.updateBreak(openBreak.id, {
+          end_at: now,
+          end_exact_at: now
+        })
+        // Update the break in our local list for calculation
+        openBreak.end_at = now
+        openBreak.end_exact_at = now
+      }
+
+      // Calculate total break time in seconds
+      const breakSeconds = breaks.reduce((sum, brk) => {
+        const start = brk.start_exact_at ?? brk.start_at
+        const end = brk.end_exact_at ?? brk.end_at
+
+        if (!start || !end) return sum
+
+        const startMs = Date.parse(start)
+        const endMs = Date.parse(end)
+
+        if (!Number.isFinite(startMs) || !Number.isFinite(endMs)) return sum
+
+        return sum + Math.max(0, Math.floor((endMs - startMs) / 1000))
+      }, 0)
+
+      // Calculate total time from check-in to check-out
+      const checkInAt = openEntry.check_in_at ?? null
+      const startMs = checkInAt ? Date.parse(checkInAt) : Number.NaN
+      const endMs = Date.parse(now)
+
+      const totalSeconds =
+        Number.isFinite(startMs) && Number.isFinite(endMs) && endMs > startMs
+          ? Math.floor((endMs - startMs) / 1000)
+          : null
+
+      // Update work entry with check-out time and calculated seconds
       await domain.updateWorkEntry({
         ...openEntry,
         work_day_id: openEntry.work_day_id ?? 0,
         createdAt: openEntry.createdAt ?? '',
-        updatedAt: openEntry.updatedAt ?? '',
-        check_out_at: new Date().toISOString()
+        updatedAt: now,
+        check_out_at: now,
+        check_out_time_at: now.split('T')[1]?.split('.')[0] || '',
+        total_working_seconds: totalSeconds !== null ? Math.max(0, totalSeconds - breakSeconds) : null,
+        total_break_seconds: breakSeconds
       })
 
       await this.loadWorkEntries()
@@ -252,62 +324,66 @@ export const useWorkEntriesStore = defineStore('staffRegister', {
 
       const todaysEntries = entries.filter((e) => e.work_day_id === work_day_id)
 
-      // Check if already on break (entry with break field set but no check_out)
-      const onBreak = todaysEntries.some((e) => e.check_in_at && !e.check_out_at && e.break)
+      const openEntry = todaysEntries.find((e) => e.check_in_at && !e.check_out_at)
 
-      if (onBreak) {
+      if (!openEntry?.id) {
+        throw new Error('Ingen öppen instämpling hittades')
+      }
+
+      const existingBreaks = await breakRepo.getBreaksByWorkEntryId(openEntry.id)
+      const hasOpenBreak = existingBreaks.some((b) => b.end_at === null)
+
+      if (hasOpenBreak) {
         throw new Error('Du är redan på rast')
       }
 
-      // Find open work entry and close it
-      const openEntry = todaysEntries.find((e) => e.check_in_at && !e.check_out_at)
-
-      if (openEntry) {
-        await domain.updateWorkEntry({
-          ...openEntry,
-          work_day_id: openEntry.work_day_id ?? 0,
-          createdAt: openEntry.createdAt ?? '',
-          updatedAt: openEntry.updatedAt ?? '',
-          check_out_at: new Date().toISOString()
-        })
-      }
-
-      // Create new break entry with break start time (end will be set when returning)
       const now = new Date().toISOString()
 
-      const breakStart = now.split('T')[1]?.split('.')[0] || '00:00:00'
+      // Create the break record
+      await breakRepo.insertBreak(openEntry.id, {
+        start_at: now,
+        end_at: null,
+        start_exact_at: now,
+        end_exact_at: null
+      })
 
-      const breakValue = `${breakStart}-00:00:00`
+      // Calculate break time so far (should be 0 for first break)
+      const allBreaks = await breakRepo.getBreaksByWorkEntryId(openEntry.id)
+      const breakSeconds = allBreaks.reduce((sum, brk) => {
+        const start = brk.start_exact_at ?? brk.start_at
+        const end = brk.end_exact_at ?? brk.end_at
 
-      await domain.createWorkEntry({
-        work_day_id: work_day_id ?? 0,
-        check_in_at: now,
-        check_out_at: null,
-        break: breakValue, // Placeholder end time
-        employee_id: 1,
-        workplace_id: 1,
-        cost_center_id: null,
-        status: 'OPEN',
-        check_in_time_at: now.split('T')[1]?.split('.')[0] || '',
-        check_in_latitude: 0,
-        check_in_longitude: 0,
-        check_in_application: 'APP',
-        check_out_time_at: null,
-        check_out_latitude: null,
-        check_out_longitude: null,
-        check_out_application: null,
-        meal_benefit_has_breakfast: false,
-        meal_benefit_has_lunch: false,
-        name: 'Anna Svensson',
-        type: 'A',
-        personalNumber: '19800101-1234',
-        administrator_comment: null,
-        total_working_seconds: null,
-        createdAt: now,
+        if (!start || !end) return sum
+
+        const startMs = Date.parse(start)
+        const endMs = Date.parse(end)
+
+        if (!Number.isFinite(startMs) || !Number.isFinite(endMs)) return sum
+
+        return sum + Math.max(0, Math.floor((endMs - startMs) / 1000))
+      }, 0)
+
+      // Calculate total time from check-in to break start
+      const checkInAt = openEntry.check_in_at ?? null
+      const startMs = checkInAt ? Date.parse(checkInAt) : Number.NaN
+      const endMs = Date.parse(now)
+
+      const totalSeconds =
+        Number.isFinite(startMs) && Number.isFinite(endMs) && endMs > startMs
+          ? Math.floor((endMs - startMs) / 1000)
+          : null
+
+      // Close the work entry (going on break ends this work segment)
+      await domain.updateWorkEntry({
+        ...openEntry,
+        work_day_id: openEntry.work_day_id ?? 0,
+        createdAt: openEntry.createdAt ?? '',
         updatedAt: now,
-        deleted_at: null,
-        synced: 0,
-        deleted: 0
+        check_out_at: now,
+        check_out_time_at: now.split('T')[1]?.split('.')[0] || '',
+        total_working_seconds: totalSeconds !== null ? Math.max(0, totalSeconds - breakSeconds) : null,
+        total_break_seconds: breakSeconds,
+        synced: 0
       })
 
       await this.loadWorkEntries()
