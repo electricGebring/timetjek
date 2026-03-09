@@ -88,37 +88,21 @@ async function bootstrap() {
     }
   }
 
-  // Setup online/offline coordinator for automatic sync
   const coordinator = new OnlineOfflineCoordinator({
     connectivity,
     sync: syncAdapter,
-    logger: createLogger('Coordinator')
+    logger: createLogger('Coordinator'),
     // Optional: Enable periodic sync for always-online apps
-    // syncIntervalMs: 30 * 1000, // Uncomment to enable
+    syncIntervalMs: 30 * 1000 // 30 seconds
   })
 
   // Initialize sync trigger for immediate sync on mutations (optional)
   // This enables instant sync when online, but still works offline
   initSyncTrigger(syncAdapter, connectivity)
 
-  // Start coordinator after app is mounted
   await coordinator.start()
-
-  // Create a logger for bootstrap
   const logger = createLogger('Bootstrap')
 
-  // Run initial sync to populate database with API data
-  /*try {
-    logger.log('[Bootstrap] Running initial sync...')
-
-    await syncAdapter.start('manual')
-
-    logger.log('[Bootstrap] Initial sync completed')
-  } catch (error) {
-    console.error('[Bootstrap] Initial sync failed:', error)
-  }*/
-
-  // Run initial cleanup of expired data based on configured policies
   try {
     const results = await cleanupAllTables()
 

@@ -73,13 +73,6 @@ export class SyncManager {
       return
     }
 
-    // Extra safety: never run sync when offline (web)
-    if (typeof window !== 'undefined' && typeof navigator !== 'undefined' && navigator.onLine === false) {
-      this.logger.warn('[SyncManager] Aborting sync: navigator.onLine is false (offline mode)')
-
-      return
-    }
-
     this.syncInProgress = true
 
     try {
