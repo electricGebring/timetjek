@@ -1,8 +1,27 @@
+import * as breakRepo from '@/db/work-entry-breaks/repo'
+
+import { buildBreakDisplayString } from '@/utils/breakDisplay'
+
+import type { Entry } from '@/views/staffRegister/types'
+
 import { getAllWorkEntries } from './queries'
 
 import { workEntryToEntry } from '@/db/work-entries/repo'
 
-import type { Entry } from '@/views/staffRegister/types'
+/** Enrich entries with break display from work_entry_breaks (source of truth for break state). */
+async function enrichEntriesWithBreaks(entries: Entry[]): Promise<Entry[]> {
+  const result: Entry[] = []
+
+  for (const entry of entries) {
+    const breaks = await breakRepo.getBreaksByWorkEntryId(entry.id)
+    result.push({
+      ...entry,
+      break: buildBreakDisplayString(entry, breaks)
+    })
+  }
+
+  return result
+}
 
 export async function updateStoreFromDb() {
   const allEntries = await getAllWorkEntries()
@@ -11,10 +30,11 @@ export async function updateStoreFromDb() {
 
   const store = useWorkEntriesStore()
 
-  // Map WorkEntry[] to Entry[]
   const entryList: Entry[] = allEntries.map(workEntryToEntry)
 
-  store.setWorkEntries(entryList)
+  const enriched = await enrichEntriesWithBreaks(entryList)
+
+  store.setWorkEntries(enriched)
 }
 
 /** Update store from a list of entries (e.g. after pull: resolved API items + unsynced local). */
@@ -23,5 +43,7 @@ export async function updateStoreFromEntries(entries: Entry[]) {
 
   const store = useWorkEntriesStore()
 
-  store.setWorkEntries(entries)
+  const enriched = await enrichEntriesWithBreaks(entries)
+
+  store.setWorkEntries(enriched)
 }

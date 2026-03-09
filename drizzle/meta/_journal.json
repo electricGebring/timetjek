@@ -29,6 +29,13 @@
       "when": 1773090344875,
       "tag": "0003_bored_thing",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1773092456506,
+      "tag": "0004_smart_squadron_supreme",
+      "breakpoints": true
     }
   ]
 }

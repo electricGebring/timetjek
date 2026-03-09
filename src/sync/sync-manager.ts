@@ -99,6 +99,10 @@ export class SyncManager {
       if (failed.length > 0) {
         this.logger.warn(`[SyncManager] ${failed.length} tables failed to sync`)
       }
+
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('sync-completed'))
+      }
     } finally {
       this.syncInProgress = false
     }
@@ -123,6 +127,10 @@ export class SyncManager {
     }
 
     await engine.start(reason)
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('sync-completed'))
+    }
   }
 
   /**

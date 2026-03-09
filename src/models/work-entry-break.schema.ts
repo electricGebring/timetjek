@@ -17,6 +17,9 @@ export type WorkEntryBreak = {
   start_exact_at: string | null
   end_exact_at: string | null
   created_at: string
+  deleted_at: string | null
+  synced: number
+  deleted: number
 }
 
 /** Column names in SELECT order – derived from WorkEntryBreak keys */
@@ -27,13 +30,19 @@ export const WORK_ENTRY_BREAK_COLUMNS = [
   'end_at',
   'start_exact_at',
   'end_exact_at',
-  'created_at'
+  'created_at',
+  'deleted_at',
+  'synced',
+  'deleted'
 ] as const satisfies readonly (keyof WorkEntryBreak)[]
 
 export type WorkEntryBreakColumn = (typeof WORK_ENTRY_BREAK_COLUMNS)[number]
 
-/** Input type for creating a new break (work_entry_id and generated fields excluded) */
-export type CreateWorkEntryBreakInput = Omit<WorkEntryBreak, 'id' | 'work_entry_id' | 'created_at'> & {
+/** Input type for creating a new break (work_entry_id and generated/sync fields excluded) */
+export type CreateWorkEntryBreakInput = Omit<
+  WorkEntryBreak,
+  'id' | 'work_entry_id' | 'created_at' | 'deleted_at' | 'synced' | 'deleted'
+> & {
   start_at?: string | null
   end_at?: string | null
   start_exact_at?: string | null
@@ -65,6 +74,13 @@ export function parseWorkEntryBreakRow(raw: Record<string, unknown>): WorkEntryB
     return String(v)
   }
 
+  const coerceNumber = (v: unknown, def: number): number => {
+    if (v === null || v === undefined) return def
+    if (typeof v === 'number') return v
+    const n = Number(v)
+    return Number.isNaN(n) ? def : n
+  }
+
   return {
     id: coerceId(raw.id),
     work_entry_id: requireString(raw.work_entry_id, 'work_entry_id'),
@@ -72,6 +88,9 @@ export function parseWorkEntryBreakRow(raw: Record<string, unknown>): WorkEntryB
     end_at: coerceString(raw.end_at),
     start_exact_at: coerceString(raw.start_exact_at),
     end_exact_at: coerceString(raw.end_exact_at),
-    created_at: requireString(raw.created_at, 'created_at')
+    created_at: requireString(raw.created_at, 'created_at'),
+    deleted_at: coerceString(raw.deleted_at),
+    synced: coerceNumber(raw.synced, 0),
+    deleted: coerceNumber(raw.deleted, 0)
   }
 }

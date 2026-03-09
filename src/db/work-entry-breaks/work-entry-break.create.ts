@@ -25,7 +25,9 @@ export async function insertBreak(workEntryId: string, breakData: CreateWorkEntr
       end_at: breakData.end_at ?? null,
       start_exact_at: breakData.start_exact_at ?? null,
       end_exact_at: breakData.end_exact_at ?? null,
-      created_at: new Date().toISOString()
+      created_at: new Date().toISOString(),
+      synced: 0,
+      deleted: 0
     })
     .returning()
 
@@ -36,17 +38,25 @@ export async function insertBreak(workEntryId: string, breakData: CreateWorkEntr
   return result[0] as WorkEntryBreak
 }
 
+/** Options for insertManyBreaks */
+export type InsertManyBreaksOptions = {
+  /** If true, inserted breaks are marked synced=1 (e.g. from API pull). Default false. */
+  synced?: boolean
+}
+
 /**
  * Insert multiple breaks at once (for sync/import)
  */
 export async function insertManyBreaks(
-  breaks: Array<CreateWorkEntryBreakInput & { work_entry_id: string; id?: string }>
+  breaks: Array<CreateWorkEntryBreakInput & { work_entry_id: string; id?: string }>,
+  options?: InsertManyBreaksOptions
 ): Promise<void> {
   if (breaks.length === 0) return
 
   logger.log(`[CREATE] Inserting ${breaks.length} breaks`)
 
   const db = getDb()
+  const synced = options?.synced ?? false
 
   await db.insert(workEntryBreaks).values(
     breaks.map((b) => ({
@@ -56,7 +66,9 @@ export async function insertManyBreaks(
       end_at: b.end_at ?? null,
       start_exact_at: b.start_exact_at ?? null,
       end_exact_at: b.end_exact_at ?? null,
-      created_at: new Date().toISOString()
+      created_at: new Date().toISOString(),
+      synced: synced ? 1 : 0,
+      deleted: 0
     }))
   )
 

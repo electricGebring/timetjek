@@ -1,30 +1,75 @@
 import { getDb } from '@/db/drizzle'
 import { workEntryBreaks } from '@/db/schema'
 import { createLogger } from '@/utils/logger'
-import { eq } from 'drizzle-orm'
+import { eq, inArray } from 'drizzle-orm'
+import { Capacitor } from '@capacitor/core'
 import { markParentEntryDirty } from '@/db/work-entries/repo'
 import { getBreakById } from './work-entry-break.read'
 
 const logger = createLogger('WorkEntryBreaksRepo')
 
+function saveDatabase() {
+  if (!Capacitor.isNativePlatform()) {
+    import('@/db/index').then(({ getDB }) => {
+      const db = getDB() as { saveDatabase?: () => void }
+      db.saveDatabase?.()
+    })
+  }
+}
+
 /**
- * Delete a single break by its ID
+ * Soft delete a break (marks deleted=1, keeps row for sync).
+ * Marks parent entry dirty for aggregation sync.
  */
 export async function deleteBreak(id: string): Promise<void> {
-  logger.log('[DELETE] Deleting break:', id)
+  logger.log('[DELETE] Soft-deleting break:', id)
 
   const breakRecord = await getBreakById(id)
   const workEntryId = breakRecord?.work_entry_id
 
-  const db = getDb()
+  const now = new Date().toISOString()
 
-  await db.delete(workEntryBreaks).where(eq(workEntryBreaks.id, id))
+  await getDb()
+    .update(workEntryBreaks)
+    .set({ deleted: 1, deleted_at: now, synced: 0 })
+    .where(eq(workEntryBreaks.id, id))
 
   if (workEntryId) {
     await markParentEntryDirty(workEntryId)
   }
 
-  logger.log('[DELETE] Break deleted')
+  saveDatabase()
+  logger.log('[DELETE] Break soft-deleted')
+}
+
+/**
+ * Permanently delete a break from the database.
+ * Call after successful API delete.
+ */
+export async function permanentDeleteBreak(id: string): Promise<void> {
+  logger.log('[DELETE] Permanently deleting break:', id)
+
+  await getDb().delete(workEntryBreaks).where(eq(workEntryBreaks.id, id))
+
+  saveDatabase()
+  logger.log('[DELETE] Break permanently deleted')
+}
+
+/**
+ * Mark a break as synced with backend
+ */
+export async function markBreakAsSynced(id: string): Promise<void> {
+  await getDb().update(workEntryBreaks).set({ synced: 1 }).where(eq(workEntryBreaks.id, id))
+  saveDatabase()
+}
+
+/**
+ * Mark multiple breaks as synced
+ */
+export async function markBreaksAsSynced(ids: string[]): Promise<void> {
+  if (ids.length === 0) return
+  await getDb().update(workEntryBreaks).set({ synced: 1 }).where(inArray(workEntryBreaks.id, ids))
+  saveDatabase()
 }
 
 /**

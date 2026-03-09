@@ -28,8 +28,7 @@
             <tr>
               <td
                 colspan="8"
-                class="border-b border-gray-200 bg-gray-50 px-3 py-3 text-base font-bold text-gray-800
-                  sm:px-5 sm:text-lg"
+                class="border-b border-gray-200 bg-gray-50 px-3 py-3 text-base font-bold text-gray-800 sm:px-5 sm:text-lg"
               >
                 <span>{{ day.dateLabel }}</span>
                 <span
@@ -104,7 +103,7 @@
                   På rast
                 </div>
                 <div
-                  v-else-if="entry.break && entry.check_out_at"
+                  v-else-if="entry.break && !entry.check_out_at"
                   class="flex items-center gap-2 font-semibold text-orange-600"
                 >
                   Rast
@@ -182,7 +181,7 @@ function isEntry(entry: unknown): entry is Entry {
 }
 
 const safeEntriesByDay = computed(() => {
-  return (props.entriesByDay as Array<{ date: string; dateLabel: string; entries: unknown[] }>).map(day => ({
+  return (props.entriesByDay as Array<{ date: string; dateLabel: string; entries: unknown[] }>).map((day) => ({
     ...day,
     entries: day.entries.filter(isEntry) as Entry[]
   }))

@@ -3,38 +3,13 @@ import { defineStore } from 'pinia'
 import * as domain from '@/domain/work-entries/domain'
 import * as breakRepo from '@/db/work-entry-breaks/repo'
 
+import { buildBreakDisplayString } from '@/utils/breakDisplay'
+
 import { WORK_ENTRY_STORE_ERRORS } from './constants'
 
 import type { Entry, GroupedWorkEntries, DayGroup } from '@/views/staffRegister/types'
 
 import { TimeRegistrationStatus } from '@/enums/TimeRegistrationStatus'
-
-import type { WorkEntryBreak } from '@/models/work-entry-break.schema'
-
-/** Parse ISO string to local time HH:mm:ss (respects timezone) */
-function isoToLocalTimeString(iso: string | null): string | null {
-  if (!iso) return null
-  const d = new Date(iso)
-  if (Number.isNaN(d.getTime())) return null
-  return [d.getHours(), d.getMinutes(), d.getSeconds()].map((n) => String(n).padStart(2, '0')).join(':')
-}
-
-function buildBreakDisplayString(entry: Entry, breaks: WorkEntryBreak[]): string | null {
-  if (!breaks.length) return entry.break ?? null
-
-  const openBreak = breaks.find((b) => !b.end_at)
-  if (openBreak && !entry.check_out_at) {
-    const start = openBreak.start_exact_at ?? openBreak.start_at
-    const timePart = isoToLocalTimeString(start)
-    return timePart ? `${timePart}-` : null
-  }
-
-  const first = breaks.find((b) => b.start_at && b.end_at)
-  if (!first) return entry.break ?? null
-  const startTime = isoToLocalTimeString(first.start_exact_at ?? first.start_at)
-  const endTime = isoToLocalTimeString(first.end_exact_at ?? first.end_at)
-  return startTime && endTime ? `${startTime}-${endTime}` : (entry.break ?? null)
-}
 
 export const useWorkEntriesStore = defineStore('staffRegister', {
   state: () => ({

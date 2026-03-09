@@ -63,10 +63,14 @@ export const workEntryBreaks = sqliteTable(
     end_at: text('end_at'),
     start_exact_at: text('start_exact_at'),
     end_exact_at: text('end_exact_at'),
-    created_at: text('created_at').notNull().default('CURRENT_TIMESTAMP')
+    created_at: text('created_at').notNull().default('CURRENT_TIMESTAMP'),
+    deleted_at: text('deleted_at'),
+    synced: integer('synced').default(0),
+    deleted: integer('deleted').default(0)
   },
   (table) => ({
-    idx_work_entry_breaks_work_entry_id: index('idx_work_entry_breaks_work_entry_id').on(table.work_entry_id)
+    idx_work_entry_breaks_work_entry_id: index('idx_work_entry_breaks_work_entry_id').on(table.work_entry_id),
+    idx_work_entry_breaks_synced_deleted: index('idx_work_entry_breaks_synced_deleted').on(table.synced, table.deleted)
   })
 )
 
