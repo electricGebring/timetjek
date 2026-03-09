@@ -7,6 +7,29 @@ import type { Entry, GroupedWorkEntries, DayGroup } from '@/views/staffRegister/
 
 import { TimeRegistrationStatus } from '@/enums/TimeRegistrationStatus'
 
+import type { WorkEntryBreak } from '@/models/work-entry-break.schema'
+
+function buildBreakDisplayString(entry: Entry, breaks: WorkEntryBreak[]): string | null {
+  if (!breaks.length) return entry.break ?? null
+
+  const openBreak = breaks.find((b) => !b.end_at)
+  if (openBreak && !entry.check_out_at) {
+    const start = openBreak.start_exact_at ?? openBreak.start_at
+    if (!start) return null
+    const timePart = start.includes('T') ? (start.split('T')[1]?.slice(0, 8) ?? '') : start.slice(11, 19)
+    return timePart ? `${timePart}-` : null
+  }
+
+  const first = breaks.find((b) => b.start_at && b.end_at)
+  if (!first) return entry.break ?? null
+  const start = first.start_exact_at ?? first.start_at
+  const end = first.end_exact_at ?? first.end_at
+  if (!start || !end) return entry.break ?? null
+  const startTime = start.includes('T') ? (start.split('T')[1]?.slice(0, 8) ?? '') : start.slice(11, 19)
+  const endTime = end.includes('T') ? (end.split('T')[1]?.slice(0, 8) ?? '') : end.slice(11, 19)
+  return startTime && endTime ? `${startTime}-${endTime}` : (entry.break ?? null)
+}
+
 export const useWorkEntriesStore = defineStore('staffRegister', {
   state: () => ({
     workEntries: [] as Entry[],
@@ -123,6 +146,7 @@ export const useWorkEntriesStore = defineStore('staffRegister', {
 
     /**
      * Loads all work entries from domain (local DB).
+     * Enriches each entry with break display from work_entry_breaks (På rast + RAST column).
      */
     async loadWorkEntries() {
       this.setLoading(true)
@@ -133,19 +157,22 @@ export const useWorkEntriesStore = defineStore('staffRegister', {
         // Convert WorkEntry to Entry format
         const convertedEntries = entries.map(domain.workEntryToEntry)
 
+        // Enrich with break data from work_entry_breaks for table display
+        for (const entry of convertedEntries) {
+          const breaks = await breakRepo.getBreaksByWorkEntryId(entry.id)
+          entry.break = buildBreakDisplayString(entry, breaks)
+        }
+
         this.setWorkEntries(convertedEntries)
 
         this.setError(null)
-      }
- catch (e: unknown) {
+      } catch (e: unknown) {
         if (e && typeof e === 'object' && 'message' in e && typeof (e as { message?: string }).message === 'string') {
           this.setError((e as { message: string }).message)
-        }
- else {
+        } else {
           this.setError('Failed to load work entries')
         }
-      }
- finally {
+      } finally {
         this.setLoading(false)
       }
     },
@@ -167,42 +194,10 @@ export const useWorkEntriesStore = defineStore('staffRegister', {
         if (openBreak) {
           const now = new Date().toISOString()
 
-          // Close the open break
+          // Return from break: close the open break only; keep the same work entry
           await breakRepo.updateBreak(openBreak.id, {
             end_at: now,
             end_exact_at: now
-          })
-
-          // Create a new entry (work segment after break)
-          await domain.createWorkEntry({
-            work_day_id: work_day_id ?? 0,
-            employee_id: 1,
-            workplace_id: 1,
-            cost_center_id: null,
-            status: 'OPEN',
-            check_in_at: now,
-            check_in_time_at: now.split('T')[1]?.split('.')[0] || '',
-            check_in_latitude: 0,
-            check_in_longitude: 0,
-            check_in_application: 'APP',
-            check_out_at: null,
-            check_out_time_at: null,
-            check_out_latitude: null,
-            check_out_longitude: null,
-            check_out_application: null,
-            break: null,
-            meal_benefit_has_breakfast: false,
-            meal_benefit_has_lunch: false,
-            name: 'Anna Svensson',
-            type: 'A',
-            personalNumber: '19800101-1234',
-            administrator_comment: null,
-            total_working_seconds: null,
-            createdAt: now,
-            updatedAt: now,
-            deleted_at: null,
-            synced: 0,
-            deleted: 0
           })
 
           await this.loadWorkEntries()
@@ -252,9 +247,7 @@ export const useWorkEntriesStore = defineStore('staffRegister', {
       const entries = await domain.getAllWorkEntries()
 
       // Find open work entry
-      const openEntry = entries.find(
-        (e) => e.work_day_id === work_day_id && e.check_in_at && !e.check_out_at
-      )
+      const openEntry = entries.find((e) => e.work_day_id === work_day_id && e.check_in_at && !e.check_out_at)
 
       if (!openEntry?.id) {
         throw new Error('Ingen öppen instämpling hittades')
@@ -339,51 +332,12 @@ export const useWorkEntriesStore = defineStore('staffRegister', {
 
       const now = new Date().toISOString()
 
-      // Create the break record
+      // Create the break record; keep the work entry open (no check_out_at)
       await breakRepo.insertBreak(openEntry.id, {
         start_at: now,
         end_at: null,
         start_exact_at: now,
         end_exact_at: null
-      })
-
-      // Calculate break time so far (should be 0 for first break)
-      const allBreaks = await breakRepo.getBreaksByWorkEntryId(openEntry.id)
-      const breakSeconds = allBreaks.reduce((sum, brk) => {
-        const start = brk.start_exact_at ?? brk.start_at
-        const end = brk.end_exact_at ?? brk.end_at
-
-        if (!start || !end) return sum
-
-        const startMs = Date.parse(start)
-        const endMs = Date.parse(end)
-
-        if (!Number.isFinite(startMs) || !Number.isFinite(endMs)) return sum
-
-        return sum + Math.max(0, Math.floor((endMs - startMs) / 1000))
-      }, 0)
-
-      // Calculate total time from check-in to break start
-      const checkInAt = openEntry.check_in_at ?? null
-      const startMs = checkInAt ? Date.parse(checkInAt) : Number.NaN
-      const endMs = Date.parse(now)
-
-      const totalSeconds =
-        Number.isFinite(startMs) && Number.isFinite(endMs) && endMs > startMs
-          ? Math.floor((endMs - startMs) / 1000)
-          : null
-
-      // Close the work entry (going on break ends this work segment)
-      await domain.updateWorkEntry({
-        ...openEntry,
-        work_day_id: openEntry.work_day_id ?? 0,
-        createdAt: openEntry.createdAt ?? '',
-        updatedAt: now,
-        check_out_at: now,
-        check_out_time_at: now.split('T')[1]?.split('.')[0] || '',
-        total_working_seconds: totalSeconds !== null ? Math.max(0, totalSeconds - breakSeconds) : null,
-        total_break_seconds: breakSeconds,
-        synced: 0
       })
 
       await this.loadWorkEntries()

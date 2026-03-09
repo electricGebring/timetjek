@@ -4,6 +4,7 @@
  */
 
 import * as staffRepo from '../../db/work-entries/repo'
+import * as breakRepo from '../../db/work-entry-breaks/repo'
 import { hasOpenCheckIn } from './rules'
 import type { DayGroup } from './types'
 import type { WorkEntry } from '../../models/work-entry.schema'
@@ -84,7 +85,17 @@ export async function canCheckIn(work_day_id: number): Promise<boolean> {
 
   const todays = all.filter((e: DrizzleWorkEntry) => e.work_day_id === work_day_id)
 
-  return !hasOpenCheckIn(todays)
+  const hasOpen = hasOpenCheckIn(todays)
+
+  if (!hasOpen) return true // No open entry: allow first punch-in
+
+  // Open entry exists: allow check-in only when returning from break (open break)
+  const openEntry = todays.find((e) => e.check_in_at && !e.check_out_at)
+  if (!openEntry?.id) return false
+
+  const breaks = await breakRepo.getBreaksByWorkEntryId(openEntry.id)
+  const hasOpenBreak = breaks.some((b) => b.end_at === null)
+  return hasOpenBreak
 }
 
 export async function canCheckOut(work_day_id: number): Promise<boolean> {
