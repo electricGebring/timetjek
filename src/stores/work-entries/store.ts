@@ -3,7 +3,7 @@ import { defineStore } from 'pinia'
 import * as domain from '@/domain/work-entries/domain'
 import * as breakRepo from '@/db/work-entry-breaks/repo'
 
-import { buildBreakDisplayString } from '@/utils/breakDisplay'
+import { buildBreakDisplayString, hasOpenBreak } from '@/utils/breakDisplay'
 
 import { WORK_ENTRY_STORE_ERRORS } from './constants'
 
@@ -132,6 +132,7 @@ export const useWorkEntriesStore = defineStore('staffRegister', {
         for (const entry of convertedEntries) {
           const breaks = await breakRepo.getBreaksByWorkEntryId(entry.id)
           entry.break = buildBreakDisplayString(entry, breaks)
+          entry.isOnBreak = hasOpenBreak(breaks) && !entry.check_out_at
         }
 
         this.setWorkEntries(convertedEntries)

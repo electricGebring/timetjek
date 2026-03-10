@@ -38,40 +38,60 @@ function formatDurationMinutes(durationMinutes: number): string {
   return `${hours}h ${minutes}min`
 }
 
-export function formatBreak(breakValue: string | null): string {
-  if (!breakValue) return '—'
+/** Parse "HH:MM:SS" or "HH:MM" to minutes since midnight */
+function parseTimeToMinutes(timeStr: string): number {
+  const parts = timeStr.split(':').map(Number)
+  const h = parts[0] ?? 0
+  const m = parts[1] ?? 0
+  const s = parts[2] ?? 0
+  return h * 60 + m + s / 60
+}
 
-  const parts = breakValue.split('-')
+/** Duration in minutes for one segment ("start-end" or "start-") */
+function segmentDurationMinutes(segment: string): number | null {
+  const dashIdx = segment.indexOf('-')
+  if (dashIdx < 0) return null
 
-  if (parts.length !== 2) return '—'
+  const start = segment.slice(0, dashIdx).trim()
+  const end = segment.slice(dashIdx + 1).trim()
 
-  const start = parts[0]
-  const end = parts[1]
+  if (!start) return null
 
-  if (!start) return '—'
-
-  const startParts = start.split(':').map(Number)
-  const startH = startParts[0] ?? 0
-  const startM = startParts[1] ?? 0
-  const startS = startParts[2] ?? 0
-  const startMinutes = startH * 60 + startM + startS / 60
+  const startMinutes = parseTimeToMinutes(start)
 
   if (!end) {
     // Open break: duration from start to now
     const now = new Date()
     const nowMinutes = now.getHours() * 60 + now.getMinutes() + now.getSeconds() / 60
-    const durationMinutes = Math.max(0, Math.round(nowMinutes - startMinutes))
-    return formatDurationMinutes(durationMinutes)
+    return Math.max(0, Math.round(nowMinutes - startMinutes))
   }
 
-  if (end === '00:00:00') return '—'
+  if (end === '00:00' || end === '00:00:00') return null
 
-  const endParts = end.split(':').map(Number)
-  const endH = endParts[0] ?? 0
-  const endM = endParts[1] ?? 0
-  const endS = endParts[2] ?? 0
-  const endMinutes = endH * 60 + endM + endS / 60
-  const durationMinutes = Math.round(endMinutes - startMinutes)
+  const endMinutes = parseTimeToMinutes(end)
+  return Math.round(endMinutes - startMinutes)
+}
 
-  return formatDurationMinutes(durationMinutes)
+/**
+ * Format break display string to total duration.
+ * Handles comma-separated segments, e.g. "09:30-10:00, 11:00-11:30".
+ * Open segments ("HH:MM-") use current time as end.
+ */
+export function formatBreak(breakValue: string | null): string {
+  if (!breakValue) return '—'
+
+  const segments = breakValue
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean)
+  let totalMinutes = 0
+
+  for (const seg of segments) {
+    const d = segmentDurationMinutes(seg)
+    if (d !== null && d > 0) totalMinutes += d
+  }
+
+  if (totalMinutes <= 0) return '—'
+
+  return formatDurationMinutes(totalMinutes)
 }

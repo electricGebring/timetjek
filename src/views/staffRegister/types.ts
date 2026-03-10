@@ -36,6 +36,8 @@ export interface Entry {
 
   // Break and meal benefits
   break: string | null
+  /** True when any break is open and work entry is not checked out. Set during enrichment. */
+  isOnBreak?: boolean
   meal_benefit_has_breakfast: boolean
   meal_benefit_has_lunch: boolean
 

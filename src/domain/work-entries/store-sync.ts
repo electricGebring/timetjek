@@ -1,6 +1,6 @@
 import * as breakRepo from '@/db/work-entry-breaks/repo'
 
-import { buildBreakDisplayString } from '@/utils/breakDisplay'
+import { buildBreakDisplayString, hasOpenBreak } from '@/utils/breakDisplay'
 
 import type { Entry } from '@/views/staffRegister/types'
 
@@ -14,9 +14,11 @@ async function enrichEntriesWithBreaks(entries: Entry[]): Promise<Entry[]> {
 
   for (const entry of entries) {
     const breaks = await breakRepo.getBreaksByWorkEntryId(entry.id)
+    const isOnBreak = hasOpenBreak(breaks) && !entry.check_out_at
     result.push({
       ...entry,
-      break: buildBreakDisplayString(entry, breaks)
+      break: buildBreakDisplayString(entry, breaks),
+      isOnBreak
     })
   }
 
