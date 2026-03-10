@@ -9,6 +9,7 @@ export {
   getDeletedUnsyncedBreaksByWorkEntryId,
   getBreakById,
   getAllBreaks,
+  getBreaksGroupedByWorkEntryId,
   hasUnsyncedBreaks
 } from './work-entry-break.read'
 export { updateBreak } from './work-entry-break.update'

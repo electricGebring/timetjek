@@ -379,25 +379,24 @@ export class SyncEngine implements SyncPort {
         this.logger.warn(mergeErrors, 'item(s) failed to merge for', this.tableName)
       }
 
-      const unsyncedItems = await this.adapter.getUnsynced()
-
-      const byId = new Map<string, Entry>()
-
-      for (const item of resolvedItems as Entry[]) {
-        if ((item as Entry)?.id !== null) {
-          byId.set((item as Entry).id, item as Entry)
+      if (isIncremental) {
+        // Incremental: merge already persisted to DB; load full set from DB for store
+        await this.adapter.updateStore()
+      } else {
+        const unsyncedItems = await this.adapter.getUnsynced()
+        const byId = new Map<string, Entry>()
+        for (const item of resolvedItems as Entry[]) {
+          if ((item as Entry)?.id !== null) {
+            byId.set((item as Entry).id, item as Entry)
+          }
         }
-      }
-
-      for (const item of unsyncedItems as Entry[]) {
-        if ((item as Entry)?.id !== null) {
-          byId.set((item as Entry).id, item as Entry)
+        for (const item of unsyncedItems as Entry[]) {
+          if ((item as Entry)?.id !== null) {
+            byId.set((item as Entry).id, item as Entry)
+          }
         }
+        await this.adapter.updateStore(Array.from(byId.values()))
       }
-
-      const combined = Array.from(byId.values())
-
-      await this.adapter.updateStore(combined)
 
       this.logPullResult(apiItems.length, isIncremental, conflictCount, mergeErrors)
     } catch (error) {

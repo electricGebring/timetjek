@@ -1,4 +1,4 @@
-import { getDb } from '@/db/drizzle'
+import { getDb, type Database } from '@/db/drizzle'
 import { workEntryBreaks } from '@/db/schema'
 import { createLogger } from '@/utils/logger'
 import { eq } from 'drizzle-orm'
@@ -8,7 +8,8 @@ import { getBreakById } from './work-entry-break.read'
 
 const logger = createLogger('WorkEntryBreaksRepo')
 
-function saveDatabase() {
+function saveDatabase(skip?: boolean) {
+  if (skip) return
   if (!Capacitor.isNativePlatform()) {
     import('@/db/index').then(({ getDB }) => {
       const db = getDB() as { saveDatabase?: () => void }
@@ -45,13 +46,16 @@ export async function deleteBreak(id: string): Promise<void> {
 /**
  * Permanently delete a break from the database.
  * Call after successful API delete.
+ * @param id - Break ID
+ * @param tx - Optional transaction client (when provided, skipSave is implied)
  */
-export async function permanentDeleteBreak(id: string): Promise<void> {
+export async function permanentDeleteBreak(id: string, tx?: Database): Promise<void> {
   logger.log('[DELETE] Permanently deleting break:', id)
 
-  await getDb().delete(workEntryBreaks).where(eq(workEntryBreaks.id, id))
+  const db = tx ?? getDb()
+  await db.delete(workEntryBreaks).where(eq(workEntryBreaks.id, id))
 
-  saveDatabase()
+  saveDatabase(!!tx)
   logger.log('[DELETE] Break permanently deleted')
 }
 
@@ -66,10 +70,15 @@ export async function markBreakAsSynced(id: string): Promise<void> {
 /**
  * Mark multiple breaks as synced.
  * If breakRemoteIdMap is provided (local_id -> server remote_id), also persists remote_id for each.
+ * @param tx - Optional transaction client (when provided, skipSave is implied)
  */
-export async function markBreaksAsSynced(ids: string[], breakRemoteIdMap?: Record<string, string>): Promise<void> {
+export async function markBreaksAsSynced(
+  ids: string[],
+  breakRemoteIdMap?: Record<string, string>,
+  tx?: Database
+): Promise<void> {
   if (ids.length === 0) return
-  const db = getDb()
+  const db = tx ?? getDb()
   for (const localId of ids) {
     const remoteId = breakRemoteIdMap?.[localId]
     await db
@@ -77,7 +86,7 @@ export async function markBreaksAsSynced(ids: string[], breakRemoteIdMap?: Recor
       .set(remoteId != null ? { synced: 1, remote_id: remoteId } : { synced: 1 })
       .where(eq(workEntryBreaks.id, localId))
   }
-  saveDatabase()
+  saveDatabase(!!tx)
 }
 
 /**

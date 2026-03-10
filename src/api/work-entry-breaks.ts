@@ -54,6 +54,18 @@ export async function fetchBreaksByWorkEntryId(workEntryId: string): Promise<Wor
   return (await response.json()) as WorkEntryBreak[]
 }
 
+/**
+ * Fetches breaks for multiple work entries (for incremental sync).
+ * Uses repeated work_entry_id params; json-server returns breaks matching any.
+ */
+export async function fetchBreaksForEntryIds(entryIds: string[]): Promise<WorkEntryBreak[]> {
+  if (entryIds.length === 0) return []
+  const params = entryIds.map((id) => `work_entry_id=${encodeURIComponent(id)}`).join('&')
+  const response = await fetchWithRetry(`${BREAKS_API_URL}?${params}`)
+  if (!response.ok) throw new Error(`Failed to fetch breaks: ${response.statusText}`)
+  return (await response.json()) as WorkEntryBreak[]
+}
+
 export async function createWorkEntryBreak(
   workEntryId: string,
   breakData: CreateWorkEntryBreakInput

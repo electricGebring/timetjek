@@ -96,6 +96,20 @@ server.use((req, res, next) => {
   next()
 })
 
+// Incremental sync: GET /entries?since=unixSeconds returns entries updated since that time
+server.get('/entries', (req, res, next) => {
+  const since = req.query?.since
+  if (since == null || since === '' || Number.isNaN(parseInt(since, 10))) {
+    return next()
+  }
+  const sinceMs = parseInt(since, 10) * 1000
+  const filtered = db.entries.filter((e) => {
+    const utc = e.updatedAt ? new Date(e.updatedAt).getTime() : 0
+    return utc >= sinceMs
+  })
+  return res.json(filtered)
+})
+
 // Custom POST handler for entries - preserve client-provided IDs
 server.post('/entries', (req, res) => {
   const entry = { ...req.body }

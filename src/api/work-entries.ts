@@ -116,6 +116,18 @@ export async function fetchWorkEntries(): Promise<Entry[]> {
   return payload.map(normalizeEntryFromApi)
 }
 
+/**
+ * Fetches work entries updated since the given Unix timestamp (seconds).
+ * Uses ?since= for incremental sync.
+ */
+export async function fetchWorkEntriesSince(since: number): Promise<Entry[]> {
+  const url = since > 0 ? `${API_URL}?since=${since}` : API_URL
+  const response = await fetchWithRetry(url)
+  const payload = (await response.json()) as Entry[]
+
+  return payload.map(normalizeEntryFromApi)
+}
+
 export async function createEntry(item: Entry): Promise<Entry> {
   const now = new Date().toISOString()
 

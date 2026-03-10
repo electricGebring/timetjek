@@ -10,19 +10,17 @@ import { workEntryToEntry } from '@/db/work-entries/repo'
 
 /** Enrich entries with break display from work_entry_breaks (source of truth for break state). */
 async function enrichEntriesWithBreaks(entries: Entry[]): Promise<Entry[]> {
-  const result: Entry[] = []
+  const breaksByEntryId = await breakRepo.getBreaksGroupedByWorkEntryId()
 
-  for (const entry of entries) {
-    const breaks = await breakRepo.getBreaksByWorkEntryId(entry.id)
+  return entries.map((entry) => {
+    const breaks = breaksByEntryId.get(entry.id) ?? []
     const isOnBreak = hasOpenBreak(breaks) && !entry.check_out_at
-    result.push({
+    return {
       ...entry,
       break: buildBreakDisplayString(entry, breaks),
       isOnBreak
-    })
-  }
-
-  return result
+    }
+  })
 }
 
 export async function updateStoreFromDb() {

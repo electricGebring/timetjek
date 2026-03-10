@@ -145,6 +145,8 @@ export async function runMigrations() {
     console.debug('[MIGRATIONS] Applying migration:', m.id)
 
     try {
+      await runSql('BEGIN TRANSACTION')
+
       // Split multiple statements (Drizzle uses --> statement-breakpoint or ;)
       const statements = m.sql
         .replace(/--> statement-breakpoint/g, ';')
@@ -158,8 +160,10 @@ export async function runMigrations() {
 
       await runSql('INSERT INTO schema_migrations (id, applied_at) VALUES (?, ?)', [m.id, new Date().toISOString()])
 
+      await runSql('COMMIT')
       console.debug('[MIGRATIONS] Migration applied:', m.id)
     } catch (e) {
+      await runSql('ROLLBACK').catch(() => {})
       throw new Error(`Migration failed: ${m.id} -> ${(e as Error).message}`)
     }
   }

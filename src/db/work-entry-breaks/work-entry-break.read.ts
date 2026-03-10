@@ -75,3 +75,27 @@ export async function getAllBreaks(): Promise<WorkEntryBreak[]> {
 
   return results.map((row) => parseWorkEntryBreakRow(row as Record<string, unknown>))
 }
+
+/**
+ * Get all non-deleted breaks grouped by work_entry_id.
+ * Single query instead of N+1; use for enriching multiple entries.
+ */
+export async function getBreaksGroupedByWorkEntryId(): Promise<Map<string, WorkEntryBreak[]>> {
+  const db = getDb()
+
+  const results = await db.select().from(workEntryBreaks).where(eq(workEntryBreaks.deleted, 0))
+
+  const map = new Map<string, WorkEntryBreak[]>()
+
+  for (const row of results) {
+    const parsed = parseWorkEntryBreakRow(row as Record<string, unknown>)
+    const wid = parsed.work_entry_id
+
+    if (!map.has(wid)) {
+      map.set(wid, [])
+    }
+    map.get(wid)!.push(parsed)
+  }
+
+  return map
+}

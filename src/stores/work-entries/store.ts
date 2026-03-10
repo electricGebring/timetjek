@@ -123,14 +123,17 @@ export const useWorkEntriesStore = defineStore('staffRegister', {
       this.setLoading(true)
 
       try {
-        const entries = await domain.getAllWorkEntries()
+        const [entries, breaksByEntryId] = await Promise.all([
+          domain.getAllWorkEntries(),
+          breakRepo.getBreaksGroupedByWorkEntryId()
+        ])
 
         // Convert WorkEntry to Entry format
         const convertedEntries = entries.map(domain.workEntryToEntry)
 
-        // Enrich with break data from work_entry_breaks for table display
+        // Enrich with break data from work_entry_breaks for table display (single batch lookup)
         for (const entry of convertedEntries) {
-          const breaks = await breakRepo.getBreaksByWorkEntryId(entry.id)
+          const breaks = breaksByEntryId.get(entry.id) ?? []
           entry.break = buildBreakDisplayString(entry, breaks)
           entry.isOnBreak = hasOpenBreak(breaks) && !entry.check_out_at
         }

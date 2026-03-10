@@ -39,4 +39,28 @@ export function resetDb() {
 
 export type Database = ReturnType<typeof drizzleSqlJs>
 
+/**
+ * Run a callback inside a transaction. All DB operations in the callback use the same transaction.
+ * Commits on success, rolls back on error. Persists to localStorage (web) after commit.
+ */
+export async function runInTransaction<T>(fn: (tx: Database) => Promise<T>): Promise<T> {
+  const db = getDb()
+
+  const result = await db.transaction(fn)
+
+  // Persist to localStorage after commit (web only)
+  try {
+    const { Capacitor } = await import('@capacitor/core')
+    if (!Capacitor.isNativePlatform()) {
+      const { getDB } = await import('./index')
+      const g = getDB() as { saveDatabase?: () => void }
+      g.saveDatabase?.()
+    }
+  } catch {
+    // Ignore if not in web context
+  }
+
+  return result
+}
+
 export * from './schema'

@@ -1,4 +1,4 @@
-import { getDb } from '@/db/drizzle'
+import { getDb, type Database } from '@/db/drizzle'
 import { workEntries, type WorkEntry } from '@/db/schema'
 import { createLogger } from '@/utils/logger'
 import { eq } from 'drizzle-orm'
@@ -10,7 +10,8 @@ const logger = createLogger('WorkEntriesRepo')
 /**
  * Save database to localStorage (web only)
  */
-function saveDatabase() {
+function saveDatabase(skip?: boolean) {
+  if (skip) return
   if (!Capacitor.isNativePlatform()) {
     import('@/db/index').then(({ getDB }) => {
       const db = getDB() as { saveDatabase: () => void }
@@ -25,11 +26,12 @@ function saveDatabase() {
  * Insert or update a work entry using Drizzle ORM.
  * Accepts WorkEntry (DB), Entry (view with boolean meal fields), or Record.
  * Coerces meal_benefit booleans to 0|1 for DB.
+ * @param tx - Optional transaction client (when provided, skipSave is implied)
  */
-export async function upsertWorkEntry(entry: Partial<WorkEntry> | Record<string, unknown>) {
+export async function upsertWorkEntry(entry: Partial<WorkEntry> | Record<string, unknown>, tx?: Database) {
   logger.log('[4. PERSIST][DRIZZLE] 💾 Upserting work entry...')
 
-  const db = getDb()
+  const db = tx ?? getDb()
   const raw = entry as Record<string, unknown>
   const trimmedId = typeof raw.id === 'string' ? raw.id.trim() : undefined
 
@@ -79,5 +81,5 @@ export async function upsertWorkEntry(entry: Partial<WorkEntry> | Record<string,
   logger.log('[4. PERSIST][DRIZZLE] ✅ Upsert complete')
 
   // Save to localStorage after write (web only)
-  saveDatabase()
+  saveDatabase(!!tx)
 }

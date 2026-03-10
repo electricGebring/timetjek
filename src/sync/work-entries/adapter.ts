@@ -9,8 +9,13 @@ import { retryWithBackoff } from '../retry-utils'
 import * as repo from '@/db/work-entries/repo'
 import * as breakRepo from '@/db/work-entry-breaks/repo'
 
-import { fetchWorkEntries, deleteEntry } from '@/api/work-entries'
-import { fetchWorkEntryBreaks, fetchBreaksByWorkEntryId, deleteWorkEntryBreak } from '@/api/work-entry-breaks'
+import { fetchWorkEntries, fetchWorkEntriesSince, deleteEntry } from '@/api/work-entries'
+import {
+  fetchWorkEntryBreaks,
+  fetchBreaksByWorkEntryId,
+  fetchBreaksForEntryIds,
+  deleteWorkEntryBreak
+} from '@/api/work-entry-breaks'
 
 import type { Entry } from '@/views/staffRegister/types'
 import type { WorkEntryBreak } from '@/models/work-entry-break.schema'
@@ -36,13 +41,12 @@ async function pushBlock(entry: Entry): Promise<Entry> {
 /**
  * Delete one block (entry + breaks) on API only.
  * Uses remote_id (server id) when available; falls back to id for backward compat.
+ * Deletes breaks in parallel, then the entry.
  */
 async function deleteBlockOnApi(entry: { id: string; remote_id?: string | null }): Promise<void> {
   const apiId = (entry.remote_id ?? entry.id).trim() || entry.id
   const remoteBreaks = await fetchBreaksByWorkEntryId(apiId)
-  for (const b of remoteBreaks) {
-    await deleteWorkEntryBreak(b.id)
-  }
+  await Promise.all(remoteBreaks.map((b) => deleteWorkEntryBreak(b.id)))
   await deleteEntry(apiId)
 }
 
@@ -150,9 +154,11 @@ export function createWorkEntriesAdapter(): TableSyncAdapter<Entry> {
         return []
       }
     },
-    fetchSince: async (_timestamp: number): Promise<Entry[]> => {
+    fetchSince: async (timestamp: number): Promise<Entry[]> => {
       try {
-        const [entries, remoteBreaks] = await Promise.all([fetchWorkEntries(), fetchWorkEntryBreaks()])
+        const entries = await fetchWorkEntriesSince(timestamp)
+        const entryIds = entries.map((e) => e.id).filter(Boolean)
+        const remoteBreaks = entryIds.length > 0 ? await fetchBreaksForEntryIds(entryIds) : []
         setRemoteBreaksCache(remoteBreaks)
         return entries
       } catch {
