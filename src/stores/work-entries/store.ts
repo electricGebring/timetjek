@@ -3,6 +3,8 @@ import { defineStore } from 'pinia'
 import * as domain from '@/domain/work-entries/domain'
 import * as breakRepo from '@/db/work-entry-breaks/repo'
 
+import { triggerSyncIfOnline } from '@/domain/services/sync-trigger'
+
 import { buildBreakDisplayString, hasOpenBreak } from '@/utils/breakDisplay'
 
 import { WORK_ENTRY_STORE_ERRORS } from './constants'
@@ -172,6 +174,7 @@ export const useWorkEntriesStore = defineStore('staffRegister', {
           })
 
           await this.loadWorkEntries()
+          triggerSyncIfOnline('mutation')
           return
         }
 
@@ -320,6 +323,7 @@ export const useWorkEntriesStore = defineStore('staffRegister', {
       })
 
       await this.loadWorkEntries()
+      triggerSyncIfOnline('mutation')
     }
   }
 })

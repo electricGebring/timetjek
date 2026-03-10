@@ -206,11 +206,19 @@ server.post('/entries/block', (req, res) => {
   let serverEntryId
   if (existingEntryIdx >= 0) {
     serverEntryId = db.entries[existingEntryIdx].id
-    const entry = { ...entryBody, break: null, id: serverEntryId, local_id: undefined }
+    // Preserve server-owned fields (id, remote_id); only apply client payload for business data
+    const clientUpdates = { ...entryBody }
+    delete clientUpdates.id
+    delete clientUpdates.remote_id
+    delete clientUpdates.local_id
+    const existing = db.entries[existingEntryIdx]
     db.entries[existingEntryIdx] = {
-      ...db.entries[existingEntryIdx],
-      ...entry,
+      ...existing,
+      ...clientUpdates,
+      break: null,
       id: serverEntryId,
+      remote_id: serverEntryId,
+      local_id: undefined,
       updatedAt: new Date().toISOString()
     }
   } else {
