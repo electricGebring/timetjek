@@ -239,9 +239,9 @@ server.post('/entries/block', (req, res) => {
     }
   }
 
-  // 3. Remove all breaks for this entry (replace semantics)
+  // 3. Remove only this entry's breaks (replace semantics); keep all other entries' breaks
   db.work_entry_breaks = db.work_entry_breaks.filter(
-    (b) => b.work_entry_id === serverEntryId || b.work_entry_id === localId
+    (b) => b.work_entry_id !== serverEntryId && b.work_entry_id !== localId
   )
 
   // 4. Insert breaks with server-generated IDs
