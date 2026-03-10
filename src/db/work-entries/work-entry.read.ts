@@ -3,6 +3,14 @@ import { workEntries, type WorkEntry } from '@/db/schema'
 import { and, eq, isNull } from 'drizzle-orm'
 
 /**
+ * Get a single work entry by id (any deleted state). For sync lookups.
+ */
+export async function getWorkEntryById(id: string): Promise<WorkEntry | null> {
+  const rows = await getDb().select().from(workEntries).where(eq(workEntries.id, id))
+  return rows[0] ?? null
+}
+
+/**
  * Get all non-deleted work entries
  */
 export async function getWorkEntries(): Promise<WorkEntry[]> {
@@ -27,13 +35,7 @@ export async function getUnsyncedWorkEntries(): Promise<WorkEntry[]> {
   const entries = await getDb()
     .select()
     .from(workEntries)
-    .where(
-      and(
-        eq(workEntries.synced, 0),
-        eq(workEntries.deleted, 0),
-        isNull(workEntries.deleted_at)
-      )
-    )
+    .where(and(eq(workEntries.synced, 0), eq(workEntries.deleted, 0), isNull(workEntries.deleted_at)))
 
   console.debug(`[DRIZZLE] ✅ Found ${entries.length} unsynced entries`)
 

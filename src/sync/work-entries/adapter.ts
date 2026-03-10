@@ -35,14 +35,15 @@ async function pushBlock(entry: Entry): Promise<Entry> {
 
 /**
  * Delete one block (entry + breaks) on API only.
- * SyncEngine calls permanentDelete after success.
+ * Uses remote_id (server id) when available; falls back to id for backward compat.
  */
-async function deleteBlockOnApi(id: string): Promise<void> {
-  const remoteBreaks = await fetchBreaksByWorkEntryId(id)
+async function deleteBlockOnApi(entry: { id: string; remote_id?: string | null }): Promise<void> {
+  const apiId = (entry.remote_id ?? entry.id).trim() || entry.id
+  const remoteBreaks = await fetchBreaksByWorkEntryId(apiId)
   for (const b of remoteBreaks) {
     await deleteWorkEntryBreak(b.id)
   }
-  await deleteEntry(id)
+  await deleteEntry(apiId)
 }
 
 export function createWorkEntriesAdapter(): TableSyncAdapter<Entry> {
@@ -59,9 +60,10 @@ export function createWorkEntriesAdapter(): TableSyncAdapter<Entry> {
     }
   }
 
-  const syncLocalBreaksFromRemote = async (workEntryId: string) => {
-    const remoteBreaks = remoteBreaksByEntryId.get(workEntryId) ?? []
-    const localBreaks = await breakRepo.getBreaksByWorkEntryId(workEntryId)
+  /** Sync local breaks from remote. remoteEntryId = API work_entry_id (server id); localEntryId = our work_entries.id */
+  const syncLocalBreaksFromRemote = async (remoteEntryId: string, localEntryId: string) => {
+    const remoteBreaks = remoteBreaksByEntryId.get(remoteEntryId) ?? []
+    const localBreaks = await breakRepo.getBreaksByWorkEntryId(localEntryId)
 
     const normalize = (arr: Array<Pick<WorkEntryBreak, 'start_at' | 'end_at' | 'start_exact_at' | 'end_exact_at'>>) =>
       [...arr]
@@ -77,12 +79,12 @@ export function createWorkEntriesAdapter(): TableSyncAdapter<Entry> {
       return
     }
 
-    await breakRepo.deleteBreaksByWorkEntryId(workEntryId, false)
+    await breakRepo.deleteBreaksByWorkEntryId(localEntryId, false)
     if (remoteBreaks.length > 0) {
       await breakRepo.insertManyBreaks(
         remoteBreaks.map((b) => ({
           id: b.id,
-          work_entry_id: workEntryId,
+          work_entry_id: localEntryId,
           start_at: b.start_at,
           end_at: b.end_at,
           start_exact_at: b.start_exact_at,
@@ -114,8 +116,9 @@ export function createWorkEntriesAdapter(): TableSyncAdapter<Entry> {
     batchDelete: async (ids: string[]): Promise<void> => {
       if (whenOffline('batchDelete')) return
       for (const id of ids) {
+        const entry = await repo.getWorkEntryById(id)
         try {
-          await retryWithBackoff(() => deleteBlockOnApi(id), RETRY)
+          await retryWithBackoff(() => deleteBlockOnApi(entry ?? { id }), RETRY)
         } catch (e) {
           if (!is404(e)) throw e
         }
@@ -130,8 +133,9 @@ export function createWorkEntriesAdapter(): TableSyncAdapter<Entry> {
     },
     deleteItem: async (id: string): Promise<void> => {
       if (whenOffline('deleteItem')) return
+      const entry = await repo.getWorkEntryById(id)
       try {
-        await retryWithBackoff(() => deleteBlockOnApi(id), RETRY)
+        await retryWithBackoff(() => deleteBlockOnApi(entry ?? { id }), RETRY)
       } catch (e) {
         if (!is404(e)) throw e
       }
@@ -160,12 +164,15 @@ export function createWorkEntriesAdapter(): TableSyncAdapter<Entry> {
       const result = await mergeRemoteWorkEntry(remoteItem, strategy)
       if (remoteItem.id) {
         const locals = await repo.getWorkEntries()
-        const local = locals.find((e) => e.id === remoteItem.id)
-        if (local?.synced === 0) return result
-        // Do not overwrite local breaks with remote when we have unsynced breaks (would wipe local data)
-        const hasUnsynced = await breakRepo.hasUnsyncedBreaks(remoteItem.id)
+        const remoteServerId = remoteItem.id
+        const local = locals.find(
+          (e) => (e.remote_id != null && e.remote_id === remoteServerId) || (e.id ?? '') === remoteServerId
+        )
+        if (!local) return result
+        if (local.synced === 0) return result
+        const hasUnsynced = await breakRepo.hasUnsyncedBreaks(local.id)
         if (hasUnsynced) return result
-        await syncLocalBreaksFromRemote(remoteItem.id)
+        await syncLocalBreaksFromRemote(remoteServerId, local.id)
       }
       return result
     },

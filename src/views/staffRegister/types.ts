@@ -12,6 +12,7 @@ export interface Entry {
   // Identification
   id: string
   remote_id?: string | null
+  device_id?: string | null
   employee_id: number
   workplace_id: number
   cost_center_id: number | null

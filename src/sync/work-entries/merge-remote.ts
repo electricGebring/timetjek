@@ -55,8 +55,12 @@ export async function mergeRemoteWorkEntry(
   }
 
   const locals = await repo.getWorkEntries()
+  const remoteServerId = remote.id ?? ''
 
-  const local = locals.find((e) => (e.id ?? '') === (remote.id ?? ''))
+  // Match by remote_id first (Option B), then by id for backward compat
+  const local = locals.find(
+    (e) => (e.remote_id != null && e.remote_id === remoteServerId) || (e.id ?? '') === remoteServerId
+  )
 
   if (!local) {
     // Avoid duplicate same-day open entry: if we already have an open entry for this work_day, skip remote insert
@@ -73,10 +77,11 @@ export async function mergeRemoteWorkEntry(
       }
     }
 
-    // No local entry: persist remote to DB as synced
+    // No local entry: persist remote to DB as synced (id = server id for pulled-only rows)
     const safeRemote = {
       ...remote,
       id: remote.id ?? '',
+      remote_id: remote.id ?? remote.remote_id ?? null,
       work_day_id: remote.work_day_id ?? 0,
       check_in_at: remote.check_in_at ?? '',
       check_out_at: remote.check_out_at ?? '',

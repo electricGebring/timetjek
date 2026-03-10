@@ -59,17 +59,21 @@ export async function insertManyBreaks(
   const synced = options?.synced ?? false
 
   await db.insert(workEntryBreaks).values(
-    breaks.map((b) => ({
-      id: b.id ?? createLocalWorkEntryId(),
-      work_entry_id: b.work_entry_id,
-      start_at: b.start_at ?? null,
-      end_at: b.end_at ?? null,
-      start_exact_at: b.start_exact_at ?? null,
-      end_exact_at: b.end_exact_at ?? null,
-      created_at: new Date().toISOString(),
-      synced: synced ? 1 : 0,
-      deleted: 0
-    }))
+    breaks.map((b) => {
+      const serverId = b.id ?? createLocalWorkEntryId()
+      return {
+        id: serverId,
+        work_entry_id: b.work_entry_id,
+        remote_id: synced && b.id ? b.id : null,
+        start_at: b.start_at ?? null,
+        end_at: b.end_at ?? null,
+        start_exact_at: b.start_exact_at ?? null,
+        end_exact_at: b.end_exact_at ?? null,
+        created_at: (b as { created_at?: string }).created_at ?? new Date().toISOString(),
+        synced: synced ? 1 : 0,
+        deleted: 0
+      }
+    })
   )
 
   const workEntryIds = [...new Set(breaks.map((b) => b.work_entry_id))]

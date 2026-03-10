@@ -12,6 +12,8 @@
 export type WorkEntryBreak = {
   id: string
   work_entry_id: string
+  remote_id?: string | null
+  device_id?: string | null
   start_at: string | null
   end_at: string | null
   start_exact_at: string | null
@@ -84,6 +86,8 @@ export function parseWorkEntryBreakRow(raw: Record<string, unknown>): WorkEntryB
   return {
     id: coerceId(raw.id),
     work_entry_id: requireString(raw.work_entry_id, 'work_entry_id'),
+    remote_id: raw.remote_id != null ? coerceString(raw.remote_id) : null,
+    device_id: raw.device_id != null ? coerceString(raw.device_id) : null,
     start_at: coerceString(raw.start_at),
     end_at: coerceString(raw.end_at),
     start_exact_at: coerceString(raw.start_exact_at),

@@ -1,7 +1,7 @@
 import { getDb } from '@/db/drizzle'
 import { workEntryBreaks } from '@/db/schema'
 import { createLogger } from '@/utils/logger'
-import { eq, inArray } from 'drizzle-orm'
+import { eq } from 'drizzle-orm'
 import { Capacitor } from '@capacitor/core'
 import { markParentEntryDirty } from '@/db/work-entries/repo'
 import { getBreakById } from './work-entry-break.read'
@@ -64,11 +64,19 @@ export async function markBreakAsSynced(id: string): Promise<void> {
 }
 
 /**
- * Mark multiple breaks as synced
+ * Mark multiple breaks as synced.
+ * If breakRemoteIdMap is provided (local_id -> server remote_id), also persists remote_id for each.
  */
-export async function markBreaksAsSynced(ids: string[]): Promise<void> {
+export async function markBreaksAsSynced(ids: string[], breakRemoteIdMap?: Record<string, string>): Promise<void> {
   if (ids.length === 0) return
-  await getDb().update(workEntryBreaks).set({ synced: 1 }).where(inArray(workEntryBreaks.id, ids))
+  const db = getDb()
+  for (const localId of ids) {
+    const remoteId = breakRemoteIdMap?.[localId]
+    await db
+      .update(workEntryBreaks)
+      .set(remoteId != null ? { synced: 1, remote_id: remoteId } : { synced: 1 })
+      .where(eq(workEntryBreaks.id, localId))
+  }
   saveDatabase()
 }
 

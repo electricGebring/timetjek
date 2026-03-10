@@ -4,6 +4,8 @@ import { createLocalWorkEntryId } from '@/db/work-entries/work-entry.helpers'
 /** Break shape for batch payload (minimal fields for upsert) */
 export type BatchBreakInput = {
   id?: string
+  /** Client local id; API uses for mapping, returns server id in breakIdMap */
+  local_id?: string
   work_entry_id: string
   start_at: string | null
   end_at: string | null
@@ -13,7 +15,7 @@ export type BatchBreakInput = {
 
 /** Payload for batch upsert block endpoint */
 export type BatchBlockPayload = {
-  entry: Entry
+  entry: Entry & { local_id?: string }
   breaks: BatchBreakInput[]
   breakIdsToDelete: string[]
 }
@@ -62,10 +64,13 @@ function normalizeEntryFromApi(raw: Entry): Entry {
         ? String(raw.remote_id)
         : null
 
+  // Option B: API returns id as server id; treat as remote_id when not explicitly set
+  const remoteId = normalizedRemoteId ?? (normalizedId ? normalizedId : null)
+
   return {
     ...raw,
     id: normalizedId,
-    remote_id: normalizedRemoteId
+    remote_id: remoteId
   }
 }
 
@@ -173,16 +178,25 @@ export async function updateEntry(item: Entry): Promise<Entry> {
 /**
  * Batch upsert one work-entry block (entry + breaks) in a single request.
  * Avoids partial state if connection drops mid-sync.
+ * API returns server IDs; response includes entry with id=server id and breakIdMap for local->remote mapping.
  */
-export async function batchUpsertBlock(payload: BatchBlockPayload): Promise<{ entry: Entry }> {
+export async function batchUpsertBlock(
+  payload: BatchBlockPayload
+): Promise<{ entry: Entry; breakIdMap: Record<string, string> }> {
   const response = await fetchWithRetry(`${API_URL}/block`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
   })
   if (!response.ok) throw new Error(`Failed to batch upsert block: ${response.statusText}`)
-  const result = (await response.json()) as { entry: Entry }
-  return { entry: normalizeEntryFromApi(result.entry) }
+  const result = (await response.json()) as {
+    entry: Entry
+    breakIdMap?: Record<string, string>
+  }
+  return {
+    entry: normalizeEntryFromApi(result.entry),
+    breakIdMap: result.breakIdMap ?? {}
+  }
 }
 
 /**

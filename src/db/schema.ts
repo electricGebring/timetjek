@@ -36,7 +36,8 @@ export const workEntries = sqliteTable(
     updatedAt: text('updatedAt'),
     deleted_at: text('deleted_at'),
     synced: integer('synced').default(0),
-    deleted: integer('deleted').default(0)
+    deleted: integer('deleted').default(0),
+    device_id: text('device_id')
   },
   (table) => ({
     idx_work_entries_synced_deleted: index('idx_work_entries_synced_deleted').on(table.synced, table.deleted),
@@ -66,7 +67,9 @@ export const workEntryBreaks = sqliteTable(
     created_at: text('created_at').notNull().default('CURRENT_TIMESTAMP'),
     deleted_at: text('deleted_at'),
     synced: integer('synced').default(0),
-    deleted: integer('deleted').default(0)
+    deleted: integer('deleted').default(0),
+    remote_id: text('remote_id'),
+    device_id: text('device_id')
   },
   (table) => ({
     idx_work_entry_breaks_work_entry_id: index('idx_work_entry_breaks_work_entry_id').on(table.work_entry_id),

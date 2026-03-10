@@ -3,7 +3,7 @@
  * Works with sql.js (browser) and Capacitor SQLite (native)
  */
 
-export { getWorkEntries, getUnsyncedWorkEntries, getDeletedWorkEntries } from './work-entry.read'
+export { getWorkEntries, getUnsyncedWorkEntries, getDeletedWorkEntries, getWorkEntryById } from './work-entry.read'
 
 export { upsertWorkEntry } from './work-entry.upsert'
 

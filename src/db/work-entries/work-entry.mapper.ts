@@ -20,6 +20,7 @@ export function workEntryToEntry(w: AnyWorkEntry): Entry {
     ...raw,
     id,
     remote_id: raw.remote_id ?? null,
+    device_id: raw.device_id ?? null,
     employee_id: (raw.employee_id as number) ?? 1,
     workplace_id: (raw.workplace_id as number) ?? 1,
     cost_center_id: (raw.cost_center_id as number) ?? null,
