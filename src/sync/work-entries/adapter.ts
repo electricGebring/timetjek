@@ -10,12 +10,7 @@ import * as repo from '@/db/work-entries/repo'
 import * as breakRepo from '@/db/work-entry-breaks/repo'
 
 import { fetchWorkEntries, deleteEntry } from '@/api/work-entries'
-import {
-  fetchWorkEntryBreaks,
-  fetchBreaksByWorkEntryId,
-  createWorkEntryBreak,
-  deleteWorkEntryBreak
-} from '@/api/work-entry-breaks'
+import { fetchWorkEntryBreaks, fetchBreaksByWorkEntryId, deleteWorkEntryBreak } from '@/api/work-entry-breaks'
 
 import type { Entry } from '@/views/staffRegister/types'
 import type { WorkEntryBreak } from '@/models/work-entry-break.schema'
@@ -24,62 +19,18 @@ import type { ConflictResolutionStrategy as ConflictStrategyType } from '@/enums
 
 import { mergeRemoteWorkEntry } from './merge-remote'
 
+import { is404, PushBlockEngine } from './push-block-engine'
+
 const RETRY = {
   maxRetries: 3,
   initialDelay: 1000,
   retryableErrors: ['NetworkError', 'Failed to fetch', 'timeout', 'ECONNRESET', 'ETIMEDOUT']
 }
 
-/**
- * Push one block (entry + breaks) to API, then persist as synced.
- * Transactional: only marks local synced after full API success.
- */
+/** Push one block (entry + breaks) to API, then persist as synced. Transactional. */
 async function pushBlock(entry: Entry): Promise<Entry> {
-  const api = await import('@/api/work-entries')
-  const existing = (await api.fetchWorkEntries()).some((e) => e.id === entry.id)
-
-  let apiEntry: Entry
-  if (existing) {
-    apiEntry = await api.updateEntry(entry)
-  } else {
-    apiEntry = await api.createEntry(entry)
-  }
-
-  const deletedUnsynced = await breakRepo.getDeletedUnsyncedBreaksByWorkEntryId(apiEntry.id)
-  for (const b of deletedUnsynced) {
-    try {
-      await deleteWorkEntryBreak(b.id)
-    } catch (e) {
-      if (!is404(e)) throw e
-    }
-    await breakRepo.permanentDeleteBreak(b.id)
-  }
-
-  const localBreaks = await breakRepo.getBreaksByWorkEntryId(apiEntry.id)
-  const remoteBreaks = await fetchBreaksByWorkEntryId(apiEntry.id)
-
-  for (const b of remoteBreaks) {
-    await deleteWorkEntryBreak(b.id)
-  }
-
-  const syncedBreakIds: string[] = []
-  for (const b of localBreaks) {
-    await createWorkEntryBreak(apiEntry.id, {
-      start_at: b.start_at,
-      end_at: b.end_at,
-      start_exact_at: b.start_exact_at,
-      end_exact_at: b.end_exact_at
-    })
-    syncedBreakIds.push(b.id)
-  }
-
-  if (syncedBreakIds.length > 0) {
-    await breakRepo.markBreaksAsSynced(syncedBreakIds)
-  }
-
-  await repo.upsertWorkEntry(repo.entryToWorkEntry({ ...apiEntry, synced: 1 }))
-
-  return apiEntry
+  const engine = new PushBlockEngine(entry)
+  return engine.run()
 }
 
 /**
@@ -92,17 +43,6 @@ async function deleteBlockOnApi(id: string): Promise<void> {
     await deleteWorkEntryBreak(b.id)
   }
   await deleteEntry(id)
-}
-
-function is404(e: unknown): boolean {
-  if (typeof e !== 'object' || e === null) return false
-  if ('message' in e && typeof (e as { message: unknown }).message === 'string') {
-    return (e as { message: string }).message.includes('404')
-  }
-  if ('status' in e && typeof (e as { status: unknown }).status === 'number') {
-    return (e as { status: number }).status === 404
-  }
-  return false
 }
 
 export function createWorkEntriesAdapter(): TableSyncAdapter<Entry> {

@@ -170,6 +170,59 @@ server.delete('/entries/:id', (req, res) => {
   return res.status(404).json({ error: 'Entry not found' })
 })
 
+// Batch upsert: entry + breaks in one request (avoids partial state on connection drop)
+server.post('/entries/block', (req, res) => {
+  const { entry: entryBody, breaks: breaksBody = [], breakIdsToDelete = [] } = req.body
+  
+  if (!entryBody || typeof entryBody !== 'object') {
+    return res.status(400).json({ error: 'entry is required' })
+  }
+  
+  const entry = { ...entryBody, break: null }
+  const breaks = Array.isArray(breaksBody) ? breaksBody : []
+  const idsToDelete = Array.isArray(breakIdsToDelete) ? breakIdsToDelete : []
+  
+  console.log('📦 POST /entries/block:', entry.id, breaks.length, 'breaks,', idsToDelete.length, 'to delete')
+  
+  // 1. Upsert entry
+  const existingEntryIdx = db.entries.findIndex(e => e.id === entry.id)
+  if (existingEntryIdx >= 0) {
+    db.entries[existingEntryIdx] = { ...db.entries[existingEntryIdx], ...entry, updatedAt: new Date().toISOString() }
+  } else {
+    db.entries.push({ ...entry, createdAt: entry.createdAt ?? new Date().toISOString(), updatedAt: new Date().toISOString() })
+  }
+  const savedEntry = db.entries.find(e => e.id === entry.id)
+  
+  // 2. Delete breakIdsToDelete
+  for (const id of idsToDelete) {
+    const idx = db.work_entry_breaks.findIndex(b => b.id === id)
+    if (idx >= 0) {
+      db.work_entry_breaks.splice(idx, 1)
+    }
+  }
+  
+  // 3. Remove all breaks for this entry (replace semantics)
+  db.work_entry_breaks = db.work_entry_breaks.filter(b => b.work_entry_id !== entry.id)
+  
+  // 4. Insert breaks
+  const now = new Date().toISOString()
+  for (const b of breaks) {
+    const breakRow = {
+      id: b.id || crypto.randomUUID(),
+      work_entry_id: entry.id,
+      start_at: b.start_at ?? null,
+      end_at: b.end_at ?? null,
+      start_exact_at: b.start_exact_at ?? null,
+      end_exact_at: b.end_exact_at ?? null,
+      created_at: b.created_at ?? now
+    }
+    db.work_entry_breaks.push(breakRow)
+  }
+  
+  saveData()
+  return res.status(200).json({ entry: savedEntry })
+})
+
 // Custom POST handler for work_entry_breaks
 server.post('/work_entry_breaks', (req, res) => {
   const breakEntry = req.body

@@ -1,13 +1,28 @@
 import type { Entry } from '@/views/staffRegister/types'
 import { createLocalWorkEntryId } from '@/db/work-entries/work-entry.helpers'
 
+/** Break shape for batch payload (minimal fields for upsert) */
+export type BatchBreakInput = {
+  id?: string
+  work_entry_id: string
+  start_at: string | null
+  end_at: string | null
+  start_exact_at: string | null
+  end_exact_at: string | null
+}
+
+/** Payload for batch upsert block endpoint */
+export type BatchBlockPayload = {
+  entry: Entry
+  breaks: BatchBreakInput[]
+  breakIdsToDelete: string[]
+}
+
 // Dynamically select API URL, preferring configuration over hard-coded IPs
 function getApiUrl() {
   // Prefer a configured base URL if available (e.g. via Vite env)
   const envBaseUrl =
-    (typeof import.meta !== 'undefined' &&
-      (import.meta as any).env &&
-      (import.meta as any).env.VITE_API_BASE_URL) ||
+    (typeof import.meta !== 'undefined' && (import.meta as any).env && (import.meta as any).env.VITE_API_BASE_URL) ||
     undefined
   let baseUrl = envBaseUrl as string | undefined
 
@@ -45,7 +60,7 @@ function normalizeEntryFromApi(raw: Entry): Entry {
         : null
       : typeof raw.remote_id === 'number'
         ? String(raw.remote_id)
-      : null
+        : null
 
   return {
     ...raw,
@@ -65,8 +80,7 @@ async function fetchWithRetry(url: string, options?: RequestInit, maxRetries = 3
       const response = await fetch(url, options)
 
       return response
-    }
- catch (error) {
+    } catch (error) {
       lastError = error as Error
 
       // Only retry on connection errors
@@ -99,11 +113,9 @@ export async function fetchWorkEntries(): Promise<Entry[]> {
 
 export async function createEntry(item: Entry): Promise<Entry> {
   const now = new Date().toISOString()
-  
+
   // Generate UUID-based local ID if not provided
-  const id = typeof item.id === 'string' && item.id.trim().length > 0
-    ? item.id.trim()
-    : createLocalWorkEntryId()
+  const id = typeof item.id === 'string' && item.id.trim().length > 0 ? item.id.trim() : createLocalWorkEntryId()
 
   const entryToCreate = {
     ...item,
@@ -156,6 +168,21 @@ export async function updateEntry(item: Entry): Promise<Entry> {
   if (!response.ok) throw new Error(`Failed to update entry: ${response.statusText}`)
 
   return response.json()
+}
+
+/**
+ * Batch upsert one work-entry block (entry + breaks) in a single request.
+ * Avoids partial state if connection drops mid-sync.
+ */
+export async function batchUpsertBlock(payload: BatchBlockPayload): Promise<{ entry: Entry }> {
+  const response = await fetchWithRetry(`${API_URL}/block`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  })
+  if (!response.ok) throw new Error(`Failed to batch upsert block: ${response.statusText}`)
+  const result = (await response.json()) as { entry: Entry }
+  return { entry: normalizeEntryFromApi(result.entry) }
 }
 
 /**
