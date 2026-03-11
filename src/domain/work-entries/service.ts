@@ -77,7 +77,8 @@ export async function getAllEntries() {
 
         return timeB - timeA // newest first
       })
-  } catch (e) {
+  }
+ catch (e) {
     console.warn('Failed to fetch all entries:', e)
 
     return []
@@ -104,32 +105,41 @@ export async function getDatabaseInfo() {
     let deletedCount = 0
 
     if (Capacitor.isNativePlatform()) {
+      type CountRow = { count?: number; ios_columns?: string[] }
+
       interface NativeDb {
-        query: (sql: string) => Promise<{ values?: Array<{ count: number }> }>
+        query: (sql: string) => Promise<{ values?: CountRow[] }>
+      }
+
+      const getCountValue = (rows?: CountRow[]) => {
+        const dataRow = (rows ?? []).find((row) => !(row && 'ios_columns' in row))
+
+        return Number(dataRow?.count) || 0
       }
 
       const nativeDb = db as NativeDb
 
       const total = await nativeDb.query('SELECT COUNT(*) as count FROM work_entries WHERE deleted_at IS NULL')
 
-      totalCount = total.values?.[0]?.count || 0
+      totalCount = getCountValue(total.values)
 
       const synced = await nativeDb.query(
         'SELECT COUNT(*) as count FROM work_entries WHERE synced = 1 AND deleted_at IS NULL'
       )
 
-      syncedCount = synced.values?.[0]?.count || 0
+      syncedCount = getCountValue(synced.values)
 
       const unsynced = await nativeDb.query(
         'SELECT COUNT(*) as count FROM work_entries WHERE synced = 0 AND deleted_at IS NULL'
       )
 
-      unsyncedCount = unsynced.values?.[0]?.count || 0
+      unsyncedCount = getCountValue(unsynced.values)
 
       const deleted = await nativeDb.query('SELECT COUNT(*) as count FROM work_entries WHERE deleted = 1')
 
-      deletedCount = deleted.values?.[0]?.count || 0
-    } else {
+      deletedCount = getCountValue(deleted.values)
+    }
+ else {
       const { sqlJsDb } = db as { sqlJsDb: { exec: (sql: string) => Array<{ values: unknown[][] }> } }
 
       const total = sqlJsDb.exec('SELECT COUNT(*) as count FROM work_entries WHERE deleted_at IS NULL')
@@ -159,7 +169,8 @@ export async function getDatabaseInfo() {
       platform: Capacitor.isNativePlatform() ? 'native' : 'web',
       databaseType: Capacitor.isNativePlatform() ? 'Capacitor SQLite' : 'sql.js (IndexedDB)'
     }
-  } catch (e) {
+  }
+ catch (e) {
     console.warn('Failed to fetch database info:', e)
 
     return {
@@ -193,7 +204,8 @@ export async function clearAllData() {
       const nativeDb = db as NativeDb
 
       await nativeDb.run('DELETE FROM work_entries')
-    } else {
+    }
+ else {
       // Web: use sqlJsDb.run()
       const { sqlJsDb, saveDatabase } = db as { sqlJsDb: { run: (sql: string) => void }; saveDatabase: () => void }
 
@@ -203,7 +215,8 @@ export async function clearAllData() {
     }
 
     console.warn('✓ All local data cleared')
-  } catch (e) {
+  }
+ catch (e) {
     console.error('Failed to clear data:', e)
   }
 }
@@ -237,7 +250,8 @@ export async function getPendingSyncOperations() {
 
         return timeB - timeA // newest first
       })
-  } catch (e) {
+  }
+ catch (e) {
     console.warn('Failed to fetch pending sync operations:', e)
 
     return []

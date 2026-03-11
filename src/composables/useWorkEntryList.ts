@@ -11,6 +11,14 @@ export function useWorkEntryList(workEntries: Ref<Entry[]>) {
     return typeof obj === 'object' && obj !== null && 'id' in obj && 'createdAt' in obj
   }
 
+  function toMs(value: string | null | undefined): number {
+    if (!value) return 0
+
+    const parsed = Date.parse(value)
+
+    return Number.isFinite(parsed) ? parsed : 0
+  }
+
   const sortedEntriesByDay = computed(() => {
 
     const arr = getArr()
@@ -50,10 +58,27 @@ export function useWorkEntryList(workEntries: Ref<Entry[]>) {
       day.entries.sort((a, b) => {
         if (!isWorkEntry(a) || !isWorkEntry(b)) return 0
 
+        const aIsOpen = Boolean(a.check_in_at) && !a.check_out_at
+
+        const bIsOpen = Boolean(b.check_in_at) && !b.check_out_at
+
+        // Always keep ongoing entry first in the day list.
+        if (aIsOpen !== bIsOpen) {
+          return aIsOpen ? -1 : 1
+        }
+
+        const activityA = Math.max(toMs(a.updatedAt), toMs(a.check_out_at), toMs(a.check_in_at), toMs(a.createdAt))
+
+        const activityB = Math.max(toMs(b.updatedAt), toMs(b.check_out_at), toMs(b.check_in_at), toMs(b.createdAt))
+
+        if (activityA !== activityB) {
+          return activityB - activityA
+        }
+
         const timeA = a.check_in_at || a.createdAt || ''
 
         const timeB = b.check_in_at || b.createdAt || ''
-        
+
         return timeB.localeCompare(timeA)
       })
     })

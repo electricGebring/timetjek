@@ -198,9 +198,20 @@ server.post('/entries/block', (req, res) => {
   const breaks = Array.isArray(breaksBody) ? breaksBody : []
   const idsToDelete = Array.isArray(breakIdsToDelete) ? breakIdsToDelete : []
 
+  const sameShift = (e) => {
+    if (!e || typeof e !== 'object') return false
+    if (!entryBody || typeof entryBody !== 'object') return false
+
+    return (
+      Number(e.employee_id) === Number(entryBody.employee_id) &&
+      Number(e.work_day_id) === Number(entryBody.work_day_id) &&
+      String(e.check_in_at ?? '') === String(entryBody.check_in_at ?? '')
+    )
+  }
+
   // Match existing: by remote_id (server id we returned) or by id (legacy: API stored client id)
   const existingEntryIdx = db.entries.findIndex(
-    (e) => e.id === remoteId || e.id === localId
+    (e) => e.id === remoteId || e.id === localId || sameShift(e)
   )
 
   let serverEntryId

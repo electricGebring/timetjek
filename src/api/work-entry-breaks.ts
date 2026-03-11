@@ -1,22 +1,10 @@
 import type { WorkEntryBreak, CreateWorkEntryBreakInput } from '@/models/work-entry-break.schema'
 
+import { resolveApiBaseUrl } from './base-url'
+
 function getBreaksApiUrl() {
-  const envBaseUrl =
-    (typeof import.meta !== 'undefined' && (import.meta as any).env && (import.meta as any).env.VITE_API_BASE_URL) ||
-    undefined
-  let baseUrl = envBaseUrl as string | undefined
+  const baseUrl = resolveApiBaseUrl()
 
-  if (!baseUrl) {
-    if (typeof window !== 'undefined' && window.location) {
-      const { protocol, hostname } = window.location
-      const port = '3002'
-      baseUrl = `${protocol}//${hostname}:${port}`
-    } else {
-      baseUrl = 'http://localhost:3002'
-    }
-  }
-
-  baseUrl = baseUrl.replace(/\/+$/, '')
   return `${baseUrl}/work_entry_breaks`
 }
 
@@ -28,13 +16,18 @@ async function fetchWithRetry(url: string, options?: RequestInit, maxRetries = 3
   for (let attempt = 0; attempt < maxRetries; attempt++) {
     try {
       return await fetch(url, options)
-    } catch (error) {
+    }
+ catch (error) {
       lastError = error as Error
+
       if (error instanceof TypeError && error.message.includes('Failed to fetch') && attempt < maxRetries - 1) {
         const delay = 100 * Math.pow(2, attempt)
+
         await new Promise((r) => setTimeout(r, delay))
+
         continue
       }
+
       throw error
     }
   }
@@ -44,13 +37,17 @@ async function fetchWithRetry(url: string, options?: RequestInit, maxRetries = 3
 
 export async function fetchWorkEntryBreaks(): Promise<WorkEntryBreak[]> {
   const response = await fetchWithRetry(BREAKS_API_URL)
+
   if (!response.ok) throw new Error(`Failed to fetch work entry breaks: ${response.statusText}`)
+
   return (await response.json()) as WorkEntryBreak[]
 }
 
 export async function fetchBreaksByWorkEntryId(workEntryId: string): Promise<WorkEntryBreak[]> {
   const response = await fetchWithRetry(`${BREAKS_API_URL}?work_entry_id=${encodeURIComponent(workEntryId)}`)
+
   if (!response.ok) throw new Error(`Failed to fetch breaks for work entry ${workEntryId}: ${response.statusText}`)
+
   return (await response.json()) as WorkEntryBreak[]
 }
 
@@ -60,9 +57,13 @@ export async function fetchBreaksByWorkEntryId(workEntryId: string): Promise<Wor
  */
 export async function fetchBreaksForEntryIds(entryIds: string[]): Promise<WorkEntryBreak[]> {
   if (entryIds.length === 0) return []
+
   const params = entryIds.map((id) => `work_entry_id=${encodeURIComponent(id)}`).join('&')
+
   const response = await fetchWithRetry(`${BREAKS_API_URL}?${params}`)
+
   if (!response.ok) throw new Error(`Failed to fetch breaks: ${response.statusText}`)
+
   return (await response.json()) as WorkEntryBreak[]
 }
 
@@ -86,6 +87,7 @@ export async function createWorkEntryBreak(
   })
 
   if (!response.ok) throw new Error(`Failed to create work entry break: ${response.statusText}`)
+
   return (await response.json()) as WorkEntryBreak
 }
 
@@ -100,11 +102,13 @@ export async function updateWorkEntryBreak(
   })
 
   if (!response.ok) throw new Error(`Failed to update work entry break ${id}: ${response.statusText}`)
+
   return (await response.json()) as WorkEntryBreak
 }
 
 export async function deleteWorkEntryBreak(id: string): Promise<void> {
   const response = await fetchWithRetry(`${BREAKS_API_URL}/${id}`, { method: 'DELETE' })
+
   if (!response.ok && response.status !== 404) {
     throw new Error(`Failed to delete work entry break ${id}: ${response.statusText}`)
   }
