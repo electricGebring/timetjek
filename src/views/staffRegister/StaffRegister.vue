@@ -28,7 +28,7 @@ const logger = createLogger('StaffRegister')
 
 import { useWorkEntryList } from '@/composables/useWorkEntryList'
 
-const { sortedEntriesByDay, dateRange } = useWorkEntryList(toRef(store, 'workEntries'))
+const { displayRowsByDay, totalDisplayRows, dateRange } = useWorkEntryList(toRef(store, 'workEntries'))
 
 // Debug panel state (dev mode only)
 const debugStatus = ref<string>('')
@@ -408,8 +408,8 @@ const runDebugFunction = async (functionName: string) => {
       </section>
 
       <WorkEntryTable
-        :entries-by-day="sortedEntriesByDay"
-        :total-entries="store.workEntries.length"
+        :entries-by-day="displayRowsByDay"
+        :total-entries="totalDisplayRows"
         :format-time="formatTime"
         :format-work-time="formatWorkTime"
         :format-break="formatBreak"
