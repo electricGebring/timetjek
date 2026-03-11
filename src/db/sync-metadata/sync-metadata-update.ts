@@ -1,6 +1,8 @@
-import { getDB } from '../index'
-
 import { Capacitor } from '@capacitor/core'
+
+import { getDb } from '../drizzle'
+
+import { syncMetadata as syncMetadataTable } from '../schema'
 
 import { getSyncMetadata } from './sync-metadata-query'
 
@@ -10,94 +12,38 @@ export async function updateSyncMetadata(
   tableName: string,
   updates: Partial<Omit<SyncMetadata, 'tableName'>>
 ): Promise<void> {
-  if (Capacitor.isNativePlatform()) {
+  const existing = await getSyncMetadata(tableName)
 
-    // Type assertion: Capacitor SQLite DB type
-    const db = getDB() as {
-      run: (sql: string, params?: unknown[]) => Promise<unknown>
-    }
-
-    const existing = await getSyncMetadata(tableName)
-
-    if (existing) {
-      await db.run(
-        `UPDATE sync_metadata 
-         SET last_sync_timestamp = ?, 
-             sync_token = ?, 
-             last_successful_sync = ?,
-             sync_state = ?,
-             error_message = ?
-         WHERE table_name = ?`,
-        [
-          updates.lastSyncTimestamp ?? existing.lastSyncTimestamp,
-          updates.syncToken ?? existing.syncToken,
-          updates.lastSuccessfulSync ?? existing.lastSuccessfulSync,
-          updates.syncState ?? existing.syncState,
-          updates.errorMessage ?? existing.errorMessage,
-          tableName
-        ]
-      )
-    }
- else {
-      await db.run(
-        `INSERT OR REPLACE INTO sync_metadata 
-         (table_name, last_sync_timestamp, sync_token, last_successful_sync, sync_state, error_message)
-         VALUES (?, ?, ?, ?, ?, ?)`,
-        [
-          tableName,
-          updates.lastSyncTimestamp ?? null,
-          updates.syncToken ?? null,
-          updates.lastSuccessfulSync ?? null,
-          updates.syncState ?? 'idle',
-          updates.errorMessage ?? null
-        ]
-      )
-    }
+  const values = {
+    table_name: tableName,
+    last_sync_timestamp: updates.lastSyncTimestamp ?? existing?.lastSyncTimestamp ?? null,
+    sync_token: updates.syncToken ?? existing?.syncToken ?? null,
+    last_successful_sync: updates.lastSuccessfulSync ?? existing?.lastSuccessfulSync ?? null,
+    sync_state: updates.syncState ?? existing?.syncState ?? 'idle',
+    error_message: updates.errorMessage ?? existing?.errorMessage ?? null
   }
- else {
-    const { sqlJsDb, saveDatabase } = getDB() as {
-      sqlJsDb: { run: (sql: string, params?: unknown[]) => void }
-      saveDatabase: () => void
-    }
 
-    const existing = await getSyncMetadata(tableName)
+  await getDb()
+    .insert(syncMetadataTable)
+    .values(values)
+    .onConflictDoUpdate({
+      target: syncMetadataTable.table_name,
+      set: {
+        last_sync_timestamp: values.last_sync_timestamp,
+        sync_token: values.sync_token,
+        last_successful_sync: values.last_successful_sync,
+        sync_state: values.sync_state,
+        error_message: values.error_message
+      }
+    })
 
-    if (existing) {
-      sqlJsDb.run(
-        `UPDATE sync_metadata 
-         SET last_sync_timestamp = ?, 
-             sync_token = ?, 
-             last_successful_sync = ?,
-             sync_state = ?,
-             error_message = ?
-         WHERE table_name = ?`,
-        [
-          updates.lastSyncTimestamp ?? existing.lastSyncTimestamp,
-          updates.syncToken ?? existing.syncToken,
-          updates.lastSuccessfulSync ?? existing.lastSuccessfulSync,
-          updates.syncState ?? existing.syncState,
-          updates.errorMessage ?? existing.errorMessage,
-          tableName
-        ]
-      )
-    }
- else {
-      sqlJsDb.run(
-        `INSERT OR REPLACE INTO sync_metadata 
-         (table_name, last_sync_timestamp, sync_token, last_successful_sync, sync_state, error_message)
-         VALUES (?, ?, ?, ?, ?, ?)`,
-        [
-          tableName,
-          updates.lastSyncTimestamp ?? null,
-          updates.syncToken ?? null,
-          updates.lastSuccessfulSync ?? null,
-          updates.syncState ?? 'idle',
-          updates.errorMessage ?? null
-        ]
-      )
-    }
+  // Persist to localStorage after write (web only)
+  if (!Capacitor.isNativePlatform()) {
+    const { getDB } = await import('../index')
 
-    saveDatabase()
+    const db = getDB() as { saveDatabase?: () => void }
+
+    db.saveDatabase?.()
   }
 }
 
