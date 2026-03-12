@@ -1,6 +1,6 @@
 import { getDb } from '@/db/drizzle'
 import { workEntries } from '@/db/schema'
-import { eq } from 'drizzle-orm'
+import { eq, inArray } from 'drizzle-orm'
 import { Capacitor } from '@capacitor/core'
 
 /**
@@ -58,6 +58,26 @@ export async function restoreWorkEntry(id: string) {
 }
 
 /**
+ * Mark a work entry as dirty (unsynced) when a child (e.g. break) changes.
+ * Used for aggregation sync: child mutations propagate to parent so the
+ * aggregate is re-pushed on next sync.
+ */
+export async function markParentEntryDirty(workEntryId: string) {
+  console.debug(`[DRIZZLE] 📝 Marking parent entry ${workEntryId} as dirty (unsynced)...`)
+
+  await getDb()
+    .update(workEntries)
+    .set({
+      synced: 0,
+      updatedAt: new Date().toISOString()
+    })
+    .where(eq(workEntries.id, workEntryId))
+
+  console.debug('[DRIZZLE] ✅ Parent marked dirty')
+  saveDatabase()
+}
+
+/**
  * Mark a work entry as synced with backend
  */
 export async function markWorkEntryAsSynced(id: string) {
@@ -84,5 +104,29 @@ export async function permanentDeleteWorkEntry(id: string) {
   await getDb().delete(workEntries).where(eq(workEntries.id, id))
 
   console.debug('[DRIZZLE] ✅ Permanent delete complete')
+  saveDatabase()
+}
+
+/**
+ * Mark multiple entries as synced after successful API push
+ */
+export async function markEntriesAsSynced(ids: string[]): Promise<void> {
+  if (ids.length === 0) return
+
+  const now = new Date().toISOString()
+
+  await getDb().update(workEntries).set({ synced: 1, updatedAt: now }).where(inArray(workEntries.id, ids))
+
+  saveDatabase()
+}
+
+/**
+ * Permanently delete multiple entries after successful delete on API
+ */
+export async function deletePermanently(ids: string[]): Promise<void> {
+  if (ids.length === 0) return
+
+  await getDb().delete(workEntries).where(inArray(workEntries.id, ids))
+
   saveDatabase()
 }

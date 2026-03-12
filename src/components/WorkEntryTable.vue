@@ -29,7 +29,7 @@
               <td
                 colspan="8"
                 class="border-b border-gray-200 bg-gray-50 px-3 py-3 text-base font-bold text-gray-800
-                  sm:px-5 sm:text-lg"
+                sm:px-5 sm:text-lg"
               >
                 <span>{{ day.dateLabel }}</span>
                 <span
@@ -41,7 +41,7 @@
             </tr>
             <tr
               v-for="entry in day.entries"
-              :key="entry.id"
+              :key="entry.rowId"
               class="bg-white"
             >
               <td class="px-3 py-3 sm:px-5 sm:py-4">
@@ -59,12 +59,12 @@
                 >
               </td>
               <td class="hidden px-3 py-3 text-gray-900 sm:px-5 sm:py-4 lg:table-cell">{{ entry.personalNumber }}</td>
-              <td class="px-3 py-3 text-gray-900 sm:px-5 sm:py-4">{{ formatTime(entry.check_in_at) }}</td>
+              <td class="px-3 py-3 text-gray-900 sm:px-5 sm:py-4">{{ displayTime(entry, 'in') }}</td>
               <td class="px-3 py-3 sm:px-5 sm:py-4">
                 <span
-                  v-if="entry.check_out_at"
+                  v-if="entry.check_out_time_at"
                   class="text-gray-900"
-                  >{{ formatTime(entry.check_out_at) }}</span
+                  >{{ displayTime(entry, 'out') }}</span
                 >
                 <span
                   v-else
@@ -74,7 +74,12 @@
               </td>
               <td class="hidden px-3 py-3 sm:px-5 sm:py-4 md:table-cell">
                 <span
-                  v-if="entry.break"
+                  v-if="entry.statusLabel === 'På rast'"
+                  class="text-gray-400"
+                  >&mdash;</span
+                >
+                <span
+                  v-else-if="entry.break"
                   class="text-gray-900"
                   >{{ formatBreak(entry.break) }}</span
                 >
@@ -98,10 +103,28 @@
               </td>
               <td class="hidden px-3 py-3 sm:px-5 sm:py-4 md:table-cell">
                 <div
-                  v-if="entry.break"
+                  v-if="entry.statusLabel === 'På rast'"
                   class="flex items-center gap-2 font-semibold text-orange-600"
                 >
-                  {{ entry.check_out_at ? 'Rast' : 'På rast' }}
+                  På rast
+                </div>
+                <div
+                  v-else-if="entry.statusLabel === 'Rast'"
+                  class="flex items-center gap-2 font-semibold text-orange-600"
+                >
+                  Rast
+                </div>
+                <div
+                  v-else-if="entry.statusLabel === 'På arbete'"
+                  class="flex items-center gap-2 font-semibold text-blue-700"
+                >
+                  På arbete
+                </div>
+                <div
+                  v-else-if="entry.statusLabel === 'Saknas tid'"
+                  class="flex items-center gap-2 font-semibold text-red-700"
+                >
+                  Saknas tid
                 </div>
                 <div
                   v-else-if="getWorkEntryStatus(entry.status)"
@@ -137,7 +160,7 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 
 import type { PropType } from 'vue'
 
-import type { Entry } from '@/views/staffRegister/types'
+import type { DisplayRow } from '@/composables/useWorkEntryList'
 
 const props = defineProps({
   entriesByDay: {
@@ -170,15 +193,31 @@ const props = defineProps({
   }
 })
 
-// Type guard for Entry
-function isEntry(entry: unknown): entry is Entry {
-  return typeof entry === 'object' && entry !== null && 'id' in entry && 'name' in entry && 'type' in entry
+// Type guard for table display row
+function isDisplayRow(entry: unknown): entry is DisplayRow {
+  return (
+    typeof entry === 'object' &&
+    entry !== null &&
+    'rowId' in entry &&
+    'entryId' in entry &&
+    'name' in entry &&
+    'type' in entry &&
+    'check_in_time_at' in entry
+  )
 }
 
 const safeEntriesByDay = computed(() => {
-  return (props.entriesByDay as Array<{ date: string; dateLabel: string; entries: unknown[] }>).map(day => ({
+  return (props.entriesByDay as Array<{ date: string; dateLabel: string; entries: unknown[] }>).map((day) => ({
     ...day,
-    entries: day.entries.filter(isEntry) as Entry[]
+    entries: day.entries.filter(isDisplayRow) as DisplayRow[]
   }))
 })
+
+function displayTime(entry: DisplayRow, kind: 'in' | 'out'): string {
+  const value = kind === 'in' ? entry.check_in_time_at : entry.check_out_time_at
+
+  if (!value) return '—'
+
+  return value.slice(0, 5)
+}
 </script>

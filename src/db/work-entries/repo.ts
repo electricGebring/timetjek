@@ -1,13 +1,9 @@
 /**
  * Repository layer using Drizzle ORM
- * Works with both sql.js (browser) and better-sqlite3 (tests/Node.js)
+ * Works with sql.js (browser) and Capacitor SQLite (native)
  */
 
-export { 
-  getWorkEntries, 
-  getUnsyncedWorkEntries, 
-  getDeletedWorkEntries 
-} from './work-entry.read'
+export { getWorkEntries, getUnsyncedWorkEntries, getDeletedWorkEntries, getWorkEntryById } from './work-entry.read'
 
 export { upsertWorkEntry } from './work-entry.upsert'
 
@@ -15,19 +11,12 @@ export {
   softDeleteWorkEntry,
   restoreWorkEntry,
   markWorkEntryAsSynced,
-  permanentDeleteWorkEntry
-} from './work-entry.delete'
-
-// Sync-specific queries
-export {
-  getUnsyncedForSync,
-  getDeletedForSync,
+  markParentEntryDirty,
+  permanentDeleteWorkEntry,
   markEntriesAsSynced,
-  deletePermanently,
-  mergeRemoteEntries
-} from './work-entry.sync'
+  deletePermanently
+} from './work-entry.delete'
 
 export { workEntryToEntry, entryToWorkEntry } from './work-entry.mapper'
 
 export { calculateTotalWorkingSeconds } from './work-entry.helpers'
-

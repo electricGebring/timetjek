@@ -1,9 +1,23 @@
 import { TimeRegistrationStatus } from '../../enums/TimeRegistrationStatus.ts'
 
+/** Generate a stable device identifier for attribution (Option C). */
+export function getDeviceId(): string {
+  if (typeof localStorage !== 'undefined') {
+    let id = localStorage.getItem('timetjek_device_id')
+    if (!id) {
+      id = uuidLike()
+      localStorage.setItem('timetjek_device_id', id)
+    }
+    return id
+  }
+  return `anon-${uuidLike()}`
+}
+
 /** Normalized shape for DB bindings (numbers for booleans, required defaults). */
 export type SafeWorkEntry = {
   id: string
   remote_id: string | null
+  device_id: string | null
   employee_id: number
   workplace_id: number
   cost_center_id: number | null
@@ -50,7 +64,7 @@ const uuidLike = (): string => {
 }
 
 export function createLocalWorkEntryId(): string {
-  return `local-${uuidLike()}`
+  return uuidLike()
 }
 
 /** Normalize a partial entry into a SafeWorkEntry for parameterized SQL. */
@@ -60,7 +74,7 @@ export function buildSafeWorkEntry(entry: Record<string, unknown>): SafeWorkEntr
       ? entry.id.trim()
       : typeof entry.id === 'number'
         ? String(entry.id)
-      : createLocalWorkEntryId()
+        : createLocalWorkEntryId()
 
   const resolvedRemoteId =
     typeof entry.remote_id === 'string'
@@ -69,11 +83,15 @@ export function buildSafeWorkEntry(entry: Record<string, unknown>): SafeWorkEntr
         : null
       : typeof entry.remote_id === 'number'
         ? String(entry.remote_id)
-      : null
+        : null
+
+  const resolvedDeviceId =
+    typeof entry.device_id === 'string' && entry.device_id.trim().length > 0 ? entry.device_id.trim() : getDeviceId()
 
   return {
     id: resolvedId,
     remote_id: resolvedRemoteId,
+    device_id: resolvedDeviceId,
     employee_id: (entry.employee_id as number) ?? 1,
     workplace_id: (entry.workplace_id as number) ?? 1,
     cost_center_id: (entry.cost_center_id as number) ?? null,

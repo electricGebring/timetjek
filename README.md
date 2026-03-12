@@ -147,6 +147,41 @@ npm run dev
 
 The app will be available at `http://localhost:5173`
 
+### Run With Mock API
+
+Use two terminals:
+
+```bash
+# Terminal 1: start mock API server (json-server wrapper)
+npm run api:work
+
+# Terminal 2: start web app
+npm run dev
+```
+
+### Run On iOS (Capacitor)
+
+```bash
+# Build web assets
+npm run build
+
+# Sync web build + Capacitor config/plugins to iOS project
+npx cap sync ios
+
+# Open Xcode project
+npx cap open ios
+```
+
+In Xcode:
+1. Select simulator or device.
+2. Press Run.
+
+Quick one-liner:
+
+```bash
+npm run build && npx cap sync ios
+```
+
 ### Build
 
 ```bash

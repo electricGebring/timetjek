@@ -13,8 +13,6 @@ import router from './router'
 
 import i18n from './i18n'
 
-import { runMigrations } from '@/db/migrate'
-
 // Import sync and connectivity dependencies
 import { CapacitorConnectivityAdapter } from './sync/capacitor-connectivity.adapter'
 
@@ -33,7 +31,7 @@ import { createLogger } from '@/utils/logger'
 import { FontAwesomeIcon } from './fontawesome/icons'
 
 // Import generic sync adapter registration and table adapters
-import { TABLE_WORK_ENTRIES } from '@/constants/tables'
+import { WORK_ENTRIES_AGGREGATE } from '@/constants/tables'
 
 import { registerTableAdapter } from '@/sync/table-sync-adapter'
 
@@ -47,11 +45,8 @@ async function bootstrap() {
   // Initialize database (tables, migrations, etc)
   await initDB()
 
-  // Run database migrations after database is initialized
-  await runMigrations()
-
-  // Register sync adapters for each entity/table
-  registerTableAdapter(TABLE_WORK_ENTRIES, createWorkEntriesAdapter)
+  // Register sync adapters: aggregation adapters use aggregation name as key
+  registerTableAdapter(WORK_ENTRIES_AGGREGATE, createWorkEntriesAdapter)
 
   // Create and mount Vue app
   const app = createApp(App)
@@ -69,11 +64,9 @@ async function bootstrap() {
   // Setup connectivity and sync dependencies
   const connectivity = new CapacitorConnectivityAdapter()
 
-  // Create SyncManager to handle all registered tables (central logging)
   const syncManager = new SyncManager({ logger: createLogger('SyncManager') })
-    // Expose syncManager globally for debug/timing access
 
-    ; (window as unknown as { syncManager: SyncManager }).syncManager = syncManager
+  ;(window as unknown as { syncManager: SyncManager }).syncManager = syncManager
 
   // Create a SyncPort adapter that wraps SyncManager
   const syncAdapter: SyncPort = {
@@ -88,38 +81,21 @@ async function bootstrap() {
     }
   }
 
-  // Setup online/offline coordinator for automatic sync
   const coordinator = new OnlineOfflineCoordinator({
     connectivity,
     sync: syncAdapter,
     logger: createLogger('Coordinator')
     // Optional: Enable periodic sync for always-online apps
-    // syncIntervalMs: 30 * 1000, // Uncomment to enable
+    //syncIntervalMs: 30 * 1000 // 30 seconds
   })
 
   // Initialize sync trigger for immediate sync on mutations (optional)
   // This enables instant sync when online, but still works offline
   initSyncTrigger(syncAdapter, connectivity)
 
-  // Start coordinator after app is mounted
   await coordinator.start()
-
-  // Create a logger for bootstrap
   const logger = createLogger('Bootstrap')
 
-  // Run initial sync to populate database with API data
-  try {
-    logger.log('[Bootstrap] Running initial sync...')
-
-    await syncAdapter.start('manual')
-
-    logger.log('[Bootstrap] Initial sync completed')
-  }
-  catch (error) {
-    console.error('[Bootstrap] Initial sync failed:', error)
-  }
-
-  // Run initial cleanup of expired data based on configured policies
   try {
     const results = await cleanupAllTables()
 
@@ -128,8 +104,7 @@ async function bootstrap() {
     if (totalCleaned > 0) {
       logger.log(`[Bootstrap] Cleaned up expired data:`, results)
     }
-  }
-  catch (error) {
+  } catch (error) {
     logger.error('[Bootstrap] Initial cleanup failed:', error)
   }
 
@@ -153,8 +128,7 @@ function scheduleDailyCleanup(logger: LoggerLike = console) {
       if (totalCleaned > 0) {
         logger.log(`[Cleanup] Cleaned up expired data:`, results)
       }
-    }
-    catch (error) {
+    } catch (error) {
       logger.error('[Cleanup] Scheduled cleanup failed:', error)
     }
   }

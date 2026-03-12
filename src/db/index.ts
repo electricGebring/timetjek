@@ -18,30 +18,30 @@ let sqlJsDb: Database | null = null
  * Also initializes Drizzle ORM with the appropriate database instance.
  */
 export async function initDB() {
-  const { initWorkEntriesDb } = await import('./work-entries/init')
+  const { runMigrations } = await import('./migrate')
 
-  const { initDrizzle } = await import('./drizzle')
+  const { initDrizzle, initDrizzleCapacitor } = await import('./drizzle')
 
   if (Capacitor.isNativePlatform()) {
     if (!sqlite) {
       sqlite = new SQLiteConnection(CapacitorSQLite)
     }
 
-
     capacitorDb = await sqlite.createConnection('appdb', false, 'no-encryption', 1, false)
 
     // Type assertion for Capacitor SQLite DB
     await (capacitorDb as { open: () => Promise<unknown> }).open()
 
-    await initWorkEntriesDb(capacitorDb, true)
+    await runMigrations()
 
-    const { initSyncMetadataTable } = await import('./sync-metadata/repo')
+    await initDrizzleCapacitor(
+      capacitorDb as {
+        run: (sql: string, params?: unknown[]) => Promise<unknown>
+        query: (sql: string, params?: unknown[]) => Promise<{ values?: Record<string, unknown>[] }>
+      }
+    )
 
-    await initSyncMetadataTable()
-    
-    // TODO: Initialize Drizzle with Capacitor SQLite
-    // For now, Capacitor uses legacy queries until Drizzle Capacitor adapter is implemented
-    console.debug('[DB] Capacitor SQLite initialized (Drizzle integration pending)')
+    console.debug('[DB] Capacitor SQLite initialized with Drizzle')
   }
  else {
     let SQL: unknown
@@ -59,7 +59,8 @@ export async function initDB() {
     }
  catch (error: unknown) {
       if (
-        typeof error === 'object' && error !== null &&
+        typeof error === 'object' &&
+        error !== null &&
         'message' in error &&
         typeof (error as { message?: string }).message === 'string' &&
         ((error as { message: string }).message.includes('fetch') ||
@@ -100,16 +101,10 @@ export async function initDB() {
       throw new Error('Failed to initialize sql.js database')
     }
 
-    const db = sqlJsDb
-
-    await initWorkEntriesDb(db, false)
-
-    const { initSyncMetadataTable } = await import('./sync-metadata/repo')
-
-    await initSyncMetadataTable()
+    await runMigrations()
 
     saveDatabase()
-    
+
     // Initialize Drizzle ORM with sql.js database
     await initDrizzle(sqlJsDb)
 

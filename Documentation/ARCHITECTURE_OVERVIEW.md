@@ -24,18 +24,18 @@ So: **User → Vue → Pinia → Domain → Repositories → SQLite**, and when 
 
 We use **Drizzle ORM** for type-safe database operations. The approach is **hybrid**:
 
-- **Browser (web)**: Uses `sql.js` as the SQL execution engine. Drizzle schema provides TypeScript types for type-safety, but execution is sql.js-powered.
-- **Node.js (backend, scripts, sync engines)**: Uses `better-sqlite3` as the SQL execution engine with Drizzle ORM for query building and type-safety.
+- **Browser (web)**: Uses `sql.js` as the SQL execution engine with Drizzle ORM for query building and type-safety.
+- **Native (iOS/Android)**: Uses Capacitor SQLite with raw SQL (Drizzle integration pending).
 - **Future backend API**: Will use Drizzle ORM with a production SQL database (PostgreSQL, MySQL, etc.).
 
 **Why hybrid?**
 - `sql.js` is the only viable in-browser SQL engine for offline-first apps (no network dependencies).
-- Drizzle lets us write type-safe queries that work across both environments.
+- Drizzle lets us write type-safe queries for the web path.
 - Gradual adoption: We can expand Drizzle usage as the backend grows without refactoring app code.
 
 **Current state:**
-- Browser code uses sql.js-based repositories (e.g. `work-entry.read.ts`, `work-entry.upsert.ts`).
-- Node.js scripts and future server logic use Drizzle ORM (e.g. `work-entry.read.drizzle.ts`, `work-entry.upsert.drizzle.ts`).
+- Browser code uses sql.js with Drizzle ORM (e.g. `work-entry.read.ts`, `work-entry.upsert.ts`).
+- Native code uses Capacitor SQLite with raw SQL.
 - All code is type-safe via Drizzle schema (`src/db/schema.ts`).
 
 ### Domain & Repository Integration
@@ -43,7 +43,7 @@ We use **Drizzle ORM** for type-safe database operations. The approach is **hybr
 The **domain layer** (business logic) is decoupled from database implementation via the **repository pattern**:
 
 - **Browser context** (`src/domain/work-entries/commands.ts`, `queries.ts`): Uses `repo.ts` which delegates to sql.js-based queries & commands.
-- **Node.js context** (`src/domain/work-entries/commands.drizzle.ts`, `queries.drizzle.ts`): Uses `repo.drizzle.ts` which delegates to Drizzle ORM queries & commands.
+- **Node.js context** (`src/domain/work-entries/work-entries.drizzle.ts`): Uses Drizzle ORM via the same repository for queries and commands in backend/sync/test contexts.
 
 The domain layer has identical logic in both contexts; only the repository implementation changes. This allows:
 1. **Type safety**: Both paths use Drizzle schema for type inference.
@@ -54,10 +54,10 @@ The domain layer has identical logic in both contexts; only the repository imple
 
 The **sync engine** orchestrates bi-directional sync between local and remote databases:
 
-- **Browser sync** (`src/sync/work-entries/adapter.ts`): Uses sql.js-based repository for sync operations in the browser.
-- **Node.js sync** (`src/sync/work-entries/adapter.drizzle.ts`): Uses Drizzle ORM repository for sync operations in Node.js contexts (backend workers, scheduled tasks).
+- **Production adapter** (`src/sync/work-entries/adapter.ts`): Implements full sync with real API calls, aggregate support (work_entry + work_entry_breaks), conflict resolution, connectivity checks, and retry. Used by the app in browser/Capacitor.
+- **Test mock** (`src/sync/work-entries/adapter.test-mock.ts`): Simulates API for Node.js sync tests (no HTTP). Uses the same repo; `fetchAll`/`fetchSince` return local data, `batchUpsert`/`batchDelete` update local state only. Do not use in production.
 
-Both adapters implement the same `TableSyncAdapter` interface:
+Both implement the same `TableSyncAdapter` interface:
 - `getUnsynced()` - Fetch outbox entries (synced=0)
 - `getDeleted()` - Fetch soft-deleted entries pending API deletion
 - `batchUpsert(items)` - Push entries to API and mark as synced
@@ -74,7 +74,7 @@ Both adapters implement the same `TableSyncAdapter` interface:
 
 **Testing:**
 - `npm run test:drizzle-domain` - Tests domain commands/queries with Drizzle
-- `npm run test:sync-engine` - Tests sync adapter operations with Drizzle
+- `npm run test:sync-engine` - Tests sync adapter operations using the mock adapter (simulated API)
 
 ---
 

@@ -1,129 +1,62 @@
-import type { Entry } from '../../views/staffRegister/types.ts'
+import type { Entry } from '@/views/staffRegister/types'
+import { TimeRegistrationStatus } from '@/enums/TimeRegistrationStatus'
+import type { WorkEntry } from '@/db/schema'
+import { createLocalWorkEntryId } from './work-entry.helpers'
 
-import type { TimeRegistrationApplication } from '../../enums/TimeRegistrationApplication.ts'
+/** Accepts WorkEntry (Drizzle) or any object with WorkEntry-like properties */
+export type AnyWorkEntry = WorkEntry | Record<string, unknown>
 
-import { TimeRegistrationStatus } from '../../enums/TimeRegistrationStatus.ts'
-
-import type { WorkEntry, WorkEntryColumn } from '../../models/work-entry.schema.ts'
-
-import { WORK_ENTRY_COLUMNS, parseWorkEntryRow } from '../../models/work-entry.schema.ts'
-
-import type { WorkEntry as DrizzleWorkEntry } from '../schema.ts'
-import { createLocalWorkEntryId } from './work-entry.helpers.ts'
-
-// Flexible type for mapper functions - accepts any object with WorkEntry-like properties
-export type AnyWorkEntry = Record<string, unknown>
-
-/** Build a record from a row array using column order (same as WORK_ENTRY_COLUMNS). */
-export function rowToRecord(
-  row: unknown[],
-  columns: readonly WorkEntryColumn[] = WORK_ENTRY_COLUMNS
-): Record<string, unknown> {
-  const record: Record<string, unknown> = {}
-
-  columns.forEach((col, i) => {
-    record[col] = row[i]
-  })
-
-  return record
-}
-
-/** Map a raw row (array or object) to a validated WorkEntry. */
-export function mapRowToWorkEntry(row: unknown): WorkEntry {
-  if (Array.isArray(row)) {
-    return parseWorkEntryRow(rowToRecord(row))
-  }
-
-  if (row && typeof row === 'object') {
-    return parseWorkEntryRow(row as Record<string, unknown>)
-  }
-
-  return parseWorkEntryRow({})
-}
-
-/** Map WorkEntry (DB type - from either Zod or Drizzle schema) to Entry (view/API type). */
+/** Map WorkEntry (DB) to Entry (view/API). Only overrides fields that need coercion. */
 export function workEntryToEntry(w: AnyWorkEntry): Entry {
-  // Type assertion to access properties - we know this has WorkEntry-like shape
-  const entry = w as unknown as (WorkEntry | DrizzleWorkEntry)
-  const resolvedId =
-    typeof entry.id === 'string'
-      ? entry.id.trim().length > 0
-        ? entry.id.trim()
+  const raw = w as Record<string, unknown>
+  const id =
+    typeof raw.id === 'string' && raw.id.trim().length > 0
+      ? raw.id.trim()
+      : typeof raw.id === 'number'
+        ? String(raw.id)
         : createLocalWorkEntryId()
-      : typeof entry.id === 'number'
-        ? String(entry.id)
-      : createLocalWorkEntryId()
-  
+
   return {
-    id: resolvedId,
-    remote_id: entry.remote_id ?? null,
-    employee_id: entry.employee_id ?? 1,
-    workplace_id: entry.workplace_id ?? 1,
-    cost_center_id: entry.cost_center_id ?? null,
-    work_day_id: entry.work_day_id ?? 0,
-    status: (entry.status ?? TimeRegistrationStatus.OPEN) as Entry['status'],
-    check_in_at: entry.check_in_at ?? '',
-    check_in_time_at: entry.check_in_time_at ?? '',
-    check_in_latitude: entry.check_in_latitude ?? 0,
-    check_in_longitude: entry.check_in_longitude ?? 0,
-    check_in_application: (entry.check_in_application ?? 'APP') as TimeRegistrationApplication,
-    check_out_at: entry.check_out_at ?? null,
-    check_out_time_at: entry.check_out_time_at ?? null,
-    check_out_latitude: entry.check_out_latitude ?? null,
-    check_out_longitude: entry.check_out_longitude ?? null,
-    check_out_application: entry.check_out_application as TimeRegistrationApplication | null,
-    break: entry.break ?? null,
-    meal_benefit_has_breakfast:
-      typeof entry.meal_benefit_has_breakfast === 'number'
-        ? !!entry.meal_benefit_has_breakfast
-        : !!entry.meal_benefit_has_breakfast,
-    meal_benefit_has_lunch:
-      typeof entry.meal_benefit_has_lunch === 'number' ? !!entry.meal_benefit_has_lunch : !!entry.meal_benefit_has_lunch,
-    name: entry.name ?? '',
-    type: entry.type ?? '',
-    personalNumber: entry.personalNumber ?? '',
-    administrator_comment: entry.administrator_comment ?? null,
-    total_working_seconds: entry.total_working_seconds ?? null,
-    createdAt: entry.createdAt ?? new Date().toISOString(),
-    updatedAt: entry.updatedAt ?? new Date().toISOString(),
-    deleted_at: entry.deleted_at ?? null,
-    synced: entry.synced ?? 0,
-    deleted: entry.deleted ?? 0
-  }
+    ...raw,
+    id,
+    remote_id: raw.remote_id ?? null,
+    device_id: raw.device_id ?? null,
+    employee_id: (raw.employee_id as number) ?? 1,
+    workplace_id: (raw.workplace_id as number) ?? 1,
+    cost_center_id: (raw.cost_center_id as number) ?? null,
+    work_day_id: (raw.work_day_id as number) ?? 0,
+    status: (raw.status as string) ?? TimeRegistrationStatus.OPEN,
+    check_in_at: (raw.check_in_at as string) ?? '',
+    check_in_time_at: (raw.check_in_time_at as string) ?? '',
+    check_in_latitude: (raw.check_in_latitude as number) ?? 0,
+    check_in_longitude: (raw.check_in_longitude as number) ?? 0,
+    check_in_application: (raw.check_in_application as string) ?? 'APP',
+    check_out_at: raw.check_out_at ?? null,
+    check_out_time_at: raw.check_out_time_at ?? null,
+    check_out_latitude: raw.check_out_latitude ?? null,
+    check_out_longitude: raw.check_out_longitude ?? null,
+    check_out_application: raw.check_out_application ?? null,
+    break: raw.break ?? null,
+    meal_benefit_has_breakfast: Boolean(raw.meal_benefit_has_breakfast),
+    meal_benefit_has_lunch: Boolean(raw.meal_benefit_has_lunch),
+    name: (raw.name as string) ?? '',
+    type: (raw.type as string) ?? '',
+    personalNumber: (raw.personalNumber as string) ?? '',
+    administrator_comment: raw.administrator_comment ?? null,
+    total_working_seconds: (raw.total_working_seconds as number) ?? null,
+    createdAt: (raw.createdAt as string) ?? new Date().toISOString(),
+    updatedAt: (raw.updatedAt as string) ?? new Date().toISOString(),
+    deleted_at: raw.deleted_at ?? null,
+    synced: (raw.synced as number) ?? 0,
+    deleted: (raw.deleted as number) ?? 0
+  } as Entry
 }
 
-/** Map Entry (view/API type) to Drizzle WorkEntry format (DB type with numbers for booleans). */
-export function entryToWorkEntry(e: Entry): AnyWorkEntry {
+/** Map Entry (view/API) to WorkEntry (DB). Only overrides meal booleans to 0|1. */
+export function entryToWorkEntry(e: Entry): Record<string, unknown> {
   return {
-    id: e.id,
-    remote_id: e.remote_id ?? null,
-    employee_id: e.employee_id,
-    workplace_id: e.workplace_id,
-    cost_center_id: e.cost_center_id,
-    work_day_id: e.work_day_id,
-    status: e.status,
-    check_in_at: e.check_in_at,
-    check_in_time_at: e.check_in_time_at,
-    check_in_latitude: e.check_in_latitude,
-    check_in_longitude: e.check_in_longitude,
-    check_in_application: e.check_in_application,
-    check_out_at: e.check_out_at,
-    check_out_time_at: e.check_out_time_at,
-    check_out_latitude: e.check_out_latitude,
-    check_out_longitude: e.check_out_longitude,
-    check_out_application: e.check_out_application,
-    break: e.break,
+    ...e,
     meal_benefit_has_breakfast: e.meal_benefit_has_breakfast ? 1 : 0,
-    meal_benefit_has_lunch: e.meal_benefit_has_lunch ? 1 : 0,
-    name: e.name,
-    type: e.type,
-    personalNumber: e.personalNumber,
-    administrator_comment: e.administrator_comment,
-    total_working_seconds: e.total_working_seconds,
-    createdAt: e.createdAt,
-    updatedAt: e.updatedAt,
-    deleted_at: e.deleted_at,
-    synced: e.synced,
-    deleted: e.deleted
-  }
+    meal_benefit_has_lunch: e.meal_benefit_has_lunch ? 1 : 0
+  } as unknown as Record<string, unknown>
 }

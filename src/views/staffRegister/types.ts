@@ -12,6 +12,7 @@ export interface Entry {
   // Identification
   id: string
   remote_id?: string | null
+  device_id?: string | null
   employee_id: number
   workplace_id: number
   cost_center_id: number | null
@@ -36,6 +37,8 @@ export interface Entry {
 
   // Break and meal benefits
   break: string | null
+  /** True when any break is open and work entry is not checked out. Set during enrichment. */
+  isOnBreak?: boolean
   meal_benefit_has_breakfast: boolean
   meal_benefit_has_lunch: boolean
 

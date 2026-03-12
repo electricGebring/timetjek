@@ -1,6 +1,12 @@
+import { count, eq, isNull, and } from 'drizzle-orm'
+
 import { getWorkEntries } from '@/db/work-entries/repo'
 
-import { getDB } from '@/db/index'
+import { getDb } from '@/db/drizzle'
+
+import { workEntries as workEntriesTable } from '@/db/schema'
+
+import { Capacitor } from '@capacitor/core'
 
 /**
  * Get work entry history
@@ -90,74 +96,23 @@ export async function getAllEntries() {
  * @returns Database metadata and stats
  */
 export async function getDatabaseInfo() {
-  const db = getDB()
-
   try {
-    const { Capacitor } = await import('@capacitor/core')
+    const db = getDb()
 
-    // Count work_entries
-    let totalCount = 0
+    const notDeleted = and(isNull(workEntriesTable.deleted_at))
 
-    let syncedCount = 0
-
-    let unsyncedCount = 0
-
-    let deletedCount = 0
-
-    if (Capacitor.isNativePlatform()) {
-      interface NativeDb {
-        query: (sql: string) => Promise<{ values?: Array<{ count: number }> }>;
-      }
-
-      const nativeDb = db as NativeDb
-
-      const total = await nativeDb.query('SELECT COUNT(*) as count FROM work_entries WHERE deleted_at IS NULL')
-
-      totalCount = total.values?.[0]?.count || 0
-
-      const synced = await nativeDb.query(
-        'SELECT COUNT(*) as count FROM work_entries WHERE synced = 1 AND deleted_at IS NULL'
-      )
-
-      syncedCount = synced.values?.[0]?.count || 0
-
-      const unsynced = await nativeDb.query(
-        'SELECT COUNT(*) as count FROM work_entries WHERE synced = 0 AND deleted_at IS NULL'
-      )
-
-      unsyncedCount = unsynced.values?.[0]?.count || 0
-
-      const deleted = await nativeDb.query('SELECT COUNT(*) as count FROM work_entries WHERE deleted = 1')
-
-      deletedCount = deleted.values?.[0]?.count || 0
-    }
- else {
-      const { sqlJsDb } = db as { sqlJsDb: { exec: (sql: string) => Array<{ values: unknown[][] }> } }
-
-      const total = sqlJsDb.exec('SELECT COUNT(*) as count FROM work_entries WHERE deleted_at IS NULL')
-
-      totalCount = Number(total[0]?.values?.[0]?.[0]) || 0
-
-      const synced = sqlJsDb.exec('SELECT COUNT(*) as count FROM work_entries WHERE synced = 1 AND deleted_at IS NULL')
-
-      syncedCount = Number(synced[0]?.values?.[0]?.[0]) || 0
-
-      const unsynced = sqlJsDb.exec(
-        'SELECT COUNT(*) as count FROM work_entries WHERE synced = 0 AND deleted_at IS NULL'
-      )
-
-      unsyncedCount = Number(unsynced[0]?.values?.[0]?.[0]) || 0
-
-      const deleted = sqlJsDb.exec('SELECT COUNT(*) as count FROM work_entries WHERE deleted = 1')
-
-      deletedCount = Number(deleted[0]?.values?.[0]?.[0]) || 0
-    }
+    const [totalResult, syncedResult, unsyncedResult, deletedResult] = await Promise.all([
+      db.select({ count: count() }).from(workEntriesTable).where(notDeleted),
+      db.select({ count: count() }).from(workEntriesTable).where(and(eq(workEntriesTable.synced, 1), notDeleted)),
+      db.select({ count: count() }).from(workEntriesTable).where(and(eq(workEntriesTable.synced, 0), notDeleted)),
+      db.select({ count: count() }).from(workEntriesTable).where(eq(workEntriesTable.deleted, 1))
+    ])
 
     return {
-      totalEntries: totalCount,
-      syncedEntries: syncedCount,
-      unsyncedEntries: unsyncedCount,
-      deletedEntries: deletedCount,
+      totalEntries: totalResult[0]?.count ?? 0,
+      syncedEntries: syncedResult[0]?.count ?? 0,
+      unsyncedEntries: unsyncedResult[0]?.count ?? 0,
+      deletedEntries: deletedResult[0]?.count ?? 0,
       platform: Capacitor.isNativePlatform() ? 'native' : 'web',
       databaseType: Capacitor.isNativePlatform() ? 'Capacitor SQLite' : 'sql.js (IndexedDB)'
     }
@@ -182,28 +137,16 @@ export async function getDatabaseInfo() {
  * WARNING: Irreversible!
  */
 export async function clearAllData() {
-  const db = getDB()
-
   try {
-    const { Capacitor } = await import('@capacitor/core')
+    await getDb().delete(workEntriesTable)
 
-    if (Capacitor.isNativePlatform()) {
-      // Native: use db.run()
-      interface NativeDb {
-        run: (sql: string) => Promise<void>;
-      }
+    // Persist to localStorage (web only)
+    if (!Capacitor.isNativePlatform()) {
+      const { getDB } = await import('@/db/index')
 
-      const nativeDb = db as NativeDb
+      const db = getDB() as { saveDatabase?: () => void }
 
-      await nativeDb.run('DELETE FROM work_entries')
-    }
- else {
-      // Web: use sqlJsDb.run()
-      const { sqlJsDb, saveDatabase } = db as { sqlJsDb: { run: (sql: string) => void }, saveDatabase: () => void }
-
-      sqlJsDb.run('DELETE FROM work_entries')
-
-      saveDatabase()
+      db.saveDatabase?.()
     }
 
     console.warn('✓ All local data cleared')
@@ -254,21 +197,19 @@ export async function getPendingSyncOperations() {
 // Export for debugging
 // ─────────────────────────────────────────────────────────
 
-;
-
 export interface WorkEntriesService {
-  getWorkHistory: typeof getWorkHistory;
-  getEntriesForDate: typeof getEntriesForDate;
-  getCurrentStatus: typeof getCurrentStatus;
-  getAllEntries: typeof getAllEntries;
-  getDatabaseInfo: typeof getDatabaseInfo;
-  clearAllData: typeof clearAllData;
-  getPendingSyncOperations: typeof getPendingSyncOperations;
+  getWorkHistory: typeof getWorkHistory
+  getEntriesForDate: typeof getEntriesForDate
+  getCurrentStatus: typeof getCurrentStatus
+  getAllEntries: typeof getAllEntries
+  getDatabaseInfo: typeof getDatabaseInfo
+  clearAllData: typeof clearAllData
+  getPendingSyncOperations: typeof getPendingSyncOperations
 }
 
 declare global {
   interface Window {
-    workEntriesService: WorkEntriesService;
+    workEntriesService: WorkEntriesService
   }
 }
 

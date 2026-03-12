@@ -28,7 +28,7 @@ const logger = createLogger('StaffRegister')
 
 import { useWorkEntryList } from '@/composables/useWorkEntryList'
 
-const { sortedEntriesByDay, dateRange } = useWorkEntryList(toRef(store, 'workEntries'))
+const { displayRowsByDay, totalDisplayRows, dateRange } = useWorkEntryList(toRef(store, 'workEntries'))
 
 // Debug panel state (dev mode only)
 const debugStatus = ref<string>('')
@@ -39,7 +39,7 @@ const debugLoading = ref(false)
 
 const debugError = ref<string>('')
 
-  const syncTimings = ref<Record<string, number> | undefined>(undefined)
+const syncTimings = ref<Record<string, number> | undefined>(undefined)
 
 // Typ för window med syncManager
 import type { SyncManager } from '@/sync/sync-manager'
@@ -53,25 +53,23 @@ function updateSyncTimings() {
     const syncManager = (window as WindowWithSyncManager).syncManager
 
     if (!syncManager) {
-      
       console.warn('[DebugPanel] No syncManager on window')
-      
+
       return
     }
 
     // Try common table names
-    const possibleTables = ['work_entries', 'staff_register', 'staffregister', 'entries']
-    
+    const possibleTables = ['work_entries', 'work_entry_breaks', 'work_entries_aggregate']
+
     let engine = null
 
     for (const t of possibleTables) {
       engine = syncManager.getSyncEngine?.(t)
-      
+
       if (engine) {
-          
         if (engine.lastSyncTimings && Object.keys(engine.lastSyncTimings).length > 0) {
           syncTimings.value = { ...engine.lastSyncTimings }
-          
+
           return
         }
       }
@@ -79,18 +77,16 @@ function updateSyncTimings() {
 
     // If no timings found, clear
     syncTimings.value = undefined
-    
+
     console.warn('[DebugPanel] No timings found for any table')
-  } 
-  catch (e) {
+  } catch (e) {
     console.error('[DebugPanel] updateSyncTimings error', e)
   }
 }
 
 onMounted(async () => {
-  
   // Patch console.debug to also push logs to debugResult for DebugPanel
-  const originalDebug = console.debug
+  /*const originalDebug = console.debug
   
   console.debug = function (...args) {
     originalDebug.apply(console, args)
@@ -109,32 +105,31 @@ onMounted(async () => {
         debugResult.value.push(args.map(String).join(' '))
       }
     }
-  }
-  
+  }*/
+
   // Load entries once from DB
   await store.loadWorkEntries()
-  
+
   // Group already-loaded entries without re-reading from DB
   store.setGroupedEntriesFromLoaded(store.workEntries)
   // prettier-ignore
-  
   ;(window as unknown as { workEntriesData: typeof store.workEntries }).workEntriesData = store.workEntries
   // Listen for sync-completed events and reload data
-  
+
   window.addEventListener('sync-completed', async () => {
     await store.loadWorkEntries()
-    
+
     updateSyncTimings()
   })
-  
+
   // Listen for debug-status events and show debug messages
   window.addEventListener('debug-status', (e: Event) => {
     const customEvent = e as CustomEvent<string>
-    
-      debugStatus.value = customEvent.detail || ''
+
+    debugStatus.value = customEvent.detail || ''
   })
   // Fetch timings after initial sync (page load)
-  
+
   setTimeout(updateSyncTimings, 500)
 })
 
@@ -175,13 +170,11 @@ const handleCheckIn = async () => {
     logger.log(`[1. UI] 🎬 CheckIn started - ${traceId}`, { work_day_id })
 
     await store.checkIn(work_day_id)
-  } 
-  catch (e: unknown) {
+  } catch (e: unknown) {
     alert((e as Error).message || 'Instämpling misslyckades')
 
     console.error('Check-in failed:', e)
-  } 
-  finally {
+  } finally {
     isProcessing.value = false
   }
 }
@@ -195,13 +188,11 @@ const handleCheckOut = async () => {
     const work_day_id = Number(new Date().setHours(0, 0, 0, 0))
 
     await store.checkOut(work_day_id)
-  } 
-  catch (e: unknown) {
+  } catch (e: unknown) {
     alert((e as Error).message || 'Utstämpling misslyckades')
 
     console.error('Check-out failed:', e)
-  } 
-  finally {
+  } finally {
     isProcessing.value = false
   }
 }
@@ -215,13 +206,11 @@ const handleBreak = async () => {
     const work_day_id = Number(new Date().setHours(0, 0, 0, 0))
 
     await store.goOnBreak(work_day_id)
-  } 
-  catch (e: unknown) {
+  } catch (e: unknown) {
     alert((e as Error).message || 'Gå på rast misslyckades')
 
     console.error('Break failed:', e)
-  } 
-  finally {
+  } finally {
     isProcessing.value = false
   }
 }
@@ -250,22 +239,22 @@ const runDebugFunction = async (functionName: string) => {
         result = await service.getCurrentStatus()
 
         debugStatus.value = `✓ Status hämtad`
-        
+
         debugResult.value = Array.isArray(result)
           ? result.map((r) => JSON.stringify(r, null, 2))
           : [JSON.stringify(result, null, 2)]
-        
-          break
+
+        break
 
       case 'getWorkHistory':
         result = await service.getWorkHistory(7)
 
         debugStatus.value = `✓ Historik hämtad (${(result as unknown[]).length} poster)`
-        
+
         debugResult.value = Array.isArray(result)
           ? result.map((r) => JSON.stringify(r, null, 2))
           : [JSON.stringify(result, null, 2)]
-        
+
         break
 
       case 'getPendingSyncOperations':
@@ -273,14 +262,13 @@ const runDebugFunction = async (functionName: string) => {
           result = await service.getPendingSyncOperations()
 
           debugStatus.value = `✓ Väntande sync hämtad (${(result as unknown[]).length} poster)`
-          
+
           debugResult.value = Array.isArray(result)
             ? result.map((r) => JSON.stringify(r, null, 2))
             : [JSON.stringify(result, null, 2)]
-        } 
-        else {
+        } else {
           debugStatus.value = `Ej implementerat`
-          
+
           debugResult.value = []
         }
 
@@ -290,18 +278,18 @@ const runDebugFunction = async (functionName: string) => {
         result = await service.getAllEntries()
 
         debugStatus.value = `✓ Alla entries hämtade (${(result as unknown[]).length} totalt)`
-        
+
         debugResult.value = Array.isArray(result)
           ? result.map((r) => JSON.stringify(r, null, 2))
           : [JSON.stringify(result, null, 2)]
 
         break
-      
-        case 'getDatabaseInfo':
+
+      case 'getDatabaseInfo':
         result = await service.getDatabaseInfo()
 
         debugStatus.value = `✓ Database info hämtad`
-        
+
         debugResult.value = Array.isArray(result)
           ? result.map((r) => JSON.stringify(r, null, 2))
           : [JSON.stringify(result, null, 2)]
@@ -317,8 +305,7 @@ const runDebugFunction = async (functionName: string) => {
           debugResult.value = []
 
           await store.loadWorkEntries()
-        } 
-        else {
+        } else {
           debugStatus.value = `Avbruten`
         }
 
@@ -327,17 +314,15 @@ const runDebugFunction = async (functionName: string) => {
 
     logger.log(`[DEBUG] ${functionName}:`, result)
     // Uppdatera timings efter varje debug-operation
-    
+
     updateSyncTimings()
-  } 
-  catch (e: unknown) {
+  } catch (e: unknown) {
     debugError.value = (e as Error).message || 'Okänt fel'
 
     debugStatus.value = `✗ Fel`
 
     console.error(`[DEBUG ERROR] ${functionName}:`, e)
-  } 
-  finally {
+  } finally {
     debugLoading.value = false
   }
 }
@@ -423,8 +408,8 @@ const runDebugFunction = async (functionName: string) => {
       </section>
 
       <WorkEntryTable
-        :entries-by-day="sortedEntriesByDay"
-        :total-entries="store.workEntries.length"
+        :entries-by-day="displayRowsByDay"
+        :total-entries="totalDisplayRows"
         :format-time="formatTime"
         :format-work-time="formatWorkTime"
         :format-break="formatBreak"

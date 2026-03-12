@@ -4,30 +4,61 @@ import { TABLE_WORK_ENTRIES } from '@/constants/tables'
 
 import { assertOnline, whenOffline } from '@/utils/connectivity'
 
+import { retryWithBackoff } from '../retry-utils'
+
 import * as repo from '@/db/work-entries/repo'
+
 import * as breakRepo from '@/db/work-entry-breaks/repo'
 
-import { fetchWorkEntries, deleteEntry } from '@/api/work-entries'
+import { fetchWorkEntries, fetchWorkEntriesSince, deleteEntry } from '@/api/work-entries'
+
 import {
   fetchWorkEntryBreaks,
   fetchBreaksByWorkEntryId,
-  createWorkEntryBreak,
+  fetchBreaksForEntryIds,
   deleteWorkEntryBreak
 } from '@/api/work-entry-breaks'
 
 import type { Entry } from '@/views/staffRegister/types'
+
 import type { WorkEntryBreak } from '@/models/work-entry-break.schema'
 
 import type { ConflictResolutionStrategy as ConflictStrategyType } from '@/enums/ConflictResolutionStrategy'
 
 import { mergeRemoteWorkEntry } from './merge-remote'
 
+import { is404, PushBlockEngine } from './push-block-engine'
+
+const RETRY = {
+  maxRetries: 3,
+  initialDelay: 1000,
+  retryableErrors: ['NetworkError', 'Failed to fetch', 'timeout', 'ECONNRESET', 'ETIMEDOUT']
+}
+
+/** Push one block (entry + breaks) to API, then persist as synced. Transactional. */
+async function pushBlock(entry: Entry): Promise<Entry> {
+  const engine = new PushBlockEngine(entry)
+
+  return engine.run()
+}
+
+/**
+ * Delete one block (entry + breaks) on API only.
+ * Uses remote_id (server id) when available; falls back to id for backward compat.
+ * Deletes breaks in parallel, then the entry.
+ */
+async function deleteBlockOnApi(entry: { id: string; remote_id?: string | null }): Promise<void> {
+  const apiId = (entry.remote_id ?? entry.id).trim() || entry.id
+
+  const remoteBreaks = await fetchBreaksByWorkEntryId(apiId)
+
+  await Promise.all(remoteBreaks.map((b) => deleteWorkEntryBreak(b.id)))
+
+  await deleteEntry(apiId)
+}
+
 export function createWorkEntriesAdapter(): TableSyncAdapter<Entry> {
   const remoteBreaksByEntryId = new Map<string, WorkEntryBreak[]>()
-
-  const fetchEntriesOrThrow = async (api: typeof import('@/api/work-entries')) => {
-    return await api.fetchWorkEntries()
-  }
 
   const setRemoteBreaksCache = (breaks: WorkEntryBreak[]) => {
     remoteBreaksByEntryId.clear()
@@ -43,111 +74,64 @@ export function createWorkEntriesAdapter(): TableSyncAdapter<Entry> {
     }
   }
 
-  const syncLocalBreaksFromRemote = async (workEntryId: string) => {
-    const remoteBreaks = remoteBreaksByEntryId.get(workEntryId) ?? []
+  /** Sync local breaks from remote.
+   * remoteEntryId = API work_entry_id (server id); localEntryId = our work_entries.id
+   */
+  const syncLocalBreaksFromRemote = async (remoteEntryId: string, localEntryId: string) => {
+    const remoteBreaks = remoteBreaksByEntryId.get(remoteEntryId) ?? []
 
-    const localBreaks = await breakRepo.getBreaksByWorkEntryId(workEntryId)
+    const localBreaks = await breakRepo.getBreaksByWorkEntryId(localEntryId)
 
-    const normalizeForCompare = (breaks: Array<Pick<WorkEntryBreak, 'start_at' | 'end_at' | 'start_exact_at' | 'end_exact_at'>>) =>
-      [...breaks]
-        .map((item) => ({
-          start_at: item.start_at ?? null,
-          end_at: item.end_at ?? null,
-          start_exact_at: item.start_exact_at ?? null,
-          end_exact_at: item.end_exact_at ?? null
+    const normalize = (arr: Array<Pick<WorkEntryBreak, 'start_at' | 'end_at' | 'start_exact_at' | 'end_exact_at'>>) =>
+      [...arr]
+        .map((b) => ({
+          start_at: b.start_at ?? null,
+          end_at: b.end_at ?? null,
+          start_exact_at: b.start_exact_at ?? null,
+          end_exact_at: b.end_exact_at ?? null
         }))
         .sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)))
 
-    const localComparable = normalizeForCompare(localBreaks)
-    const remoteComparable = normalizeForCompare(remoteBreaks)
-
-    if (JSON.stringify(localComparable) === JSON.stringify(remoteComparable)) {
+    if (JSON.stringify(normalize(localBreaks)) === JSON.stringify(normalize(remoteBreaks))) {
       return
     }
 
-    await breakRepo.deleteBreaksByWorkEntryId(workEntryId)
+    await breakRepo.deleteBreaksByWorkEntryId(localEntryId, false)
 
     if (remoteBreaks.length > 0) {
       await breakRepo.insertManyBreaks(
-        remoteBreaks.map((item) => ({
-          work_entry_id: workEntryId,
-          start_at: item.start_at,
-          end_at: item.end_at,
-          start_exact_at: item.start_exact_at,
-          end_exact_at: item.end_exact_at
-        }))
+        remoteBreaks.map((b) => ({
+          id: b.id,
+          work_entry_id: localEntryId,
+          start_at: b.start_at,
+          end_at: b.end_at,
+          start_exact_at: b.start_exact_at,
+          end_exact_at: b.end_exact_at
+        })),
+        { synced: true }
       )
-    }
-  }
-
-  const syncRemoteBreaksFromLocal = async (workEntryId: string) => {
-    const [localBreaks, remoteBreaks] = await Promise.all([
-      breakRepo.getBreaksByWorkEntryId(workEntryId),
-      fetchBreaksByWorkEntryId(workEntryId)
-    ])
-
-    for (const remoteBreak of remoteBreaks) {
-      await deleteWorkEntryBreak(remoteBreak.id)
-    }
-
-    for (const localBreak of localBreaks) {
-      await createWorkEntryBreak(workEntryId, {
-        start_at: localBreak.start_at,
-        end_at: localBreak.end_at,
-        start_exact_at: localBreak.start_exact_at,
-        end_exact_at: localBreak.end_exact_at
-      })
     }
   }
 
   return {
     tableName: TABLE_WORK_ENTRIES,
-    getUnsynced: async (): Promise<Entry[]> => {
-      const unsynced = (await repo.getUnsyncedWorkEntries()).filter((e) => e.id !== null).map(repo.workEntryToEntry)
-
-      return unsynced
-    },
+    getUnsynced: async (): Promise<Entry[]> =>
+      (await repo.getUnsyncedWorkEntries()).filter((e) => e.id !== null).map(repo.workEntryToEntry),
     getDeleted: async (): Promise<Entry[]> =>
       (await repo.getDeletedWorkEntries()).filter((e) => e.id !== null).map(repo.workEntryToEntry),
-    markAsSynced: async (id: string): Promise<void> => {
-      await repo.markWorkEntryAsSynced(id)
-    },
-    permanentDelete: async (id: string): Promise<void> => {
-      await repo.permanentDeleteWorkEntry(id)
-    },
+    markAsSynced: (id: string) => repo.markWorkEntryAsSynced(id),
+    permanentDelete: (id: string) => repo.permanentDeleteWorkEntry(id),
     batchUpsert: async (items: Entry[]): Promise<Entry[]> => {
       assertOnline('batchUpsert')
-
-      const api = await import('@/api/work-entries')
-
-      const allEntries = await fetchEntriesOrThrow(api)
 
       const results: Entry[] = []
 
       for (const item of items) {
-        // Type guard to ensure item is Entry
-        if (typeof item !== 'object' || item === null || !('id' in item)) continue
+        if (typeof item !== 'object' || item === null || !('id' in item) || !(item as Entry).id) continue
 
-        const entry = item as Entry
+        const result = await retryWithBackoff(() => pushBlock(item as Entry), RETRY)
 
-        if (!entry.id) continue
-
-        const existsInApi = allEntries.some((e) => e.id === entry.id)
-
-        let resultItem: Entry
-
-        if (existsInApi) {
-          resultItem = await api.updateEntry(entry)
-        }
-
- else {
-          resultItem = await api.createEntry(entry)
-        }
-
-        await repo.upsertWorkEntry(repo.entryToWorkEntry(resultItem))
-        await syncRemoteBreaksFromLocal(resultItem.id)
-
-        results.push(resultItem)
+        results.push(result)
       }
 
       return results
@@ -156,70 +140,36 @@ export function createWorkEntriesAdapter(): TableSyncAdapter<Entry> {
       if (whenOffline('batchDelete')) return
 
       for (const id of ids) {
+        const entry = await repo.getWorkEntryById(id)
+
         try {
-          const remoteBreaks = await fetchBreaksByWorkEntryId(id)
-
-          for (const remoteBreak of remoteBreaks) {
-            await deleteWorkEntryBreak(remoteBreak.id)
-          }
-
-          await deleteEntry(id)
+          await retryWithBackoff(() => deleteBlockOnApi(entry ?? { id }), RETRY)
         }
  catch (e) {
-          if (
-            typeof e === 'object' &&
-            e !== null &&
-            'message' in e &&
-            typeof (e as { message: unknown }).message === 'string' &&
-            ((e as { message: string }).message.includes('404'))
-          ) {
-            continue
-          }
-
-          throw e
+          if (!is404(e)) throw e
         }
       }
     },
     createItem: async (item: Entry): Promise<Entry> => {
       assertOnline('createItem')
 
-      // Type guard to ensure item is Entry
       if (typeof item !== 'object' || item === null || !('id' in item)) {
         throw new Error('Invalid item: not an Entry')
       }
 
-      const entry = item as Entry
-
-      const api = await import('@/api/work-entries')
-
-      const allEntries = await fetchEntriesOrThrow(api)
-
-      const existsInApi = allEntries.some((e) => e.id === entry.id)
-
-      let resultItem: Entry
-
-      if (existsInApi) {
-        resultItem = await api.updateEntry(entry)
-      }
- else {
-        resultItem = await api.createEntry(entry)
-      }
-
-      await repo.upsertWorkEntry(repo.entryToWorkEntry(resultItem))
-      await syncRemoteBreaksFromLocal(resultItem.id)
-
-      return resultItem
+      return retryWithBackoff(() => pushBlock(item), RETRY)
     },
     deleteItem: async (id: string): Promise<void> => {
       if (whenOffline('deleteItem')) return
 
-      const remoteBreaks = await fetchBreaksByWorkEntryId(id)
+      const entry = await repo.getWorkEntryById(id)
 
-      for (const remoteBreak of remoteBreaks) {
-        await deleteWorkEntryBreak(remoteBreak.id)
+      try {
+        await retryWithBackoff(() => deleteBlockOnApi(entry ?? { id }), RETRY)
       }
-
-      await deleteEntry(id)
+ catch (e) {
+        if (!is404(e)) throw e
+      }
     },
     fetchAll: async (): Promise<Entry[]> => {
       try {
@@ -229,21 +179,31 @@ export function createWorkEntriesAdapter(): TableSyncAdapter<Entry> {
 
         return entries
       }
- catch {
+ catch (error) {
+        console.error('[SYNC][work_entries] fetchAll failed:', error)
+
         remoteBreaksByEntryId.clear()
+
         return []
       }
     },
-    fetchSince: async (): Promise<Entry[]> => {
+    fetchSince: async (timestamp: number): Promise<Entry[]> => {
       try {
-        const [entries, remoteBreaks] = await Promise.all([fetchWorkEntries(), fetchWorkEntryBreaks()])
+        const entries = await fetchWorkEntriesSince(timestamp)
+
+        const entryIds = entries.map((e) => e.id).filter(Boolean)
+
+        const remoteBreaks = entryIds.length > 0 ? await fetchBreaksForEntryIds(entryIds) : []
 
         setRemoteBreaksCache(remoteBreaks)
 
         return entries
       }
- catch {
+ catch (error) {
+        console.error('[SYNC][work_entries] fetchSince failed:', { timestamp, error })
+
         remoteBreaksByEntryId.clear()
+
         return []
       }
     },
@@ -251,15 +211,23 @@ export function createWorkEntriesAdapter(): TableSyncAdapter<Entry> {
       const result = await mergeRemoteWorkEntry(remoteItem, strategy)
 
       if (remoteItem.id) {
-        const localEntries = await repo.getWorkEntries()
+        const locals = await repo.getWorkEntries()
 
-        const localEntry = localEntries.find((item) => item.id === remoteItem.id)
+        const remoteServerId = remoteItem.id
 
-        if (localEntry?.synced === 0) {
-          return result
-        }
+        const local = locals.find(
+          (e) => (e.remote_id !== null && e.remote_id === remoteServerId) || (e.id ?? '') === remoteServerId
+        )
 
-        await syncLocalBreaksFromRemote(remoteItem.id)
+        if (!local) return result
+
+        if (local.synced === 0) return result
+
+        const hasUnsynced = await breakRepo.hasUnsyncedBreaks(local.id)
+
+        if (hasUnsynced) return result
+
+        await syncLocalBreaksFromRemote(remoteServerId, local.id)
       }
 
       return result

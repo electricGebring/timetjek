@@ -1,67 +1,98 @@
-import { Capacitor } from '@capacitor/core'
-
 import { drizzle as drizzleSqlJs } from 'drizzle-orm/sql-js'
+
+import { drizzle as drizzleProxy } from 'drizzle-orm/sqlite-proxy'
 
 import * as schema from './schema'
 
 type SqlJsDatabase = import('sql.js').Database
 
-type BetterSqliteDatabase = import('better-sqlite3').Database
+type SqliteProxyMethod = 'run' | 'all' | 'values' | 'get'
 
-type RawSqlite = {
-  prepare: (sql: string) => {
-    run: (...params: unknown[]) => void
-    all: (...params: unknown[]) => unknown[]
-  }
+type NativeRow = Record<string, unknown>
+
+export type CapacitorDB = {
+  run: (sql: string, params?: unknown[]) => Promise<unknown>
+  query: (sql: string, params?: unknown[]) => Promise<{ values?: NativeRow[] }>
 }
 
-const isNativeRuntime = (() => {
-  try {
-    return Capacitor.isNativePlatform()
-  }
- catch {
-    return false
-  }
-})()
+type ColumnMetadataRow = { ios_columns: string[] }
 
-const isNodeRuntime =
-  !isNativeRuntime &&
-  typeof globalThis === 'object' &&
-  'process' in globalThis &&
-  typeof (globalThis as { process?: { versions?: { node?: unknown } } }).process?.versions?.node === 'string'
+function isIosColumnsRow(row: unknown): row is ColumnMetadataRow {
+  return (
+    typeof row === 'object' &&
+    row !== null &&
+    'ios_columns' in row &&
+    Array.isArray((row as { ios_columns?: unknown }).ios_columns)
+  )
+}
+
+function normalizeNativeRows(values: unknown[]): { rows: unknown[][]; firstRow: unknown[] | undefined } {
+  const metadataRow = values.find((row) => isIosColumnsRow(row)) as ColumnMetadataRow | undefined
+
+  const dataRows = values.filter((row) => {
+    if (isIosColumnsRow(row)) {
+      return false
+    }
+
+    return typeof row === 'object' && row !== null
+  }) as NativeRow[]
+
+  if (dataRows.length === 0) {
+    return { rows: [], firstRow: undefined }
+  }
+
+  const columns = metadataRow?.ios_columns ?? Object.keys(dataRows[0] ?? {})
+
+  const rows = dataRows.map((row) => columns.map((column) => row[column]))
+
+  return { rows, firstRow: rows[0] }
+}
 
 let dbInstance: unknown = null
 
-let rawSqlite: RawSqlite | null = null // Raw better-sqlite3 instance for Node.js
-
 /**
- * Initialize Drizzle database instance
- * 
- * For browser/Vue app: Use sql.js database (pass existing sql.js instance)
- * For Node.js tests: Use better-sqlite3 (pass file path string)
+ * Initialize Drizzle database instance with sql.js (browser)
  */
-export async function initDrizzle(dbOrPath: string | SqlJsDatabase) {
+export async function initDrizzle(db: SqlJsDatabase) {
   if (dbInstance) {
     return dbInstance
   }
 
-  // If passed a string, assume it's a file path for better-sqlite3 (Node.js)
-  if (typeof dbOrPath === 'string') {
-    // Dynamic import to avoid bundling for browser
-    const { drizzle: drizzleBetterSqlite } = await import('drizzle-orm/better-sqlite3')
-    
-    const Database = (await import('better-sqlite3')).default
+  dbInstance = drizzleSqlJs(db, { schema })
 
-    const sqlite = new Database(dbOrPath) as BetterSqliteDatabase
+  return dbInstance
+}
 
-    rawSqlite = sqlite as unknown as RawSqlite
-
-    dbInstance = drizzleBetterSqlite(sqlite, { schema })
-  } 
-  // Otherwise assume it's a sql.js database instance (browser)
-  else {
-    dbInstance = drizzleSqlJs(dbOrPath, { schema })
+/**
+ * Initialize Drizzle database instance with Capacitor SQLite (native iOS/Android)
+ */
+export async function initDrizzleCapacitor(db: CapacitorDB) {
+  if (dbInstance) {
+    return dbInstance
   }
+
+  dbInstance = drizzleProxy(
+    async (sql: string, params: unknown[], method: SqliteProxyMethod) => {
+      if (method === 'run') {
+        await db.run(sql, params)
+
+        return { rows: [] }
+      }
+
+      const result = await db.query(sql, params)
+
+      const values = result.values ?? []
+
+      const normalized = normalizeNativeRows(values)
+
+      if (method === 'get') {
+        return { rows: normalized.firstRow ? [...normalized.firstRow] : [] }
+      }
+
+      return { rows: normalized.rows }
+    },
+    { schema }
+  )
 
   return dbInstance
 }
@@ -78,42 +109,40 @@ export function getDb(): ReturnType<typeof drizzleSqlJs> {
 }
 
 /**
- * Get the raw sqlite3 instance (Node.js only)
- */
-export function getRawSqlite() {
-  return rawSqlite
-}
-
-/**
- * Get raw sqlite instance and fail fast when unavailable.
- * Use only in Node.js execution paths.
- */
-export function requireRawSqlite(): RawSqlite {
-  if (!isNodeRuntime) {
-    throw new Error(
-      `Raw sqlite is only available in Node.js (current runtime: ${isNativeRuntime ? 'native' : 'web'})`
-    )
-  }
-
-  const sqlite = getRawSqlite()
-
-  if (!sqlite) {
-    throw new Error('Raw sqlite is unavailable on this platform (expected Node.js with better-sqlite3)')
-  }
-
-  return sqlite
-}
-
-/**
  * Reset database instance (useful for tests)
  */
 export function resetDb() {
   dbInstance = null
-
-  rawSqlite = null
 }
 
 export type Database = ReturnType<typeof drizzleSqlJs>
 
-export * from './schema'
+/**
+ * Run a callback inside a transaction. All DB operations in the callback use the same transaction.
+ * Commits on success, rolls back on error. Persists to localStorage (web) after commit.
+ */
+export async function runInTransaction<T>(fn: (tx: Database) => Promise<T>): Promise<T> {
+  const db = getDb()
 
+  const result = await db.transaction(fn)
+
+  // Persist to localStorage after commit (web only)
+  try {
+    const { Capacitor } = await import('@capacitor/core')
+
+    if (!Capacitor.isNativePlatform()) {
+      const { getDB } = await import('./index')
+
+      const g = getDB() as { saveDatabase?: () => void }
+
+      g.saveDatabase?.()
+    }
+  }
+  catch {
+    // Ignore if not in web context
+  }
+
+  return result
+}
+
+export * from './schema'

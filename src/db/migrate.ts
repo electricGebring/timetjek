@@ -4,8 +4,6 @@ import { Capacitor } from '@capacitor/core'
 
 import { getDB } from './index'
 
-import { getRawSqlite } from './drizzle'
-
 type Migration = { id: string; sql: string }
 
 const isNativeRuntime = (() => {
@@ -38,51 +36,28 @@ if (isNodeProcessRuntime()) {
 
   const drizzlePath = join(cwd(), 'drizzle')
 
-  const migrationsPath = join(cwd(), 'migrations')
+  const drizzleFiles = existsSync(drizzlePath)
+    ? readdirSync(drizzlePath)
+        .filter((f: string) => f.endsWith('.sql'))
+        .sort()
+    : []
 
-  const drizzleFiles = existsSync(drizzlePath) 
-    ? readdirSync(drizzlePath).filter((f: string) => f.endsWith('.sql')).sort() 
-    : []
-  
-  const migrationFiles = existsSync(migrationsPath)
-    ? readdirSync(migrationsPath).filter((f: string) => f.endsWith('.sql')).sort()
-    : []
-  
-  // Combine and sort: drizzle/ files must run first (prefix 0), then migrations/ (prefix 1)
-  migrations = [
-    ...drizzleFiles.map((file: string) => ({
-      id: `0_drizzle_${file.replace('.sql', '')}`,
-      sql: readFileSync(join(drizzlePath, file), 'utf-8')
-    })),
-    ...migrationFiles.map((file: string) => ({
-      id: `1_custom_${file.replace('.sql', '')}`,
-      sql: readFileSync(join(migrationsPath, file), 'utf-8')
-    }))
-  ].sort((a, b) => a.id.localeCompare(b.id))
+  migrations = drizzleFiles.map((file: string) => ({
+    id: `0_drizzle_${file.replace('.sql', '')}`,
+    sql: readFileSync(join(drizzlePath, file), 'utf-8')
+  }))
 }
  else {
   // Web/Vite: use dynamic imports for SQL files (Vite supports ?raw)
   // This will be populated at build time by Vite's static analysis
   const drizzleModules = import.meta.glob('../../drizzle/*.sql', { query: '?raw', eager: true })
 
-  const customModules = import.meta.glob('../../migrations/*.sql', { query: '?raw', eager: true })
-  
-  const allModules = { ...drizzleModules, ...customModules }
-  
-  // Sort: drizzle migrations (0000_...) must run before custom migrations (20260304...)
-  // We use numeric prefix to ensure correct ordering
-  migrations = Object.entries(allModules)
+  migrations = Object.entries(drizzleModules)
     .map(([path, mod]) => {
       const fileName = path.split('/').pop()?.replace('.sql', '') || ''
 
-      const isDrizzle = path.includes('/drizzle/')
-
-      // Use prefix '0' for drizzle, '1' for custom to ensure drizzle runs first
-      const sortPrefix = isDrizzle ? '0' : '1'
-      const id = `${sortPrefix}_${isDrizzle ? 'drizzle' : 'custom'}_${fileName}`
-
       return {
-        id,
+        id: `0_drizzle_${fileName}`,
         sql: (mod as { default: string }).default
       }
     })
@@ -124,15 +99,7 @@ async function runSql(sql: string, params: unknown[] = []) {
 
     await db.run(sql, params)
   }
-  else {
-    const sqlite = getRawSqlite()
-
-    if (sqlite) {
-      sqlite.prepare(sql).run(...params)
-
-      return
-    }
-
+ else {
     const { sqlJsDb } = getDB() as { sqlJsDb: { run: (sql: string, params?: unknown[]) => void } }
 
     sqlJsDb.run(sql, params)
@@ -152,22 +119,7 @@ async function queryRows(sql: string, params: unknown[] = []): Promise<unknown[]
 
     return values as unknown[][]
   }
-  else {
-    const sqlite = getRawSqlite()
-
-    if (sqlite) {
-      const rows = sqlite.prepare(sql).all(...params)
-
-      // Convert from object format [{id: 'x'}] to array format [['x']] for consistency
-      return rows.map((row: unknown) => {
-        if (typeof row === 'object' && row !== null) {
-          return Object.values(row)
-        }
-
-        return [row]
-      })
-    }
-
+ else {
     const { sqlJsDb } = getDB() as { sqlJsDb: { exec: (sql: string, params?: unknown[]) => { values: unknown[][] }[] } }
 
     const results = sqlJsDb.exec(sql, params)
@@ -179,7 +131,7 @@ async function queryRows(sql: string, params: unknown[] = []): Promise<unknown[]
 }
 
 async function saveIfWeb() {
-  if (isNativeRuntime || getRawSqlite()) {
+  if (isNativeRuntime) {
     return
   }
 
@@ -199,8 +151,13 @@ export async function runMigrations() {
     console.debug('[MIGRATIONS] Applying migration:', m.id)
 
     try {
-      // Split multiple statements and execute each individually
+      if (!isNativeRuntime) {
+        await runSql('BEGIN TRANSACTION')
+      }
+
+      // Split multiple statements (Drizzle uses --> statement-breakpoint or ;)
       const statements = m.sql
+        .replace(/--> statement-breakpoint/g, ';')
         .split(';')
         .map((stmt) => stmt.trim())
         .filter((stmt) => stmt.length > 0)
@@ -211,9 +168,17 @@ export async function runMigrations() {
 
       await runSql('INSERT INTO schema_migrations (id, applied_at) VALUES (?, ?)', [m.id, new Date().toISOString()])
 
+      if (!isNativeRuntime) {
+        await runSql('COMMIT')
+      }
+
       console.debug('[MIGRATIONS] Migration applied:', m.id)
     }
  catch (e) {
+      if (!isNativeRuntime) {
+        await runSql('ROLLBACK').catch(() => {})
+      }
+
       throw new Error(`Migration failed: ${m.id} -> ${(e as Error).message}`)
     }
   }

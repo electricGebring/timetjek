@@ -1,6 +1,6 @@
 /**
  * Merge a remote work entry with the local one in memory (conflict resolution).
- * Does not persist to DB — the pull path only updates the store. DB is written only when pushing 
+ * Does not persist to DB — the pull path only updates the store. DB is written only when pushing
  * (unsynced → API → save result).
  */
 
@@ -55,14 +55,33 @@ export async function mergeRemoteWorkEntry(
   }
 
   const locals = await repo.getWorkEntries()
+  const remoteServerId = remote.id ?? ''
 
-  const local = locals.find((e) => (e.id ?? '') === (remote.id ?? ''))
+  // Match by remote_id first (Option B), then by id for backward compat
+  const local = locals.find(
+    (e) => (e.remote_id != null && e.remote_id === remoteServerId) || (e.id ?? '') === remoteServerId
+  )
 
   if (!local) {
-    // No local entry: persist remote to DB as synced
+    // Avoid duplicate same-day open entry: if we already have an open entry for this work_day, skip remote insert
+    const remoteWorkDayId = remote.work_day_id ?? 0
+    const remoteIsOpen = remote.check_in_at && !remote.check_out_at
+    if (remoteIsOpen && remoteWorkDayId) {
+      const openSameDay = locals.find(
+        (e) =>
+          e.work_day_id === remoteWorkDayId && e.check_in_at && !e.check_out_at && (e.id ?? '') !== (remote.id ?? '')
+      )
+      if (openSameDay) {
+        const resolvedLocal = workEntryToEntry(openSameDay)
+        return { resolved: resolvedLocal, conflictDetected: false }
+      }
+    }
+
+    // No local entry: persist remote to DB as synced (id = server id for pulled-only rows)
     const safeRemote = {
       ...remote,
       id: remote.id ?? '',
+      remote_id: remote.id ?? remote.remote_id ?? null,
       work_day_id: remote.work_day_id ?? 0,
       check_in_at: remote.check_in_at ?? '',
       check_out_at: remote.check_out_at ?? '',
@@ -76,7 +95,7 @@ export async function mergeRemoteWorkEntry(
       check_in_application: (remote.check_in_application ?? 'APP') as TimeRegistrationApplication,
       check_out_application: (remote.check_out_application ?? null) as TimeRegistrationApplication | null,
       deleted: remote.deleted ?? 0,
-      deleted_at: remote.deleted_at ?? null,
+      deleted_at: remote.deleted_at ?? null
     }
 
     await repo.upsertWorkEntry(entryToWorkEntry({ ...safeRemote, synced: 1 }))
@@ -136,7 +155,7 @@ export async function mergeRemoteWorkEntry(
     deleted: toPersist.deleted ?? 0,
     employee_id: toPersist.employee_id ?? 0,
     workplace_id: toPersist.workplace_id ?? 0,
-    cost_center_id: toPersist.cost_center_id ?? 0,
+    cost_center_id: toPersist.cost_center_id ?? 0
   }
 
   const shouldUpsert = !entriesAreEqual(localEntry, safeToPersist)

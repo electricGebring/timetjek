@@ -1,4 +1,5 @@
 const jsonServer = require('json-server')
+const crypto = require('crypto')
 const fs = require('fs')
 const path = require('path')
 
@@ -60,7 +61,7 @@ function syncBreakFromEntry(entry) {
   }
 
   const newBreak = {
-    id: `break-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+    id: crypto.randomUUID(),
     work_entry_id: entry.id,
     start_at: startAt,
     end_at: endAt,
@@ -93,6 +94,20 @@ server.use(jsonServer.bodyParser)
 server.use((req, res, next) => {
   console.log(`[${req.method}] ${req.path}`)
   next()
+})
+
+// Incremental sync: GET /entries?since=unixSeconds returns entries updated since that time
+server.get('/entries', (req, res, next) => {
+  const since = req.query?.since
+  if (since == null || since === '' || Number.isNaN(parseInt(since, 10))) {
+    return next()
+  }
+  const sinceMs = parseInt(since, 10) * 1000
+  const filtered = db.entries.filter((e) => {
+    const utc = e.updatedAt ? new Date(e.updatedAt).getTime() : 0
+    return utc >= sinceMs
+  })
+  return res.json(filtered)
 })
 
 // Custom POST handler for entries - preserve client-provided IDs
@@ -169,6 +184,113 @@ server.delete('/entries/:id', (req, res) => {
   return res.status(404).json({ error: 'Entry not found' })
 })
 
+// Batch upsert: entry + breaks in one request (avoids partial state on connection drop)
+// Option B: API generates server IDs; accepts local_id for mapping; returns server id
+server.post('/entries/block', (req, res) => {
+  const { entry: entryBody, breaks: breaksBody = [], breakIdsToDelete = [] } = req.body
+
+  if (!entryBody || typeof entryBody !== 'object') {
+    return res.status(400).json({ error: 'entry is required' })
+  }
+
+  const localId = entryBody.local_id ?? entryBody.id
+  const remoteId = entryBody.remote_id
+  const breaks = Array.isArray(breaksBody) ? breaksBody : []
+  const idsToDelete = Array.isArray(breakIdsToDelete) ? breakIdsToDelete : []
+
+  const sameShift = (e) => {
+    if (!e || typeof e !== 'object') return false
+    if (!entryBody || typeof entryBody !== 'object') return false
+
+    return (
+      Number(e.employee_id) === Number(entryBody.employee_id) &&
+      Number(e.work_day_id) === Number(entryBody.work_day_id) &&
+      String(e.check_in_at ?? '') === String(entryBody.check_in_at ?? '')
+    )
+  }
+
+  // Match existing: by remote_id (server id we returned) or by id (legacy: API stored client id)
+  const existingEntryIdx = db.entries.findIndex(
+    (e) => e.id === remoteId || e.id === localId || sameShift(e)
+  )
+
+  let serverEntryId
+  if (existingEntryIdx >= 0) {
+    serverEntryId = db.entries[existingEntryIdx].id
+    // Preserve server-owned fields (id, remote_id); only apply client payload for business data
+    const clientUpdates = { ...entryBody }
+    delete clientUpdates.id
+    delete clientUpdates.remote_id
+    delete clientUpdates.local_id
+    const existing = db.entries[existingEntryIdx]
+    db.entries[existingEntryIdx] = {
+      ...existing,
+      ...clientUpdates,
+      break: null,
+      id: serverEntryId,
+      remote_id: serverEntryId,
+      local_id: undefined,
+      updatedAt: new Date().toISOString()
+    }
+  } else {
+    serverEntryId = crypto.randomUUID()
+    const entry = {
+      ...entryBody,
+      break: null,
+      id: serverEntryId,
+      local_id: undefined,
+      remote_id: serverEntryId,
+      createdAt: entryBody.createdAt ?? new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    }
+    db.entries.push(entry)
+  }
+
+  const savedEntry = db.entries.find((e) => e.id === serverEntryId)
+
+  // 2. Delete breakIdsToDelete (by server id or local id)
+  for (const id of idsToDelete) {
+    const idx = db.work_entry_breaks.findIndex(
+      (b) => b.id === id || b.remote_id === id
+    )
+    if (idx >= 0) {
+      db.work_entry_breaks.splice(idx, 1)
+    }
+  }
+
+  // 3. Remove only this entry's breaks (replace semantics); keep all other entries' breaks
+  db.work_entry_breaks = db.work_entry_breaks.filter(
+    (b) => b.work_entry_id !== serverEntryId && b.work_entry_id !== localId
+  )
+
+  // 4. Insert breaks with server-generated IDs
+  const now = new Date().toISOString()
+  const localToServerBreakMap = {}
+  for (const b of breaks) {
+    const serverBreakId = crypto.randomUUID()
+    const localBreakId = b.local_id ?? b.id
+    if (localBreakId) localToServerBreakMap[localBreakId] = serverBreakId
+
+    const breakRow = {
+      id: serverBreakId,
+      remote_id: serverBreakId,
+      work_entry_id: serverEntryId,
+      start_at: b.start_at ?? null,
+      end_at: b.end_at ?? null,
+      start_exact_at: b.start_exact_at ?? null,
+      end_exact_at: b.end_exact_at ?? null,
+      created_at: b.created_at ?? now
+    }
+    db.work_entry_breaks.push(breakRow)
+  }
+
+  saveData()
+  return res.status(200).json({
+    entry: { ...savedEntry, remote_id: serverEntryId },
+    breakIdMap: localToServerBreakMap
+  })
+})
+
 // Custom POST handler for work_entry_breaks
 server.post('/work_entry_breaks', (req, res) => {
   const breakEntry = req.body
@@ -190,7 +312,7 @@ server.post('/work_entry_breaks', (req, res) => {
     return res.status(201).json(breakEntry)
   }
   
-  const newBreak = { ...breakEntry, id: `break-${Date.now()}` }
+  const newBreak = { ...breakEntry, id: crypto.randomUUID() }
   db.work_entry_breaks.push(newBreak)
   saveData()
   return res.status(201).json(newBreak)

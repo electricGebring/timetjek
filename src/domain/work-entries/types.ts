@@ -1,4 +1,4 @@
-import type { WorkEntry } from '@/models/work-entry.schema'
+import type { WorkEntry } from '@/db/schema'
 
 export type DayGroup = { date: string; dateLabel: string; entries: WorkEntry[] }
 

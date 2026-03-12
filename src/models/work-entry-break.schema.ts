@@ -1,7 +1,7 @@
 /**
  * WorkEntryBreak schema and types – using pure TypeScript (no Zod)
  * Single source of truth: this file defines the work_entry_breaks table structure.
- * 
+ *
  * Raw values from SQL:
  * - Numbers: database INTEGER
  * - Strings: database TEXT
@@ -10,13 +10,18 @@
 
 /** WorkEntryBreak type – matches database schema */
 export type WorkEntryBreak = {
-  id: number
+  id: string
   work_entry_id: string
+  remote_id?: string | null
+  device_id?: string | null
   start_at: string | null
   end_at: string | null
   start_exact_at: string | null
   end_exact_at: string | null
   created_at: string
+  deleted_at: string | null
+  synced: number
+  deleted: number
 }
 
 /** Column names in SELECT order – derived from WorkEntryBreak keys */
@@ -28,12 +33,18 @@ export const WORK_ENTRY_BREAK_COLUMNS = [
   'start_exact_at',
   'end_exact_at',
   'created_at',
+  'deleted_at',
+  'synced',
+  'deleted'
 ] as const satisfies readonly (keyof WorkEntryBreak)[]
 
 export type WorkEntryBreakColumn = (typeof WORK_ENTRY_BREAK_COLUMNS)[number]
 
-/** Input type for creating a new break (work_entry_id and generated fields excluded) */
-export type CreateWorkEntryBreakInput = Omit<WorkEntryBreak, 'id' | 'work_entry_id' | 'created_at'> & {
+/** Input type for creating a new break (work_entry_id and generated/sync fields excluded) */
+export type CreateWorkEntryBreakInput = Omit<
+  WorkEntryBreak,
+  'id' | 'work_entry_id' | 'created_at' | 'deleted_at' | 'synced' | 'deleted'
+> & {
   start_at?: string | null
   end_at?: string | null
   start_exact_at?: string | null
@@ -51,13 +62,6 @@ export function parseWorkEntryBreakRow(raw: Record<string, unknown>): WorkEntryB
     return String(v)
   }
 
-  const requireNumber = (v: unknown, fieldName: string): number => {
-    if (typeof v === 'number') {
-      return v
-    }
-    throw new Error(`Invalid WorkEntryBreak: ${fieldName} is required and must be a number`)
-  }
-
   const requireString = (v: unknown, fieldName: string): string => {
     if (typeof v === 'string') {
       return v
@@ -65,13 +69,32 @@ export function parseWorkEntryBreakRow(raw: Record<string, unknown>): WorkEntryB
     throw new Error(`Invalid WorkEntryBreak: ${fieldName} is required and must be a string`)
   }
 
+  const coerceId = (v: unknown): string => {
+    if (v === null || v === undefined) return ''
+    if (typeof v === 'string' && v.trim().length > 0) return v
+    if (typeof v === 'number') return String(v)
+    return String(v)
+  }
+
+  const coerceNumber = (v: unknown, def: number): number => {
+    if (v === null || v === undefined) return def
+    if (typeof v === 'number') return v
+    const n = Number(v)
+    return Number.isNaN(n) ? def : n
+  }
+
   return {
-    id: requireNumber(raw.id, 'id'),
+    id: coerceId(raw.id),
     work_entry_id: requireString(raw.work_entry_id, 'work_entry_id'),
+    remote_id: raw.remote_id != null ? coerceString(raw.remote_id) : null,
+    device_id: raw.device_id != null ? coerceString(raw.device_id) : null,
     start_at: coerceString(raw.start_at),
     end_at: coerceString(raw.end_at),
     start_exact_at: coerceString(raw.start_exact_at),
     end_exact_at: coerceString(raw.end_exact_at),
     created_at: requireString(raw.created_at, 'created_at'),
+    deleted_at: coerceString(raw.deleted_at),
+    synced: coerceNumber(raw.synced, 0),
+    deleted: coerceNumber(raw.deleted, 0)
   }
 }
