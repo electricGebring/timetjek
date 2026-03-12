@@ -3,12 +3,34 @@
  * SSR-safe: no window/navigator access when those are undefined.
  */
 
+import type { ConnectivityPort, ConnectivityState, Unsubscribe } from '@/domain/ports/connectivity.port'
+
 import type { Logger } from './logger'
+
+let currentConnectivityState: ConnectivityState | null = null
+
+function setCurrentConnectivityState(state: ConnectivityState): void {
+  currentConnectivityState = state
+}
+
+/**
+ * Bind the app-wide connectivity source used by sync helpers.
+ * Returns an unsubscribe function for completeness; app bootstrap keeps it for app lifetime.
+ */
+export async function bindConnectivitySource(connectivity: ConnectivityPort): Promise<Unsubscribe> {
+  setCurrentConnectivityState(await connectivity.getCurrent())
+
+  return connectivity.subscribe((state) => {
+    setCurrentConnectivityState(state)
+  })
+}
 
 /**
  * True when running in a browser and navigator reports offline.
  */
 export function isBrowserOffline(): boolean {
+  if (currentConnectivityState) return currentConnectivityState.online === false
+
   if (typeof window === 'undefined' || typeof navigator === 'undefined') return false
 
   return navigator.onLine === false

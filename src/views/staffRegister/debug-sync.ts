@@ -1,11 +1,12 @@
 import { triggerSyncIfOnline } from '@/domain/services/sync-trigger'
+import { isBrowserOffline } from '@/utils/connectivity'
 
 export async function debugSyncNow() {
   // Try to trigger sync, but show debug info if not possible
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const syncManager = (window as unknown as { syncManager: any }).syncManager;
 
-  if (!navigator.onLine) {
+  if (isBrowserOffline()) {
      
     console.warn('[DebugPanel] Sync not triggered: offline mode');
 

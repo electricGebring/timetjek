@@ -27,6 +27,7 @@ import type { SyncPort } from './domain/ports/sync.port'
 import { initSyncTrigger } from './domain/services/sync-trigger'
 
 import { createLogger } from '@/utils/logger'
+import { bindConnectivitySource } from '@/utils/connectivity'
 
 import { FontAwesomeIcon } from './fontawesome/icons'
 
@@ -63,6 +64,8 @@ async function bootstrap() {
 
   // Setup connectivity and sync dependencies
   const connectivity = new CapacitorConnectivityAdapter()
+
+  await bindConnectivitySource(connectivity)
 
   const syncManager = new SyncManager({ logger: createLogger('SyncManager') })
 
