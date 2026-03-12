@@ -1,152 +1,38 @@
 [
   {
-    "id": "3e4997c4-6f50-459e-a360-4bea9cd44f25",
-    "remote_id": "3e4997c4-6f50-459e-a360-4bea9cd44f25",
-    "work_entry_id": "87f052c8-372f-4a8a-9d50-252867a0d367",
-    "start_at": "2026-03-10T05:22:30.256Z",
-    "end_at": "2026-03-10T05:22:34.161Z",
-    "start_exact_at": "2026-03-10T05:22:30.256Z",
-    "end_exact_at": "2026-03-10T05:22:34.161Z",
-    "created_at": "2026-03-11T10:50:31.121Z"
+    "id": "22e52f5e-c700-41e4-ab5b-07789b35d53e",
+    "work_entry_id": "5716845c-ebde-4468-9b93-3e1669ca3495",
+    "start_at": "2025-02-11T12:20:00Z",
+    "end_at": "2025-02-11T12:30:00Z",
+    "start_exact_at": "2025-02-11T12:20:13Z",
+    "end_exact_at": "2025-02-11T12:30:03Z",
+    "created_at": "2025-02-11T12:20:13Z"
   },
   {
-    "id": "f519149e-f58c-4f8d-bf87-7c3611d169d0",
-    "remote_id": "f519149e-f58c-4f8d-bf87-7c3611d169d0",
-    "work_entry_id": "7b1bc747-ced3-49c2-bd58-e59d6d0e76aa",
-    "start_at": "2026-03-10T05:22:59.727Z",
-    "end_at": "2026-03-10T05:23:02.913Z",
-    "start_exact_at": "2026-03-10T05:22:59.727Z",
-    "end_exact_at": "2026-03-10T05:23:02.913Z",
-    "created_at": "2026-03-11T10:50:31.132Z"
+    "id": "7e74eb7d-9ab7-4af9-bc8c-6d3d3c9ba3bf",
+    "work_entry_id": "c0c9bafe-dba1-4205-9973-d253a24697a3",
+    "start_at": "2025-02-11T11:00:00Z",
+    "end_at": "2025-02-11T11:30:00Z",
+    "start_exact_at": null,
+    "end_exact_at": null,
+    "created_at": "2025-02-11T11:00:00Z"
   },
   {
-    "id": "da573624-e346-4451-8230-8dc6c4181941",
-    "remote_id": "da573624-e346-4451-8230-8dc6c4181941",
-    "work_entry_id": "7c2b113c-c251-4890-b044-7ab871faa5b7",
-    "start_at": "2026-03-10T11:51:09.819Z",
-    "end_at": "2026-03-10T11:51:18.424Z",
-    "start_exact_at": "2026-03-10T11:51:09.819Z",
-    "end_exact_at": "2026-03-10T11:51:18.424Z",
-    "created_at": "2026-03-11T10:50:31.146Z"
+    "work_entry_id": "local-32b58f9e-d2ab-4446-824b-b7a06c37c564",
+    "start_at": "2026-03-09T16:16:15.309Z",
+    "end_at": null,
+    "start_exact_at": "2026-03-09T16:16:15.309Z",
+    "end_exact_at": null,
+    "created_at": "2026-03-09T16:16:15.456Z",
+    "id": "break-1773072975462"
   },
   {
-    "id": "aa5d024c-d20f-4da3-b0fa-6c6e55af3c83",
-    "remote_id": "aa5d024c-d20f-4da3-b0fa-6c6e55af3c83",
-    "work_entry_id": "1ab23d40-b03c-493e-a17c-88a887741b40",
-    "start_at": "2026-03-10T11:53:16.635Z",
-    "end_at": "2026-03-10T11:53:18.622Z",
-    "start_exact_at": "2026-03-10T11:53:16.635Z",
-    "end_exact_at": "2026-03-10T11:53:18.622Z",
-    "created_at": "2026-03-11T10:50:31.158Z"
-  },
-  {
-    "id": "d3a28068-6f0f-4dcd-8f21-b8b2fb7f0996",
-    "remote_id": "d3a28068-6f0f-4dcd-8f21-b8b2fb7f0996",
-    "work_entry_id": "cc8709ca-6696-4226-a6a4-c418f8b33a90",
-    "start_at": "2026-03-11T09:27:47.150Z",
-    "end_at": "2026-03-11T09:28:00.984Z",
-    "start_exact_at": "2026-03-11T09:27:47.150Z",
-    "end_exact_at": "2026-03-11T09:28:00.984Z",
-    "created_at": "2026-03-11T10:50:31.171Z"
-  },
-  {
-    "id": "9dda7187-f6b3-4a1c-b898-98a7e8e0de98",
-    "remote_id": "9dda7187-f6b3-4a1c-b898-98a7e8e0de98",
-    "work_entry_id": "c42e035a-9345-40db-8642-8472a19b9783",
-    "start_at": "2026-03-11T09:59:15.662Z",
-    "end_at": "2026-03-11T09:59:27.046Z",
-    "start_exact_at": "2026-03-11T09:59:15.662Z",
-    "end_exact_at": "2026-03-11T09:59:27.046Z",
-    "created_at": "2026-03-11T10:50:31.185Z"
-  },
-  {
-    "id": "1769257d-39c8-4cd7-aa49-c5f642d2fc57",
-    "remote_id": "1769257d-39c8-4cd7-aa49-c5f642d2fc57",
-    "work_entry_id": "938b543a-5557-46c5-8eeb-cd7c1a4a75b5",
-    "start_at": "2026-03-11T10:00:16.478Z",
-    "end_at": "2026-03-11T10:00:21.958Z",
-    "start_exact_at": "2026-03-11T10:00:16.478Z",
-    "end_exact_at": "2026-03-11T10:00:21.958Z",
-    "created_at": "2026-03-11T10:50:31.219Z"
-  },
-  {
-    "id": "5c6065d4-3aa8-42a7-98ed-5335141ea3de",
-    "remote_id": "5c6065d4-3aa8-42a7-98ed-5335141ea3de",
-    "work_entry_id": "5777c36e-3536-4240-8ff4-98b6e22803d7",
-    "start_at": "2026-03-11T10:29:20.142Z",
-    "end_at": "2026-03-11T10:29:26.232Z",
-    "start_exact_at": "2026-03-11T10:29:20.142Z",
-    "end_exact_at": "2026-03-11T10:29:26.232Z",
-    "created_at": "2026-03-11T10:50:31.232Z"
-  },
-  {
-    "id": "0d2c2f5d-7e6c-415d-8e8d-e90a2d8b36f0",
-    "remote_id": "0d2c2f5d-7e6c-415d-8e8d-e90a2d8b36f0",
-    "work_entry_id": "5777c36e-3536-4240-8ff4-98b6e22803d7",
-    "start_at": "2026-03-11T10:32:59.623Z",
-    "end_at": "2026-03-11T10:33:12.485Z",
-    "start_exact_at": "2026-03-11T10:32:59.623Z",
-    "end_exact_at": "2026-03-11T10:33:12.485Z",
-    "created_at": "2026-03-11T10:50:31.232Z"
-  },
-  {
-    "id": "47263c95-0dd1-49de-9b7d-60e441faf623",
-    "remote_id": "47263c95-0dd1-49de-9b7d-60e441faf623",
-    "work_entry_id": "71a78072-1c6f-488f-9d09-39c7fd3a82ca",
-    "start_at": "2026-03-11T10:43:55.359Z",
-    "end_at": "2026-03-11T10:44:04.553Z",
-    "start_exact_at": "2026-03-11T10:43:55.359Z",
-    "end_exact_at": "2026-03-11T10:44:04.553Z",
-    "created_at": "2026-03-11T10:50:31.246Z"
-  },
-  {
-    "id": "2ac26b2f-a91d-46c1-a006-aa40ea1bf1da",
-    "remote_id": "2ac26b2f-a91d-46c1-a006-aa40ea1bf1da",
-    "work_entry_id": "592c06ce-018c-4bfe-b2d0-7abb178c33a8",
-    "start_at": "2026-03-11T10:45:53.324Z",
-    "end_at": "2026-03-11T10:45:58.319Z",
-    "start_exact_at": "2026-03-11T10:45:53.324Z",
-    "end_exact_at": "2026-03-11T10:45:58.319Z",
-    "created_at": "2026-03-11T10:50:31.259Z"
-  },
-  {
-    "id": "6cfa0735-005e-4fae-9166-ce9cc19cdfc9",
-    "remote_id": "6cfa0735-005e-4fae-9166-ce9cc19cdfc9",
-    "work_entry_id": "3d4a25f2-769a-4068-b626-e45e7d8c1c8d",
-    "start_at": "2026-03-11T10:50:04.091Z",
-    "end_at": "2026-03-11T10:50:19.148Z",
-    "start_exact_at": "2026-03-11T10:50:04.091Z",
-    "end_exact_at": "2026-03-11T10:50:19.148Z",
-    "created_at": "2026-03-11T10:54:22.168Z"
-  },
-  {
-    "id": "bf405ec8-ecb1-4890-b16a-cc120da5d4e2",
-    "remote_id": "bf405ec8-ecb1-4890-b16a-cc120da5d4e2",
-    "work_entry_id": "9c6514e5-cee3-41cd-b0fe-2de5e4d5295b",
-    "start_at": "2026-03-11T10:50:28.165Z",
-    "end_at": "2026-03-11T10:50:30.198Z",
-    "start_exact_at": "2026-03-11T10:50:28.165Z",
-    "end_exact_at": "2026-03-11T10:50:30.198Z",
-    "created_at": "2026-03-11T10:54:22.187Z"
-  },
-  {
-    "id": "8c01117c-6d1b-48e8-b1b2-57ab739f250b",
-    "remote_id": "8c01117c-6d1b-48e8-b1b2-57ab739f250b",
-    "work_entry_id": "51ad7b05-84a5-4794-98ca-b4a8ee965f50",
-    "start_at": "2026-03-11T10:54:23.508Z",
-    "end_at": "2026-03-11T10:54:33.968Z",
-    "start_exact_at": "2026-03-11T10:54:23.508Z",
-    "end_exact_at": "2026-03-11T10:54:33.968Z",
-    "created_at": "2026-03-11T10:55:11.211Z"
-  },
-  {
-    "id": "a545e68d-0902-4ba3-a214-73f334ff7568",
-    "remote_id": "a545e68d-0902-4ba3-a214-73f334ff7568",
-    "work_entry_id": "51ad7b05-84a5-4794-98ca-b4a8ee965f50",
-    "start_at": "2026-03-11T10:54:37.684Z",
-    "end_at": "2026-03-11T10:54:39.851Z",
-    "start_exact_at": "2026-03-11T10:54:37.684Z",
-    "end_exact_at": "2026-03-11T10:54:39.851Z",
-    "created_at": "2026-03-11T10:55:11.211Z"
+    "work_entry_id": "local-ef634c9e-f6de-45d0-bea7-12e8cdd1b31b",
+    "start_at": "2026-03-09T16:16:54.003Z",
+    "end_at": null,
+    "start_exact_at": "2026-03-09T16:16:54.003Z",
+    "end_exact_at": null,
+    "created_at": "2026-03-09T16:16:54.145Z",
+    "id": "break-1773073014149"
   }
 ]
