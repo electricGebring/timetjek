@@ -20,7 +20,7 @@ let sqlJsDb: Database | null = null
 export async function initDB() {
   const { runMigrations } = await import('./migrate')
 
-  const { initDrizzle } = await import('./drizzle')
+  const { initDrizzle, initDrizzleCapacitor } = await import('./drizzle')
 
   if (Capacitor.isNativePlatform()) {
     if (!sqlite) {
@@ -34,10 +34,16 @@ export async function initDB() {
 
     await runMigrations()
 
-    // TODO: Initialize Drizzle with Capacitor SQLite
-    // For now, Capacitor uses legacy queries until Drizzle Capacitor adapter is implemented
-    console.debug('[DB] Capacitor SQLite initialized (Drizzle integration pending)')
-  } else {
+    await initDrizzleCapacitor(
+      capacitorDb as {
+        run: (sql: string, params?: unknown[]) => Promise<unknown>
+        query: (sql: string, params?: unknown[]) => Promise<{ values?: Record<string, unknown>[] }>
+      }
+    )
+
+    console.debug('[DB] Capacitor SQLite initialized with Drizzle')
+  }
+ else {
     let SQL: unknown
 
     try {
@@ -50,7 +56,8 @@ export async function initDB() {
           return `https://sql.js.org/dist/${file}`
         }
       })
-    } catch (error: unknown) {
+    }
+ catch (error: unknown) {
       if (
         typeof error === 'object' &&
         error !== null &&
@@ -66,13 +73,15 @@ export async function initDB() {
           SQL = await initSqlJs({
             locateFile: (file) => `https://sql.js.org/dist/${file}`
           })
-        } catch {
+        }
+ catch {
           throw new Error(
             'Failed to load sql.js WASM file. ' +
               'For offline support, copy node_modules/sql.js/dist/sql-wasm.wasm to public/sqljs/sql-wasm.wasm'
           )
         }
-      } else {
+      }
+ else {
         throw error
       }
     }
@@ -83,7 +92,8 @@ export async function initDB() {
       const buf = Uint8Array.from(atob(savedDb), (c) => c.charCodeAt(0))
 
       sqlJsDb = new (SQL as import('sql.js').SqlJsStatic).Database(buf)
-    } else {
+    }
+ else {
       sqlJsDb = new (SQL as import('sql.js').SqlJsStatic).Database()
     }
 
@@ -132,7 +142,8 @@ export function getDB() {
     }
 
     return capacitorDb
-  } else {
+  }
+ else {
     if (!sqlJsDb) {
       throw new Error('sql.js DB not initialized')
     }
@@ -150,7 +161,9 @@ export function getDB() {
  *   window.dbQuery('SELECT * FROM sync_metadata')
  */
 if (typeof window !== 'undefined' && !Capacitor.isNativePlatform()) {
-  ;(window as unknown as { dbQuery: (sql: string) => unknown }).dbQuery = (sql: string) => {
+  ;
+
+(window as unknown as { dbQuery: (sql: string) => unknown }).dbQuery = (sql: string) => {
     if (!sqlJsDb) {
       console.error('Database not initialized. Make sure the app has loaded.')
 
@@ -186,7 +199,8 @@ if (typeof window !== 'undefined' && !Capacitor.isNativePlatform()) {
       console.table(rows)
 
       return rows
-    } catch (error) {
+    }
+ catch (error) {
       console.error('Database query error:', error)
 
       throw error

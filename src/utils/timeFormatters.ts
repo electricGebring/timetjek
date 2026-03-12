@@ -91,7 +91,8 @@ export function formatBreak(breakValue: string | null): string {
     if (d !== null && d > 0) totalMinutes += d
   }
 
-  if (totalMinutes <= 0) return '—'
+  // If break segments exist but duration rounds below 1 minute, show 0min.
+  if (totalMinutes <= 0) return '0min'
 
   return formatDurationMinutes(totalMinutes)
 }

@@ -1,53 +1,27 @@
-import { getDB } from '../index'
+import { eq } from 'drizzle-orm'
 
-import { Capacitor } from '@capacitor/core'
+import { getDb } from '../drizzle'
+
+import { syncMetadata as syncMetadataTable } from '../schema'
 
 import type { SyncMetadata } from './sync-metadata-types'
 
 export async function getSyncMetadata(tableName: string): Promise<SyncMetadata | null> {
-  if (Capacitor.isNativePlatform()) {
-    // Type assertion for Capacitor SQLite DB
-    const db = getDB() as {
-      query: (sql: string, params?: unknown[]) => Promise<{ values?: unknown[][] }>
-    }
+  const rows = await getDb()
+    .select()
+    .from(syncMetadataTable)
+    .where(eq(syncMetadataTable.table_name, tableName))
 
-    const res = await db.query('SELECT * FROM sync_metadata WHERE table_name = ?', [tableName])
+  const row = rows[0]
 
-    if (!res.values || res.values.length === 0) return null
+  if (!row) return null
 
-    const row = res.values[0]
-
-    if (!Array.isArray(row)) return null
-
-    return {
-      tableName: String(row[0]),
-      lastSyncTimestamp: row[1] !== null ? Number(row[1]) : null,
-      syncToken: row[2] !== null ? String(row[2]) : null,
-      lastSuccessfulSync: row[3] !== null ? Number(row[3]) : null,
-      syncState: (row[4] ?? 'idle') as SyncMetadata['syncState'],
-      errorMessage: row[5] !== null ? String(row[5]) : null
-    }
-  }
- else {
-    const { sqlJsDb } = getDB() as {
-      sqlJsDb: { exec: (sql: string, params: unknown[]) => { length: number; values: unknown[][] }[] }
-    }
-
-    const results = sqlJsDb.exec('SELECT * FROM sync_metadata WHERE table_name = ?', [tableName])
-
-    if (!results.length || !results[0]?.values || !results[0].values.length) return null
-
-    const row = results[0].values[0]
-
-    if (!Array.isArray(row)) return null
-
-    return {
-      tableName: String(row[0]),
-      lastSyncTimestamp: row[1] !== null ? Number(row[1]) : null,
-      syncToken: row[2] !== null ? String(row[2]) : null,
-      lastSuccessfulSync: row[3] !== null ? Number(row[3]) : null,
-      syncState: (row[4] ?? 'idle') as SyncMetadata['syncState'],
-      errorMessage: row[5] !== null ? String(row[5]) : null
-    }
+  return {
+    tableName: row.table_name,
+    lastSyncTimestamp: row.last_sync_timestamp ?? null,
+    syncToken: row.sync_token ?? null,
+    lastSuccessfulSync: row.last_successful_sync ?? null,
+    syncState: (row.sync_state ?? 'idle') as SyncMetadata['syncState'],
+    errorMessage: row.error_message ?? null
   }
 }

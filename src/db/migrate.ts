@@ -9,7 +9,8 @@ type Migration = { id: string; sql: string }
 const isNativeRuntime = (() => {
   try {
     return Capacitor.isNativePlatform()
-  } catch {
+  }
+ catch {
     return false
   }
 })()
@@ -45,7 +46,8 @@ if (isNodeProcessRuntime()) {
     id: `0_drizzle_${file.replace('.sql', '')}`,
     sql: readFileSync(join(drizzlePath, file), 'utf-8')
   }))
-} else {
+}
+ else {
   // Web/Vite: use dynamic imports for SQL files (Vite supports ?raw)
   // This will be populated at build time by Vite's static analysis
   const drizzleModules = import.meta.glob('../../drizzle/*.sql', { query: '?raw', eager: true })
@@ -53,6 +55,7 @@ if (isNodeProcessRuntime()) {
   migrations = Object.entries(drizzleModules)
     .map(([path, mod]) => {
       const fileName = path.split('/').pop()?.replace('.sql', '') || ''
+
       return {
         id: `0_drizzle_${fileName}`,
         sql: (mod as { default: string }).default
@@ -80,7 +83,8 @@ async function getAppliedMigrationIds(): Promise<Set<string>> {
     rows.map((r) => {
       if (Array.isArray(r)) {
         return String(r[0])
-      } else if (typeof r === 'object' && r !== null) {
+      }
+ else if (typeof r === 'object' && r !== null) {
         return String((r as unknown as { id: string }).id)
       }
 
@@ -94,7 +98,8 @@ async function runSql(sql: string, params: unknown[] = []) {
     const db = getDB() as { run: (sql: string, params?: unknown[]) => Promise<void> }
 
     await db.run(sql, params)
-  } else {
+  }
+ else {
     const { sqlJsDb } = getDB() as { sqlJsDb: { run: (sql: string, params?: unknown[]) => void } }
 
     sqlJsDb.run(sql, params)
@@ -113,7 +118,8 @@ async function queryRows(sql: string, params: unknown[] = []): Promise<unknown[]
     })
 
     return values as unknown[][]
-  } else {
+  }
+ else {
     const { sqlJsDb } = getDB() as { sqlJsDb: { exec: (sql: string, params?: unknown[]) => { values: unknown[][] }[] } }
 
     const results = sqlJsDb.exec(sql, params)
@@ -145,7 +151,9 @@ export async function runMigrations() {
     console.debug('[MIGRATIONS] Applying migration:', m.id)
 
     try {
-      await runSql('BEGIN TRANSACTION')
+      if (!isNativeRuntime) {
+        await runSql('BEGIN TRANSACTION')
+      }
 
       // Split multiple statements (Drizzle uses --> statement-breakpoint or ;)
       const statements = m.sql
@@ -160,17 +168,25 @@ export async function runMigrations() {
 
       await runSql('INSERT INTO schema_migrations (id, applied_at) VALUES (?, ?)', [m.id, new Date().toISOString()])
 
-      await runSql('COMMIT')
+      if (!isNativeRuntime) {
+        await runSql('COMMIT')
+      }
+
       console.debug('[MIGRATIONS] Migration applied:', m.id)
-    } catch (e) {
-      await runSql('ROLLBACK').catch(() => {})
+    }
+ catch (e) {
+      if (!isNativeRuntime) {
+        await runSql('ROLLBACK').catch(() => {})
+      }
+
       throw new Error(`Migration failed: ${m.id} -> ${(e as Error).message}`)
     }
   }
 
   if (pending.length === 0) {
     console.debug('[MIGRATIONS] No new migrations to apply')
-  } else {
+  }
+ else {
     console.debug('[MIGRATIONS] All migrations applied')
   }
 

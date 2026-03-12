@@ -1,5 +1,8 @@
 import type { Entry } from '@/views/staffRegister/types'
+
 import { createLocalWorkEntryId } from '@/db/work-entries/work-entry.helpers'
+
+import { resolveApiBaseUrl } from './base-url'
 
 /** Break shape for batch payload (minimal fields for upsert) */
 export type BatchBreakInput = {
@@ -22,26 +25,8 @@ export type BatchBlockPayload = {
 
 // Dynamically select API URL, preferring configuration over hard-coded IPs
 function getApiUrl() {
-  // Prefer a configured base URL if available (e.g. via Vite env)
-  const envBaseUrl =
-    (typeof import.meta !== 'undefined' && (import.meta as any).env && (import.meta as any).env.VITE_API_BASE_URL) ||
-    undefined
-  let baseUrl = envBaseUrl as string | undefined
+  const baseUrl = resolveApiBaseUrl()
 
-  // If no env base URL is provided, derive it from window.location when available
-  if (!baseUrl) {
-    if (typeof window !== 'undefined' && window.location) {
-      const { protocol, hostname } = window.location
-      const port = '3002'
-      baseUrl = `${protocol}//${hostname}:${port}`
-    } else {
-      // Fallback for non-browser environments
-      baseUrl = 'http://localhost:3002'
-    }
-  }
-
-  // Ensure no trailing slash before appending the entries path
-  baseUrl = baseUrl.replace(/\/+$/, '')
   return `${baseUrl}/entries`
 }
 
@@ -85,7 +70,8 @@ async function fetchWithRetry(url: string, options?: RequestInit, maxRetries = 3
       const response = await fetch(url, options)
 
       return response
-    } catch (error) {
+    }
+ catch (error) {
       lastError = error as Error
 
       // Only retry on connection errors
@@ -111,6 +97,7 @@ async function fetchWithRetry(url: string, options?: RequestInit, maxRetries = 3
  */
 export async function fetchWorkEntries(): Promise<Entry[]> {
   const response = await fetchWithRetry(API_URL)
+
   const payload = (await response.json()) as Entry[]
 
   return payload.map(normalizeEntryFromApi)
@@ -122,7 +109,9 @@ export async function fetchWorkEntries(): Promise<Entry[]> {
  */
 export async function fetchWorkEntriesSince(since: number): Promise<Entry[]> {
   const url = since > 0 ? `${API_URL}?since=${since}` : API_URL
+
   const response = await fetchWithRetry(url)
+
   const payload = (await response.json()) as Entry[]
 
   return payload.map(normalizeEntryFromApi)
@@ -200,11 +189,14 @@ export async function batchUpsertBlock(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
   })
+
   if (!response.ok) throw new Error(`Failed to batch upsert block: ${response.statusText}`)
+
   const result = (await response.json()) as {
     entry: Entry
     breakIdMap?: Record<string, string>
   }
+
   return {
     entry: normalizeEntryFromApi(result.entry),
     breakIdMap: result.breakIdMap ?? {}
