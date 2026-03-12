@@ -41,7 +41,7 @@
             </tr>
             <tr
               v-for="entry in day.entries"
-              :key="entry.id"
+              :key="entry.rowId"
               class="bg-white"
             >
               <td class="px-3 py-3 sm:px-5 sm:py-4">
@@ -198,7 +198,8 @@ function isDisplayRow(entry: unknown): entry is DisplayRow {
   return (
     typeof entry === 'object' &&
     entry !== null &&
-    'id' in entry &&
+    'rowId' in entry &&
+    'entryId' in entry &&
     'name' in entry &&
     'type' in entry &&
     'check_in_time_at' in entry

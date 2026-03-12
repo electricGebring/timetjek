@@ -1,38 +1,22 @@
 [
   {
-    "id": "22e52f5e-c700-41e4-ab5b-07789b35d53e",
-    "work_entry_id": "5716845c-ebde-4468-9b93-3e1669ca3495",
-    "start_at": "2025-02-11T12:20:00Z",
-    "end_at": "2025-02-11T12:30:00Z",
-    "start_exact_at": "2025-02-11T12:20:13Z",
-    "end_exact_at": "2025-02-11T12:30:03Z",
-    "created_at": "2025-02-11T12:20:13Z"
+    "id": "28b1c0ba-20fb-4fc2-8159-32f3ab3aea3a",
+    "remote_id": "28b1c0ba-20fb-4fc2-8159-32f3ab3aea3a",
+    "work_entry_id": "640b65db-023e-4023-8b7a-a636cd89ae0c",
+    "start_at": "2026-03-12T09:21:57.184Z",
+    "end_at": "2026-03-12T09:22:01.467Z",
+    "start_exact_at": "2026-03-12T09:21:57.184Z",
+    "end_exact_at": "2026-03-12T09:22:01.467Z",
+    "created_at": "2026-03-12T09:22:33.108Z"
   },
   {
-    "id": "7e74eb7d-9ab7-4af9-bc8c-6d3d3c9ba3bf",
-    "work_entry_id": "c0c9bafe-dba1-4205-9973-d253a24697a3",
-    "start_at": "2025-02-11T11:00:00Z",
-    "end_at": "2025-02-11T11:30:00Z",
-    "start_exact_at": null,
-    "end_exact_at": null,
-    "created_at": "2025-02-11T11:00:00Z"
-  },
-  {
-    "work_entry_id": "local-32b58f9e-d2ab-4446-824b-b7a06c37c564",
-    "start_at": "2026-03-09T16:16:15.309Z",
-    "end_at": null,
-    "start_exact_at": "2026-03-09T16:16:15.309Z",
-    "end_exact_at": null,
-    "created_at": "2026-03-09T16:16:15.456Z",
-    "id": "break-1773072975462"
-  },
-  {
-    "work_entry_id": "local-ef634c9e-f6de-45d0-bea7-12e8cdd1b31b",
-    "start_at": "2026-03-09T16:16:54.003Z",
-    "end_at": null,
-    "start_exact_at": "2026-03-09T16:16:54.003Z",
-    "end_exact_at": null,
-    "created_at": "2026-03-09T16:16:54.145Z",
-    "id": "break-1773073014149"
+    "id": "0723e7d2-7477-4fc4-a73e-9b30bd8fe573",
+    "remote_id": "0723e7d2-7477-4fc4-a73e-9b30bd8fe573",
+    "work_entry_id": "640b65db-023e-4023-8b7a-a636cd89ae0c",
+    "start_at": "2026-03-12T09:22:10.113Z",
+    "end_at": "2026-03-12T09:22:11.204Z",
+    "start_exact_at": "2026-03-12T09:22:10.113Z",
+    "end_exact_at": "2026-03-12T09:22:11.204Z",
+    "created_at": "2026-03-12T09:22:33.108Z"
   }
 ]

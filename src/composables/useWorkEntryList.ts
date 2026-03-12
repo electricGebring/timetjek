@@ -3,7 +3,8 @@ import { computed, type Ref } from 'vue'
 import type { Entry } from '@/views/staffRegister/types'
 
 export type DisplayRow = {
-  id: string
+  rowId: string
+  entryId: string
   name: string
   type: string
   personalNumber: string
@@ -117,7 +118,8 @@ export function useWorkEntryList(workEntries: Ref<Entry[]>) {
       const workTo = segment.start
 
       rows.push({
-        id: `${entry.id}:work:${idx}`,
+        rowId: `${entry.id}:work:${idx}`,
+        entryId: entry.id,
         name: entry.name,
         type: entry.type,
         personalNumber: entry.personalNumber,
@@ -134,7 +136,8 @@ export function useWorkEntryList(workEntries: Ref<Entry[]>) {
       })
 
       rows.push({
-        id: `${entry.id}:break:${idx}`,
+        rowId: `${entry.id}:break:${idx}`,
+        entryId: entry.id,
         name: entry.name,
         type: 'P',
         personalNumber: entry.personalNumber,
@@ -157,7 +160,8 @@ export function useWorkEntryList(workEntries: Ref<Entry[]>) {
       const finalOut = normalizeTime(entry.check_out_time_at) ?? toTimePart(entry.check_out_at)
 
       rows.push({
-        id: `${entry.id}:work:final`,
+        rowId: `${entry.id}:work:final`,
+        entryId: entry.id,
         name: entry.name,
         type: entry.type,
         personalNumber: entry.personalNumber,
@@ -176,7 +180,8 @@ export function useWorkEntryList(workEntries: Ref<Entry[]>) {
 
     if (rows.length === 0) {
       rows.push({
-        id: `${entry.id}:fallback`,
+        rowId: `${entry.id}:fallback`,
+        entryId: entry.id,
         name: entry.name,
         type: entry.type,
         personalNumber: entry.personalNumber,
