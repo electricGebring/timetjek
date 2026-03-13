@@ -71,6 +71,16 @@ export class SyncEngine implements SyncPort {
 
     const timings: Record<string, number> = {}
 
+    const handleCancelledSync = async (): Promise<boolean> => {
+      if (!signal.aborted) return false
+
+      timings.cancelled = 1
+
+      await syncMetadata.markSyncError(this.tableName, 'Sync cancelled')
+
+      return true
+    }
+
     try {
       const t0 = performance.now()
 
@@ -78,7 +88,7 @@ export class SyncEngine implements SyncPort {
 
       timings.setSyncState = performance.now() - t0
 
-      if (signal.aborted) {
+      if (await handleCancelledSync()) {
         this.lastSyncTimings = timings
 
         return
@@ -90,7 +100,7 @@ export class SyncEngine implements SyncPort {
 
       timings.drainOutbox = performance.now() - t1
 
-      if (signal.aborted) {
+      if (await handleCancelledSync()) {
         this.lastSyncTimings = timings
 
         return
@@ -102,7 +112,7 @@ export class SyncEngine implements SyncPort {
 
       timings.drainDeletions = performance.now() - t2
 
-      if (signal.aborted) {
+      if (await handleCancelledSync()) {
         this.lastSyncTimings = timings
 
         return
@@ -114,7 +124,7 @@ export class SyncEngine implements SyncPort {
 
       timings.pullRemoteChanges = performance.now() - t3
 
-      if (signal.aborted) {
+      if (await handleCancelledSync()) {
         this.lastSyncTimings = timings
 
         return
@@ -210,6 +220,12 @@ export class SyncEngine implements SyncPort {
     const failed: { id: string; error: unknown }[] = []
 
     for (const item of unsyncedItems) {
+      if (signal?.aborted) {
+        this.logger.log(`[SyncEngine] 🛑 Abort requested during outbox drain for ${this.tableName}`)
+
+        break
+      }
+
       try {
         const now = Math.floor(Date.now() / 1000)
 
@@ -294,6 +310,12 @@ export class SyncEngine implements SyncPort {
       typeof e === 'object' && e !== null && 'status' in e && typeof (e as { status: unknown }).status === 'number'
 
     for (const item of deletedItems) {
+      if (signal?.aborted) {
+        this.logger.log(`[SyncEngine] 🛑 Abort requested during deletion drain for ${this.tableName}`)
+
+        break
+      }
+
       const typedItem = item as { id: string }
 
       try {
