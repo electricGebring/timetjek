@@ -20,6 +20,8 @@ import { OnlineOfflineCoordinator } from './domain/services/online-offline-coord
 
 import { cleanupAllTables } from './domain/services/data-cleanup'
 
+import { updateSyncMetadata } from '@/db/sync-metadata/repo'
+
 import { SyncManager } from './sync/sync-manager'
 
 import type { SyncPort } from './domain/ports/sync.port'
@@ -27,6 +29,7 @@ import type { SyncPort } from './domain/ports/sync.port'
 import { initSyncTrigger } from './domain/services/sync-trigger'
 
 import { createLogger } from '@/utils/logger'
+
 import { bindConnectivitySource } from '@/utils/connectivity'
 
 import { FontAwesomeIcon } from './fontawesome/icons'
@@ -38,6 +41,8 @@ import { registerTableAdapter } from '@/sync/table-sync-adapter'
 
 import { createWorkEntriesAdapter } from '@/sync/work-entries/adapter'
 
+import { getSyncUnitsForSync } from '@/domain/config/data-policies'
+
 // Import service layer (exposes on window for debugging)
 import '@/domain/work-entries/service'
 
@@ -48,6 +53,12 @@ async function bootstrap() {
 
   // Register sync adapters: aggregation adapters use aggregation name as key
   registerTableAdapter(WORK_ENTRIES_AGGREGATE, createWorkEntriesAdapter)
+
+  // Ensure sync metadata rows exist for all configured sync units.
+  // updateSyncMetadata({}) preserves existing values and inserts missing rows.
+  const syncUnits = getSyncUnitsForSync()
+
+  await Promise.all(syncUnits.map((syncKey) => updateSyncMetadata(syncKey, {})))
 
   // Create and mount Vue app
   const app = createApp(App)
@@ -97,6 +108,7 @@ async function bootstrap() {
   initSyncTrigger(syncAdapter, connectivity)
 
   await coordinator.start()
+
   const logger = createLogger('Bootstrap')
 
   try {
@@ -107,7 +119,8 @@ async function bootstrap() {
     if (totalCleaned > 0) {
       logger.log(`[Bootstrap] Cleaned up expired data:`, results)
     }
-  } catch (error) {
+  }
+ catch (error) {
     logger.error('[Bootstrap] Initial cleanup failed:', error)
   }
 
@@ -131,7 +144,8 @@ function scheduleDailyCleanup(logger: LoggerLike = console) {
       if (totalCleaned > 0) {
         logger.log(`[Cleanup] Cleaned up expired data:`, results)
       }
-    } catch (error) {
+    }
+ catch (error) {
       logger.error('[Cleanup] Scheduled cleanup failed:', error)
     }
   }

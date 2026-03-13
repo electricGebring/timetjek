@@ -81,8 +81,11 @@ export function getAggregationPolicyForRootTable(rootTable: string): Aggregation
  */
 export function getDataPolicy(tableName: string): DataRetentionPolicy | undefined {
   const tablePolicy = DATA_POLICIES[tableName]
+
   if (tablePolicy) return tablePolicy
+
   const agg = getAggregationPolicyForRootTable(tableName)
+
   if (agg) {
     return {
       tableName: agg.rootTable,
@@ -93,6 +96,7 @@ export function getDataPolicy(tableName: string): DataRetentionPolicy | undefine
       conflictStrategy: agg.conflictStrategy
     }
   }
+
   return undefined
 }
 
@@ -144,10 +148,13 @@ export function shouldSoftDeleteOnly(tableName: string): boolean {
  */
 export function getConflictStrategy(tableOrAggregationKey: string): ConflictResolutionStrategy {
   const aggregation = AGGREGATION_POLICIES[tableOrAggregationKey]
+
   if (aggregation?.conflictStrategy) {
     return aggregation.conflictStrategy
   }
+
   const policy = getDataPolicy(tableOrAggregationKey)
+
   return policy?.conflictStrategy ?? ConflictResolutionStrategy.LAST_WRITE_WINS
 }
 
@@ -166,6 +173,7 @@ export function getPoliciesNeedingCleanup(): DataRetentionPolicy[] {
   const rootTablesInAggregations = new Set(
     (Object.values(AGGREGATION_POLICIES) as AggregationPolicy[]).map((ap) => ap.rootTable)
   )
+
   const fromDataPolicies = (Object.values(DATA_POLICIES) as DataRetentionPolicy[]).filter(
     (policy) =>
       !rootTablesInAggregations.has(policy.tableName) &&
@@ -173,12 +181,14 @@ export function getPoliciesNeedingCleanup(): DataRetentionPolicy[] {
       policy.retentionDays !== undefined &&
       policy.retentionDays > 0
   )
+
   const fromAggregations = (Object.values(AGGREGATION_POLICIES) as AggregationPolicy[]).filter(
     (agg) =>
       (agg.syncMode === SyncMode.OFFLINE_FIRST || agg.syncMode === SyncMode.CACHE_ONLY) &&
       agg.retentionDays !== undefined &&
       agg.retentionDays > 0
   )
+
   const aggregationCleanupPolicies: DataRetentionPolicy[] = fromAggregations.map((agg) => ({
     tableName: agg.rootTable,
     syncMode: agg.syncMode,
@@ -187,6 +197,7 @@ export function getPoliciesNeedingCleanup(): DataRetentionPolicy[] {
     autoSync: agg.autoSync,
     conflictStrategy: agg.conflictStrategy
   }))
+
   return [...fromDataPolicies, ...aggregationCleanupPolicies]
 }
 
@@ -202,6 +213,7 @@ export function getPoliciesForSync(): DataRetentionPolicy[] {
  */
 function shouldSyncAggregation(aggregation: AggregationPolicy): boolean {
   if (aggregation.syncMode === SyncMode.ONLINE_ONLY) return false
+
   return aggregation.autoSync !== false
 }
 
@@ -219,9 +231,14 @@ export function getAggregationPoliciesForSync(): AggregationPolicy[] {
  */
 export function getSyncUnitsForSync(): string[] {
   const aggregationPolicies = getAggregationPoliciesForSync()
+
   const rootTablesInAggregations = new Set(aggregationPolicies.map((ap) => ap.rootTable))
+
   const aggregationKeys = aggregationPolicies.map((ap) => ap.aggregationName)
+
   const tablePolicies = getPoliciesForSync()
+
   const tableKeys = tablePolicies.map((p) => p.tableName).filter((table) => !rootTablesInAggregations.has(table))
+
   return [...aggregationKeys, ...tableKeys]
 }
