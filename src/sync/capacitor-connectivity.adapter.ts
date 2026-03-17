@@ -13,6 +13,8 @@ export class CapacitorConnectivityAdapter implements ConnectivityPort {
   }
 
   subscribe(handler: (state: ConnectivityState) => void): Unsubscribe {
+    console.log(handler, 'handler')
+    
     const listener = Network.addListener('networkStatusChange', (status) => {
       handler({
         online: status.connected,
@@ -22,7 +24,11 @@ export class CapacitorConnectivityAdapter implements ConnectivityPort {
 
     return () => {
       // Capacitor listener returns a handle with remove()
-      void listener.then((handle) => handle.remove())
+      // Use async IIFE to ensure listener resolves before removal
+      void (async () => {
+        const handle = await listener
+        await handle.remove()
+      })()
     }
   }
 }
