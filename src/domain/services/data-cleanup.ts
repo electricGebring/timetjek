@@ -18,9 +18,9 @@ function buildCleanupQueries(
   cutoffTimestamp: number
 ): { countSql: string; deleteSql: string; params: number[] } {
   if (softDeleteOnly) {
-    const sql = `SELECT COUNT(*) as count FROM ${tableName} WHERE deleted = 1 AND updatedAt < ?`
+    const sql = `SELECT COUNT(*) as count FROM ${tableName} WHERE deleted = 1 AND synced = 1 AND updatedAt < ?`
 
-    const deleteSql = `DELETE FROM ${tableName} WHERE deleted = 1 AND updatedAt < ?`
+    const deleteSql = `DELETE FROM ${tableName} WHERE deleted = 1 AND synced = 1 AND updatedAt < ?`
 
     return { countSql: sql, deleteSql, params: [cutoffTimestamp] }
   }
