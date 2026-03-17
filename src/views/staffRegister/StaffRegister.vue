@@ -58,27 +58,15 @@ function updateSyncTimings() {
       return
     }
 
-    // Try common table names
-    const possibleTables = ['work_entries', 'work_entry_breaks', 'work_entries_aggregate']
+    // Get sync timings from work_entries_aggregate
+    const engine = syncManager.getSyncEngine?.('work_entries_aggregate')
 
-    let engine = null
-
-    for (const t of possibleTables) {
-      engine = syncManager.getSyncEngine?.(t)
-
-      if (engine) {
-        if (engine.lastSyncTimings && Object.keys(engine.lastSyncTimings).length > 0) {
-          syncTimings.value = { ...engine.lastSyncTimings }
-
-          return
-        }
-      }
+    if (engine?.lastSyncTimings && Object.keys(engine.lastSyncTimings).length > 0) {
+      syncTimings.value = { ...engine.lastSyncTimings }
+    } else {
+      syncTimings.value = undefined
+      console.warn('[DebugPanel] No sync timings available for work_entries_aggregate')
     }
-
-    // If no timings found, clear
-    syncTimings.value = undefined
-
-    console.warn('[DebugPanel] No timings found for any table')
   } catch (e) {
     console.error('[DebugPanel] updateSyncTimings error', e)
   }
