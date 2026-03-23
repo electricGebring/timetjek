@@ -1,4 +1,5 @@
 import * as staffRepo from '@/db/work-entries/repo'
+
 import * as breakRepo from '@/db/work-entry-breaks/repo'
 
 import { hasOpenCheckIn } from './rules'
@@ -88,10 +89,13 @@ export async function canCheckIn(work_day_id: number): Promise<boolean> {
 
   // Open entry exists: allow check-in only when returning from break (open break)
   const openEntry = todays.find((e) => e.check_in_at && !e.check_out_at)
+
   if (!openEntry?.id) return false
 
   const breaks = await breakRepo.getBreaksByWorkEntryId(openEntry.id)
+
   const hasOpenBreak = breaks.some((b) => b.end_at === null)
+
   return hasOpenBreak
 }
 

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 const jsonServer = require('json-server')
 const crypto = require('crypto')
 const fs = require('fs')
@@ -370,7 +371,7 @@ server.use((req, res, next) => {
 })
 
 // Fallback: also save after router is done
-server.use((req, res) => {
+server.use((req) => {
   if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) {
     console.log('💾 Final save after ' + req.method)
     saveData()

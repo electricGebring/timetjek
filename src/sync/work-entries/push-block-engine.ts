@@ -1,8 +1,11 @@
 import * as repo from '@/db/work-entries/repo'
+
 import * as breakRepo from '@/db/work-entry-breaks/repo'
+
 import { runInTransaction } from '@/db/drizzle'
 
 import { batchUpsertBlock } from '@/api/work-entries'
+
 import { getDeviceId } from '@/db/work-entries/work-entry.helpers'
 
 import type { Entry } from '@/views/staffRegister/types'
@@ -12,12 +15,15 @@ import type { Entry } from '@/views/staffRegister/types'
  */
 function is404(e: unknown): boolean {
   if (typeof e !== 'object' || e === null) return false
+
   if ('message' in e && typeof (e as { message: unknown }).message === 'string') {
     return (e as { message: string }).message.includes('404')
   }
+
   if ('status' in e && typeof (e as { status: unknown }).status === 'number') {
     return (e as { status: number }).status === 404
   }
+
   return false
 }
 
@@ -43,7 +49,9 @@ export class PushBlockEngine {
   /** Run all steps in sequence. Returns the synced API entry. */
   async run(): Promise<Entry> {
     await this.step1BatchPushBlock()
+
     await this.step2MarkSynced()
+
     return this.apiEntry!
   }
 
@@ -52,7 +60,9 @@ export class PushBlockEngine {
   /** Step 1: Batch push entry + breaks to API in one request */
   async step1BatchPushBlock(): Promise<void> {
     const localBreaks = await breakRepo.getBreaksByWorkEntryId(this.entry.id)
+
     const deletedUnsynced = await breakRepo.getDeletedUnsyncedBreaksByWorkEntryId(this.entry.id)
+
     this.breakIdsToDelete = deletedUnsynced.map((b) => b.id)
 
     const entryWithLocalId = {
@@ -78,13 +88,19 @@ export class PushBlockEngine {
     })
 
     this.apiEntry = entry
+
     this.breakIdMap = breakIdMap
+
     this.syncedBreakIds = localBreaks.map((b) => b.id)
   }
 
-  /** Step 2: Mark local breaks and work entry as synced, persist remote_id, permanent-delete locally deleted breaks (atomic) */
+  /**
+   * Step 2: Mark local breaks and work entry as synced,
+   * persist remote_id, and permanently delete locally deleted breaks (atomic).
+   */
   async step2MarkSynced(): Promise<void> {
     if (!this.apiEntry) throw new Error('step1BatchPushBlock must run first')
+
     const toPersist: Entry = {
       ...this.apiEntry,
       id: this.entry.id,
@@ -92,13 +108,16 @@ export class PushBlockEngine {
       device_id: this.entry.device_id ?? this.apiEntry.device_id ?? getDeviceId(),
       synced: 1
     }
+
     await runInTransaction(async (tx) => {
       if (this.syncedBreakIds.length > 0) {
         await breakRepo.markBreaksAsSynced(this.syncedBreakIds, this.breakIdMap, tx)
       }
+
       for (const id of this.breakIdsToDelete) {
         await breakRepo.permanentDeleteBreak(id, tx)
       }
+
       await repo.upsertWorkEntry(repo.entryToWorkEntry(toPersist), tx)
     })
   }

@@ -36,6 +36,7 @@ export class SyncManager {
    */
   public getSyncEngine(syncKey: string): SyncEngine | null {
     const isAggregation = getAggregationPoliciesForSync().some((ap) => ap.aggregationName === syncKey)
+
     const isTable = getDataPolicy(syncKey) !== undefined
 
     if (!isAggregation && !isTable) {
@@ -74,6 +75,7 @@ export class SyncManager {
     }
 
     this.syncInProgress = true
+
     const startTime = Date.now()
 
     try {
@@ -87,7 +89,8 @@ export class SyncManager {
 
           try {
             await engine.start(reason)
-          } catch (error) {
+          }
+ catch (error) {
             this.logger.error(`[SyncManager] Failed to sync ${syncKey}:`, error)
 
             throw error
@@ -96,6 +99,7 @@ export class SyncManager {
       )
 
       const failed = results.filter((r) => r.status === 'rejected')
+
       const failedCount = failed.length
 
       if (failedCount > 0) {
@@ -115,7 +119,9 @@ export class SyncManager {
           }
         }))
       }
-    } finally {
+    }
+
+ finally {
       this.syncInProgress = false
     }
   }
@@ -139,12 +145,16 @@ export class SyncManager {
     }
 
     const startTime = Date.now()
+
     let failedCount = 0
 
     try {
       await engine.start(reason)
-    } catch (error) {
+    }
+
+ catch (error) {
       this.logger.error(`[SyncManager] Failed to sync ${syncKey}:`, error)
+
       failedCount = 1
     }
 
@@ -161,6 +171,7 @@ export class SyncManager {
         }
       }))
     }
+
   }
 
   /**

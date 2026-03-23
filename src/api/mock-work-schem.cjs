@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 const workScheme = require('./mock-data/work-scheme.json')
 const entries = require('./mock-data/entries.json')
 const workEntryBreaks = require('./mock-data/work-entry-breaks.json')

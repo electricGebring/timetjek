@@ -1,10 +1,14 @@
 import type { Entry } from '@/views/staffRegister/types'
+
 import type { WorkEntryBreak } from '@/models/work-entry-break.schema'
 
 function isoToLocalTimeString(iso: string | null): string | null {
   if (!iso) return null
+
   const d = new Date(iso)
+
   if (Number.isNaN(d.getTime())) return null
+
   return [d.getUTCHours(), d.getUTCMinutes(), d.getUTCSeconds()].map((n) => String(n).padStart(2, '0')).join(':')
 }
 
@@ -26,7 +30,9 @@ export function buildBreakDisplayString(entry: Entry, breaks: WorkEntryBreak[]):
 
   const sorted = [...breaks].sort((a, b) => {
     const sa = a.start_exact_at ?? a.start_at ?? ''
+
     const sb = b.start_exact_at ?? b.start_at ?? ''
+
     return sa.localeCompare(sb)
   })
 
@@ -34,12 +40,16 @@ export function buildBreakDisplayString(entry: Entry, breaks: WorkEntryBreak[]):
 
   for (const b of sorted) {
     const start = isoToLocalTimeString(b.start_exact_at ?? b.start_at)
+
     if (!start) continue
 
     if (!b.end_at && !entry.check_out_at) {
       segments.push(`${start}-`)
-    } else if (b.end_at) {
+    }
+
+    else if (b.end_at) {
       const end = isoToLocalTimeString(b.end_exact_at ?? b.end_at)
+
       if (end) segments.push(`${start}-${end}`)
     }
   }

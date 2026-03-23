@@ -48,7 +48,9 @@ export const DATA_POLICIES: Record<string, DataRetentionPolicy> = {
 
 /** Aggregation policies: parent + children synced together.
  * childTables is the canonical list of child tables (FK to root).
- * Used for sync orchestration; adapters may hardcode today but this drives cleanup and future policy-driven adapters. */
+ * Used for sync orchestration; adapters may hardcode today but this drives
+ * cleanup and future policy-driven adapters.
+ */
 export const AGGREGATION_POLICIES: Record<string, AggregationPolicy> = {
   [WORK_ENTRIES_AGGREGATE]: {
     aggregationName: WORK_ENTRIES_AGGREGATE,

@@ -5,6 +5,7 @@ import { triggerSyncIfOnline } from '../services/sync-trigger'
 import { WorkEntryValidationError } from './errors'
 
 import type { WorkEntry } from '@/db/schema'
+
 import type { Entry } from '@/views/staffRegister/types'
 
 import * as staffRepo from '@/db/work-entries/repo'
@@ -24,11 +25,13 @@ export async function createWorkEntry(entry: Entry | Partial<WorkEntry> | Record
 
   // Trigger sync only after upsert completes so insert is visible before sync runs
   logger.log('[5. DOMAIN] 🔄 Triggering sync...')
+
   triggerSyncIfOnline('mutation')
 }
 
 export async function updateWorkEntry(entry: Entry | Partial<WorkEntry> | Record<string, unknown>) {
   const e = entry as Record<string, unknown>
+
   if (e.id === null || e.id === undefined) {
     throw new WorkEntryValidationError('Cannot update entry without id')
   }
@@ -56,6 +59,7 @@ export async function updateWorkEntry(entry: Entry | Partial<WorkEntry> | Record
   }
 
   e.updatedAt = new Date().toISOString()
+
   e.synced = 0 // Mark as unsynced so sync engine will push this update
 
   await staffRepo.upsertWorkEntry(entry as Record<string, unknown>)

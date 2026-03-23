@@ -1,8 +1,13 @@
 import { getDb } from '@/db/drizzle'
+
 import { workEntryBreaks } from '@/db/schema'
+
 import type { WorkEntryBreak } from '@/models/work-entry-break.schema'
+
 import { createLogger } from '@/utils/logger'
+
 import { eq } from 'drizzle-orm'
+
 import { markParentEntryDirty } from '@/db/work-entries/repo'
 
 const logger = createLogger('WorkEntryBreaksRepo')
@@ -37,5 +42,6 @@ export async function updateBreak(id: string, changes: UpdateBreakInput): Promis
   }
 
   logger.log('[UPDATE] Break updated')
+
   return updated ?? null
 }

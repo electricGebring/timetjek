@@ -63,11 +63,16 @@ function updateSyncTimings() {
 
     if (engine?.lastSyncTimings && Object.keys(engine.lastSyncTimings).length > 0) {
       syncTimings.value = { ...engine.lastSyncTimings }
-    } else {
+    }
+
+ else {
       syncTimings.value = undefined
+
       console.warn('[DebugPanel] No sync timings available for work_entries_aggregate')
     }
-  } catch (e) {
+  }
+
+ catch (e) {
     console.error('[DebugPanel] updateSyncTimings error', e)
   }
 }
@@ -100,6 +105,7 @@ onMounted(async () => {
 
   // Group already-loaded entries without re-reading from DB
   store.setGroupedEntriesFromLoaded(store.workEntries)
+
   // prettier-ignore
   ;(window as unknown as { workEntriesData: typeof store.workEntries }).workEntriesData = store.workEntries
   // Listen for sync-completed events and reload data
@@ -115,7 +121,7 @@ onMounted(async () => {
 
     const { reason, failedCount, durationMs } = customEvent.detail ?? {}
 
-    console.log(`[SyncCompleted] Reason: ${reason}, Failed: ${failedCount}, Duration: ${durationMs}ms`)
+    console.debug(`[SyncCompleted] Reason: ${reason}, Failed: ${failedCount}, Duration: ${durationMs}ms`)
 
     await store.loadWorkEntries()
 
@@ -170,11 +176,13 @@ const handleCheckIn = async () => {
     logger.log(`[1. UI] 🎬 CheckIn started - ${traceId}`, { work_day_id })
 
     await store.checkIn(work_day_id)
-  } catch (e: unknown) {
+  }
+ catch (e: unknown) {
     alert((e as Error).message || 'Instämpling misslyckades')
 
     console.error('Check-in failed:', e)
-  } finally {
+  }
+ finally {
     isProcessing.value = false
   }
 }
@@ -188,11 +196,13 @@ const handleCheckOut = async () => {
     const work_day_id = Number(new Date().setHours(0, 0, 0, 0))
 
     await store.checkOut(work_day_id)
-  } catch (e: unknown) {
+  }
+ catch (e: unknown) {
     alert((e as Error).message || 'Utstämpling misslyckades')
 
     console.error('Check-out failed:', e)
-  } finally {
+  }
+ finally {
     isProcessing.value = false
   }
 }
@@ -206,11 +216,13 @@ const handleBreak = async () => {
     const work_day_id = Number(new Date().setHours(0, 0, 0, 0))
 
     await store.goOnBreak(work_day_id)
-  } catch (e: unknown) {
+  }
+ catch (e: unknown) {
     alert((e as Error).message || 'Gå på rast misslyckades')
 
     console.error('Break failed:', e)
-  } finally {
+  }
+ finally {
     isProcessing.value = false
   }
 }
@@ -266,7 +278,8 @@ const runDebugFunction = async (functionName: string) => {
           debugResult.value = Array.isArray(result)
             ? result.map((r) => JSON.stringify(r, null, 2))
             : [JSON.stringify(result, null, 2)]
-        } else {
+        }
+ else {
           debugStatus.value = `Ej implementerat`
 
           debugResult.value = []
@@ -305,7 +318,8 @@ const runDebugFunction = async (functionName: string) => {
           debugResult.value = []
 
           await store.loadWorkEntries()
-        } else {
+        }
+ else {
           debugStatus.value = `Avbruten`
         }
 
@@ -316,13 +330,15 @@ const runDebugFunction = async (functionName: string) => {
     // Uppdatera timings efter varje debug-operation
 
     updateSyncTimings()
-  } catch (e: unknown) {
+  }
+ catch (e: unknown) {
     debugError.value = (e as Error).message || 'Okänt fel'
 
     debugStatus.value = `✗ Fel`
 
     console.error(`[DEBUG ERROR] ${functionName}:`, e)
-  } finally {
+  }
+ finally {
     debugLoading.value = false
   }
 }

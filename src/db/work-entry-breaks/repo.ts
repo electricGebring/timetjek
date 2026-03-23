@@ -4,6 +4,7 @@
  */
 
 export { insertBreak, insertManyBreaks } from './work-entry-break.create'
+
 export {
   getBreaksByWorkEntryId,
   getDeletedUnsyncedBreaksByWorkEntryId,
@@ -12,7 +13,9 @@ export {
   getBreaksGroupedByWorkEntryId,
   hasUnsyncedBreaks
 } from './work-entry-break.read'
+
 export { updateBreak } from './work-entry-break.update'
+
 export {
   deleteBreak,
   deleteBreaksByWorkEntryId,

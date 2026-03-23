@@ -58,7 +58,9 @@ export type CreateWorkEntryBreakInput = Omit<
 export function parseWorkEntryBreakRow(raw: Record<string, unknown>): WorkEntryBreak {
   const coerceString = (v: unknown): string | null => {
     if (v === null || v === undefined) return null
+
     if (typeof v === 'string') return v
+
     return String(v)
   }
 
@@ -66,28 +68,35 @@ export function parseWorkEntryBreakRow(raw: Record<string, unknown>): WorkEntryB
     if (typeof v === 'string') {
       return v
     }
+
     throw new Error(`Invalid WorkEntryBreak: ${fieldName} is required and must be a string`)
   }
 
   const coerceId = (v: unknown): string => {
     if (v === null || v === undefined) return ''
+
     if (typeof v === 'string' && v.trim().length > 0) return v
+
     if (typeof v === 'number') return String(v)
+
     return String(v)
   }
 
   const coerceNumber = (v: unknown, def: number): number => {
     if (v === null || v === undefined) return def
+
     if (typeof v === 'number') return v
+
     const n = Number(v)
+
     return Number.isNaN(n) ? def : n
   }
 
   return {
     id: coerceId(raw.id),
     work_entry_id: requireString(raw.work_entry_id, 'work_entry_id'),
-    remote_id: raw.remote_id != null ? coerceString(raw.remote_id) : null,
-    device_id: raw.device_id != null ? coerceString(raw.device_id) : null,
+    remote_id: raw.remote_id !== null && raw.remote_id !== undefined ? coerceString(raw.remote_id) : null,
+    device_id: raw.device_id !== null && raw.device_id !== undefined ? coerceString(raw.device_id) : null,
     start_at: coerceString(raw.start_at),
     end_at: coerceString(raw.end_at),
     start_exact_at: coerceString(raw.start_exact_at),

@@ -1,4 +1,5 @@
 import { integer, real, text, sqliteTable, index } from 'drizzle-orm/sqlite-core'
+
 import { TABLE_WORK_ENTRIES, TABLE_WORK_ENTRY_BREAKS } from '../constants/tables'
 
 export const workEntries = sqliteTable(

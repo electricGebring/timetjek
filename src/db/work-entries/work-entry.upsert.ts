@@ -1,8 +1,13 @@
 import { getDb, type Database } from '@/db/drizzle'
+
 import { workEntries, type WorkEntry } from '@/db/schema'
+
 import { createLogger } from '@/utils/logger'
+
 import { eq } from 'drizzle-orm'
+
 import { Capacitor } from '@capacitor/core'
+
 import { createLocalWorkEntryId } from './work-entry.helpers'
 
 const logger = createLogger('WorkEntriesRepo')
@@ -12,9 +17,11 @@ const logger = createLogger('WorkEntriesRepo')
  */
 function saveDatabase(skip?: boolean) {
   if (skip) return
+
   if (!Capacitor.isNativePlatform()) {
     import('@/db/index').then(({ getDB }) => {
       const db = getDB() as { saveDatabase: () => void }
+
       if (db.saveDatabase) {
         db.saveDatabase()
       }
@@ -32,7 +39,9 @@ export async function upsertWorkEntry(entry: Partial<WorkEntry> | Record<string,
   logger.log('[4. PERSIST][DRIZZLE] 💾 Upserting work entry...')
 
   const db = tx ?? getDb()
+
   const raw = entry as Record<string, unknown>
+
   const trimmedId = typeof raw.id === 'string' ? raw.id.trim() : undefined
 
   const mealBreakfast: number =
@@ -41,6 +50,7 @@ export async function upsertWorkEntry(entry: Partial<WorkEntry> | Record<string,
         ? 1
         : 0
       : Number(raw.meal_benefit_has_breakfast) || 0
+
   const mealLunch: number =
     typeof raw.meal_benefit_has_lunch === 'boolean'
       ? raw.meal_benefit_has_lunch
@@ -49,6 +59,7 @@ export async function upsertWorkEntry(entry: Partial<WorkEntry> | Record<string,
       : Number(raw.meal_benefit_has_lunch) || 0
 
   const now = new Date().toISOString()
+
   const safeEntry = {
     ...raw,
     id: typeof trimmedId === 'string' && trimmedId.length > 0 ? trimmedId : createLocalWorkEntryId(),
@@ -70,7 +81,8 @@ export async function upsertWorkEntry(entry: Partial<WorkEntry> | Record<string,
         ...safeEntry
       })
       .where(eq(workEntries.id, safeEntry.id))
-  } else {
+  }
+ else {
     logger.log(`[4. PERSIST][DRIZZLE] ➕ Inserting entry with ID ${safeEntry.id}...`)
 
     await db.insert(workEntries).values({

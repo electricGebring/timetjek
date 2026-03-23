@@ -1,6 +1,9 @@
 import { getDb } from '@/db/drizzle'
+
 import { workEntries } from '@/db/schema'
+
 import { eq, inArray } from 'drizzle-orm'
+
 import { Capacitor } from '@capacitor/core'
 
 /**
@@ -10,6 +13,7 @@ function saveDatabase() {
   if (!Capacitor.isNativePlatform()) {
     import('@/db/index').then(({ getDB }) => {
       const db = getDB() as { saveDatabase: () => void }
+
       if (db.saveDatabase) {
         db.saveDatabase()
       }
@@ -35,6 +39,7 @@ export async function softDeleteWorkEntry(id: string) {
     .where(eq(workEntries.id, id))
 
   console.debug('[DRIZZLE] ✅ Soft-delete complete')
+
   saveDatabase()
 }
 
@@ -54,6 +59,7 @@ export async function restoreWorkEntry(id: string) {
     .where(eq(workEntries.id, id))
 
   console.debug('[DRIZZLE] ✅ Restore complete')
+
   saveDatabase()
 }
 
@@ -74,6 +80,7 @@ export async function markParentEntryDirty(workEntryId: string) {
     .where(eq(workEntries.id, workEntryId))
 
   console.debug('[DRIZZLE] ✅ Parent marked dirty')
+
   saveDatabase()
 }
 
@@ -92,6 +99,7 @@ export async function markWorkEntryAsSynced(id: string) {
     .where(eq(workEntries.id, id))
 
   console.debug('[DRIZZLE] ✅ Sync mark complete')
+
   saveDatabase()
 }
 
@@ -104,6 +112,7 @@ export async function permanentDeleteWorkEntry(id: string) {
   await getDb().delete(workEntries).where(eq(workEntries.id, id))
 
   console.debug('[DRIZZLE] ✅ Permanent delete complete')
+
   saveDatabase()
 }
 

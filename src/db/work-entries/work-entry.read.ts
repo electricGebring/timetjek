@@ -1,5 +1,7 @@
 import { getDb } from '@/db/drizzle'
+
 import { workEntries, type WorkEntry } from '@/db/schema'
+
 import { and, eq, isNull } from 'drizzle-orm'
 
 /**
@@ -7,6 +9,7 @@ import { and, eq, isNull } from 'drizzle-orm'
  */
 export async function getWorkEntryById(id: string): Promise<WorkEntry | null> {
   const rows = await getDb().select().from(workEntries).where(eq(workEntries.id, id))
+
   return rows[0] ?? null
 }
 

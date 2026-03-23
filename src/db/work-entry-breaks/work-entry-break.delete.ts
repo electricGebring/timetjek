@@ -1,18 +1,26 @@
 import { getDb, type Database } from '@/db/drizzle'
+
 import { workEntryBreaks } from '@/db/schema'
+
 import { createLogger } from '@/utils/logger'
+
 import { eq } from 'drizzle-orm'
+
 import { Capacitor } from '@capacitor/core'
+
 import { markParentEntryDirty } from '@/db/work-entries/repo'
+
 import { getBreakById } from './work-entry-break.read'
 
 const logger = createLogger('WorkEntryBreaksRepo')
 
 function saveDatabase(skip?: boolean) {
   if (skip) return
+
   if (!Capacitor.isNativePlatform()) {
     import('@/db/index').then(({ getDB }) => {
       const db = getDB() as { saveDatabase?: () => void }
+
       db.saveDatabase?.()
     })
   }
@@ -26,6 +34,7 @@ export async function deleteBreak(id: string): Promise<void> {
   logger.log('[DELETE] Soft-deleting break:', id)
 
   const breakRecord = await getBreakById(id)
+
   const workEntryId = breakRecord?.work_entry_id
 
   const now = new Date().toISOString()
@@ -40,6 +49,7 @@ export async function deleteBreak(id: string): Promise<void> {
   }
 
   saveDatabase()
+
   logger.log('[DELETE] Break soft-deleted')
 }
 
@@ -53,9 +63,11 @@ export async function permanentDeleteBreak(id: string, tx?: Database): Promise<v
   logger.log('[DELETE] Permanently deleting break:', id)
 
   const db = tx ?? getDb()
+
   await db.delete(workEntryBreaks).where(eq(workEntryBreaks.id, id))
 
   saveDatabase(!!tx)
+
   logger.log('[DELETE] Break permanently deleted')
 }
 
@@ -64,6 +76,7 @@ export async function permanentDeleteBreak(id: string, tx?: Database): Promise<v
  */
 export async function markBreakAsSynced(id: string): Promise<void> {
   await getDb().update(workEntryBreaks).set({ synced: 1 }).where(eq(workEntryBreaks.id, id))
+
   saveDatabase()
 }
 
@@ -78,14 +91,18 @@ export async function markBreaksAsSynced(
   tx?: Database
 ): Promise<void> {
   if (ids.length === 0) return
+
   const db = tx ?? getDb()
+
   for (const localId of ids) {
     const remoteId = breakRemoteIdMap?.[localId]
+
     await db
       .update(workEntryBreaks)
-      .set(remoteId != null ? { synced: 1, remote_id: remoteId } : { synced: 1 })
+      .set(remoteId !== null && remoteId !== undefined ? { synced: 1, remote_id: remoteId } : { synced: 1 })
       .where(eq(workEntryBreaks.id, localId))
   }
+
   saveDatabase(!!tx)
 }
 

@@ -14,7 +14,9 @@ async function enrichEntriesWithBreaks(entries: Entry[]): Promise<Entry[]> {
 
   return entries.map((entry) => {
     const breaks = breaksByEntryId.get(entry.id) ?? []
+
     const isOnBreak = hasOpenBreak(breaks) && !entry.check_out_at
+
     return {
       ...entry,
       break: buildBreakDisplayString(entry, breaks),

@@ -14,8 +14,6 @@ import { workEntryToEntry, entryToWorkEntry, type AnyWorkEntry } from '@/db/work
 
 import type { Entry } from '@/views/staffRegister/types'
 
-import type { ConflictResolutionStrategy } from '@/enums/ConflictResolutionStrategy'
-
 /**
  * Creates a mock work entries sync adapter for testing.
  * Uses real repo for local DB; simulates API (no HTTP).
@@ -28,6 +26,7 @@ export function createMockWorkEntriesAdapter(): TableSyncAdapter<Entry> {
       const unsynced = (await repo.getUnsyncedWorkEntries())
         .filter((e: AnyWorkEntry) => e.id !== null)
         .map(workEntryToEntry)
+
       return unsynced
     },
 
@@ -44,9 +43,11 @@ export function createMockWorkEntriesAdapter(): TableSyncAdapter<Entry> {
 
     batchUpsert: async (items: Entry[]): Promise<Entry[]> => {
       const ids = items.filter((item) => item.id).map((item) => item.id)
+
       if (ids.length > 0) {
         await repo.markEntriesAsSynced(ids)
       }
+
       return items
     },
 
@@ -60,28 +61,29 @@ export function createMockWorkEntriesAdapter(): TableSyncAdapter<Entry> {
       if (typeof item !== 'object' || item === null || !('id' in item)) {
         throw new Error('Invalid item: not an Entry')
       }
+
       return item
     },
 
-    deleteItem: async (_id: string): Promise<void> => {
+    deleteItem: async (): Promise<void> => {
       // Simulated: no-op (SyncEngine calls permanentDelete after)
     },
 
     fetchAll: async (): Promise<Entry[]> => {
       const all = await repo.getWorkEntries()
+
       return all.map((e: AnyWorkEntry) => workEntryToEntry(e))
     },
 
-    fetchSince: async (_timestamp: number): Promise<Entry[]> => {
+    fetchSince: async (): Promise<Entry[]> => {
       const all = await repo.getWorkEntries()
+
       return all.map((e: AnyWorkEntry) => workEntryToEntry(e))
     },
 
-    mergeRemote: async (
-      remoteItem: Entry,
-      _strategy?: ConflictResolutionStrategy
-    ): Promise<{ resolved: Entry; conflictDetected: boolean }> => {
+    mergeRemote: async (remoteItem: Entry): Promise<{ resolved: Entry; conflictDetected: boolean }> => {
       await repo.upsertWorkEntry(entryToWorkEntry({ ...remoteItem, synced: 1 }))
+
       return { resolved: remoteItem, conflictDetected: false }
     },
 

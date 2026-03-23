@@ -1,8 +1,13 @@
 import { getDb } from '@/db/drizzle'
+
 import { workEntryBreaks } from '@/db/schema'
+
 import type { WorkEntryBreak, CreateWorkEntryBreakInput } from '@/models/work-entry-break.schema'
+
 import { createLogger } from '@/utils/logger'
+
 import { markParentEntryDirty } from '@/db/work-entries/repo'
+
 import { createLocalWorkEntryId } from '@/db/work-entries/work-entry.helpers'
 
 const logger = createLogger('WorkEntryBreaksRepo')
@@ -14,6 +19,7 @@ export async function insertBreak(workEntryId: string, breakData: CreateWorkEntr
   logger.log('[CREATE] Inserting break for work entry:', workEntryId)
 
   const db = getDb()
+
   const id = createLocalWorkEntryId()
 
   const result = await db
@@ -56,11 +62,13 @@ export async function insertManyBreaks(
   logger.log(`[CREATE] Inserting ${breaks.length} breaks`)
 
   const db = getDb()
+
   const synced = options?.synced ?? false
 
   await db.insert(workEntryBreaks).values(
     breaks.map((b) => {
       const serverId = b.id ?? createLocalWorkEntryId()
+
       return {
         id: serverId,
         work_entry_id: b.work_entry_id,
@@ -77,6 +85,7 @@ export async function insertManyBreaks(
   )
 
   const workEntryIds = [...new Set(breaks.map((b) => b.work_entry_id))]
+
   for (const workEntryId of workEntryIds) {
     await markParentEntryDirty(workEntryId)
   }

@@ -51,8 +51,11 @@ export function useWorkEntryList(workEntries: Ref<Entry[]>) {
     if (!value) return null
 
     const [hRaw, mRaw, sRaw] = value.split(':')
+
     const h = Number(hRaw)
+
     const m = Number(mRaw)
+
     const s = Number(sRaw ?? '0')
 
     if (!Number.isFinite(h) || !Number.isFinite(m) || !Number.isFinite(s)) return null
@@ -62,6 +65,7 @@ export function useWorkEntryList(workEntries: Ref<Entry[]>) {
 
   function durationSeconds(start: string | null, end: string | null): number | null {
     const s = parseTimeToSeconds(start)
+
     const e = parseTimeToSeconds(end)
 
     if (s === null || e === null) return null
@@ -75,8 +79,11 @@ export function useWorkEntryList(workEntries: Ref<Entry[]>) {
     if (!value) return null
 
     const parts = value.split(':')
+
     const hh = (parts[0] ?? '').padStart(2, '0')
+
     const mm = (parts[1] ?? '00').padStart(2, '0')
+
     const ss = (parts[2] ?? '00').padStart(2, '0')
 
     if (!hh || !mm || !ss) return null
@@ -103,10 +110,13 @@ export function useWorkEntryList(workEntries: Ref<Entry[]>) {
 
   function buildDisplayRowsForEntry(entry: Entry): DisplayRow[] {
     const rows: DisplayRow[] = []
+
     const breakSegments = parseBreakSegments(entry.break)
+
     const openBreak = breakSegments.find((segment) => !segment.end)
 
     let cursor = normalizeTime(entry.check_in_time_at) ?? toTimePart(entry.check_in_at)
+
     const baseMs = Math.max(
       toMs(entry.updatedAt),
       toMs(entry.check_out_at),
@@ -293,6 +303,7 @@ export function useWorkEntryList(workEntries: Ref<Entry[]>) {
         .flatMap((entry) => buildDisplayRowsForEntry(entry))
         .sort((a, b) => {
           const aOpen = a.isOnBreak || a.status === 'OPEN'
+
           const bOpen = b.isOnBreak || b.status === 'OPEN'
 
           if (aOpen !== bOpen) return aOpen ? -1 : 1

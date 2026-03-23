@@ -4,12 +4,16 @@ import { TimeRegistrationStatus } from '../../enums/TimeRegistrationStatus.ts'
 export function getDeviceId(): string {
   if (typeof localStorage !== 'undefined') {
     let id = localStorage.getItem('timetjek_device_id')
+
     if (!id) {
       id = uuidLike()
+
       localStorage.setItem('timetjek_device_id', id)
     }
+
     return id
   }
+
   return `anon-${uuidLike()}`
 }
 

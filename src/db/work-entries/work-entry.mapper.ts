@@ -1,6 +1,9 @@
 import type { Entry } from '@/views/staffRegister/types'
+
 import { TimeRegistrationStatus } from '@/enums/TimeRegistrationStatus'
+
 import type { WorkEntry } from '@/db/schema'
+
 import { createLocalWorkEntryId } from './work-entry.helpers'
 
 /** Accepts WorkEntry (Drizzle) or any object with WorkEntry-like properties */
@@ -9,6 +12,7 @@ export type AnyWorkEntry = WorkEntry | Record<string, unknown>
 /** Map WorkEntry (DB) to Entry (view/API). Only overrides fields that need coercion. */
 export function workEntryToEntry(w: AnyWorkEntry): Entry {
   const raw = w as Record<string, unknown>
+
   const id =
     typeof raw.id === 'string' && raw.id.trim().length > 0
       ? raw.id.trim()

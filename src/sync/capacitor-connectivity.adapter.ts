@@ -26,6 +26,7 @@ export class CapacitorConnectivityAdapter implements ConnectivityPort {
       // Use async IIFE to ensure listener resolves before removal
       void (async () => {
         const handle = await listener
+
         await handle.remove()
       })()
     }

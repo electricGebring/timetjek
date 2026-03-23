@@ -1,7 +1,11 @@
 import { getDb } from '@/db/drizzle'
+
 import { workEntryBreaks } from '@/db/schema'
+
 import type { WorkEntryBreak } from '@/models/work-entry-break.schema'
+
 import { parseWorkEntryBreakRow } from '@/models/work-entry-break.schema'
+
 import { and, eq } from 'drizzle-orm'
 
 /**
@@ -10,6 +14,7 @@ import { and, eq } from 'drizzle-orm'
  */
 export async function hasUnsyncedBreaks(workEntryId: string): Promise<boolean> {
   const db = getDb()
+
   const result = await db
     .select()
     .from(workEntryBreaks)
@@ -17,6 +22,7 @@ export async function hasUnsyncedBreaks(workEntryId: string): Promise<boolean> {
       and(eq(workEntryBreaks.work_entry_id, workEntryId), eq(workEntryBreaks.deleted, 0), eq(workEntryBreaks.synced, 0))
     )
     .limit(1)
+
   return result.length > 0
 }
 
@@ -89,11 +95,13 @@ export async function getBreaksGroupedByWorkEntryId(): Promise<Map<string, WorkE
 
   for (const row of results) {
     const parsed = parseWorkEntryBreakRow(row as Record<string, unknown>)
+
     const wid = parsed.work_entry_id
 
     if (!map.has(wid)) {
       map.set(wid, [])
     }
+
     map.get(wid)!.push(parsed)
   }
 

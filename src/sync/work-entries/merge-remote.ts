@@ -5,6 +5,7 @@
  */
 
 import * as repo from '@/db/work-entries/repo'
+
 import { entryToWorkEntry, workEntryToEntry } from '@/db/work-entries/work-entry.mapper'
 
 import { defaultConflictResolver } from '@/sync/conflict-resolver'
@@ -55,24 +56,31 @@ export async function mergeRemoteWorkEntry(
   }
 
   const locals = await repo.getWorkEntries()
+
   const remoteServerId = remote.id ?? ''
 
   // Match by remote_id first (Option B), then by id for backward compat
   const local = locals.find(
-    (e) => (e.remote_id != null && e.remote_id === remoteServerId) || (e.id ?? '') === remoteServerId
+    (e) =>
+      (e.remote_id !== null && e.remote_id !== undefined && e.remote_id === remoteServerId) ||
+      (e.id ?? '') === remoteServerId
   )
 
   if (!local) {
     // Avoid duplicate same-day open entry: if we already have an open entry for this work_day, skip remote insert
     const remoteWorkDayId = remote.work_day_id ?? 0
+
     const remoteIsOpen = remote.check_in_at && !remote.check_out_at
+
     if (remoteIsOpen && remoteWorkDayId) {
       const openSameDay = locals.find(
         (e) =>
           e.work_day_id === remoteWorkDayId && e.check_in_at && !e.check_out_at && (e.id ?? '') !== (remote.id ?? '')
       )
+
       if (openSameDay) {
         const resolvedLocal = workEntryToEntry(openSameDay)
+
         return { resolved: resolvedLocal, conflictDetected: false }
       }
     }
