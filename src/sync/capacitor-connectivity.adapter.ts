@@ -13,7 +13,6 @@ export class CapacitorConnectivityAdapter implements ConnectivityPort {
   }
 
   subscribe(handler: (state: ConnectivityState) => void): Unsubscribe {
-    console.log(handler, 'handler')
     
     const listener = Network.addListener('networkStatusChange', (status) => {
       handler({
