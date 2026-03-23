@@ -104,7 +104,19 @@ onMounted(async () => {
   ;(window as unknown as { workEntriesData: typeof store.workEntries }).workEntriesData = store.workEntries
   // Listen for sync-completed events and reload data
 
-  window.addEventListener('sync-completed', async () => {
+  window.addEventListener('sync-completed', async (e: Event) => {
+    const customEvent = e as CustomEvent<{
+      reason: string
+      syncUnits: string[]
+      failedCount: number
+      durationMs: number
+      timestamp: number
+    }>
+
+    const { reason, failedCount, durationMs } = customEvent.detail ?? {}
+
+    console.log(`[SyncCompleted] Reason: ${reason}, Failed: ${failedCount}, Duration: ${durationMs}ms`)
+
     await store.loadWorkEntries()
 
     updateSyncTimings()

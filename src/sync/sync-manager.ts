@@ -74,6 +74,7 @@ export class SyncManager {
     }
 
     this.syncInProgress = true
+    const startTime = Date.now()
 
     try {
       const syncUnits = getSyncUnitsForSync()
@@ -95,13 +96,24 @@ export class SyncManager {
       )
 
       const failed = results.filter((r) => r.status === 'rejected')
+      const failedCount = failed.length
 
-      if (failed.length > 0) {
-        this.logger.warn(`[SyncManager] ${failed.length} tables failed to sync`)
+      if (failedCount > 0) {
+        this.logger.warn(`[SyncManager] ${failedCount} tables failed to sync`)
       }
 
+      const durationMs = Date.now() - startTime
+
       if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('sync-completed'))
+        window.dispatchEvent(new CustomEvent('sync-completed', {
+          detail: {
+            reason,
+            syncUnits,
+            failedCount,
+            durationMs,
+            timestamp: Date.now()
+          }
+        }))
       }
     } finally {
       this.syncInProgress = false
@@ -126,10 +138,28 @@ export class SyncManager {
       throw new Error(`No sync engine available for ${syncKey}`)
     }
 
-    await engine.start(reason)
+    const startTime = Date.now()
+    let failedCount = 0
+
+    try {
+      await engine.start(reason)
+    } catch (error) {
+      this.logger.error(`[SyncManager] Failed to sync ${syncKey}:`, error)
+      failedCount = 1
+    }
+
+    const durationMs = Date.now() - startTime
 
     if (typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent('sync-completed'))
+      window.dispatchEvent(new CustomEvent('sync-completed', {
+        detail: {
+          reason,
+          syncUnits: [syncKey],
+          failedCount,
+          durationMs,
+          timestamp: Date.now()
+        }
+      }))
     }
   }
 
