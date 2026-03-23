@@ -91,6 +91,16 @@ watch(() => props.syncTimings, (val, oldVal) => {
     >
       Fel: {{ props.debugError }}
     </div>
+    <div
+      v-if="Array.isArray(props.debugResult) && props.debugResult.length"
+      class="mt-3 max-h-96 overflow-y-auto rounded-lg bg-gray-900 p-3"
+    >
+      <pre
+        v-for="(line, i) in (props.debugResult as string[])"
+        :key="i"
+        class="whitespace-pre-wrap break-all font-mono text-xs text-green-300"
+      >{{ line }}</pre>
+    </div>
     <div v-if="props.syncTimings && Object.keys(props.syncTimings).length" class="mb-2 text-xs text-gray-700">
       <details :open="showTimings">
         <summary class="cursor-pointer font-semibold text-gray-700">Sync timings (klicka för att expandera)</summary>

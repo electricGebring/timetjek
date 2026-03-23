@@ -124,19 +124,24 @@ export type Database = ReturnType<typeof drizzleSqlJs>
 export async function runInTransaction<T>(fn: (tx: Database) => Promise<T>): Promise<T> {
   const db = getDb()
 
+  const { Capacitor } = await import('@capacitor/core')
+
+  // On native Capacitor, SQLite already runs inside its own transaction context.
+  // Calling db.transaction() would issue a BEGIN which causes "cannot start a
+  // transaction within a transaction". So we call fn directly on native.
+  if (Capacitor.isNativePlatform()) {
+    return fn(db)
+  }
+
   const result = await db.transaction(fn)
 
   // Persist to localStorage after commit (web only)
   try {
-    const { Capacitor } = await import('@capacitor/core')
+    const { getDB } = await import('./index')
 
-    if (!Capacitor.isNativePlatform()) {
-      const { getDB } = await import('./index')
+    const g = getDB() as { saveDatabase?: () => void }
 
-      const g = getDB() as { saveDatabase?: () => void }
-
-      g.saveDatabase?.()
-    }
+    g.saveDatabase?.()
   }
   catch {
     // Ignore if not in web context
