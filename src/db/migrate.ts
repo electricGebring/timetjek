@@ -140,12 +140,49 @@ async function saveIfWeb() {
   saveDatabase()
 }
 
+function getMigrationOrdinal(migrationId: string): number | null {
+  const match = migrationId.match(/^\d+_drizzle_(\d+)_/)
+
+  if (!match || !match[1]) {
+    return null
+  }
+
+  const ordinal = Number.parseInt(match[1], 10)
+
+  return Number.isNaN(ordinal) ? null : ordinal
+}
+
 export async function runMigrations() {
   await ensureMigrationsTable()
 
   const applied = await getAppliedMigrationIds()
 
-  const pending = migrations.filter((m) => !applied.has(m.id))
+  const appliedOrdinals = new Set<number>()
+
+  for (const migrationId of applied) {
+    const ordinal = getMigrationOrdinal(migrationId)
+
+    if (ordinal !== null) {
+      appliedOrdinals.add(ordinal)
+    }
+  }
+
+  const pending = migrations.filter((m) => {
+    if (applied.has(m.id)) {
+      return false
+    }
+
+    const ordinal = getMigrationOrdinal(m.id)
+
+    // Prevent duplicate application when same migration number was renamed.
+    if (ordinal !== null && appliedOrdinals.has(ordinal)) {
+      console.debug('[MIGRATIONS] Skipping migration due to applied ordinal:', m.id)
+
+      return false
+    }
+
+    return true
+  })
 
   for (const m of pending) {
     console.debug('[MIGRATIONS] Applying migration:', m.id)
@@ -167,6 +204,12 @@ export async function runMigrations() {
       }
 
       await runSql('INSERT INTO schema_migrations (id, applied_at) VALUES (?, ?)', [m.id, new Date().toISOString()])
+
+      const appliedOrdinal = getMigrationOrdinal(m.id)
+
+      if (appliedOrdinal !== null) {
+        appliedOrdinals.add(appliedOrdinal)
+      }
 
       if (!isNativeRuntime) {
         await runSql('COMMIT')
